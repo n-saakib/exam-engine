@@ -1,0 +1,307 @@
+{
+  "setId": "e8236c46-9743-466f-9019-48e40707d22d",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Easy Set 1",
+  "difficulty": "Easy",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "What does IAM stand for in AWS?",
+      "options": {
+        "A": "Internet Access Management",
+        "B": "Identity and Access Management",
+        "C": "Integrated Application Model",
+        "D": "Internal Authorization Module"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Internet Access Management",
+          "reason": "A made-up term — AWS has no service by this name."
+        },
+        "B": {
+          "description": "Identity and Access Management",
+          "reason": "The full name of the AWS IAM service, which manages users, groups, roles, and policies to control access to AWS resources."
+        },
+        "C": {
+          "description": "Integrated Application Model",
+          "reason": "A generic software architecture term, not an AWS service."
+        },
+        "D": {
+          "description": "Internal Authorization Module",
+          "reason": "A fabricated term with no meaning in AWS."
+        }
+      },
+      "Tips": "IAM = Identity and Access Management — the word 'Identity' is the clue. Eliminate options that use unrelated IT jargon (Internet, Integrated, Internal) that don't match AWS terminology."
+    },
+    {
+      "id": 2,
+      "questionText": "Which IAM entity is best suited for granting permissions to an AWS service (e.g., EC2) to access other AWS resources?",
+      "options": {
+        "A": "IAM User",
+        "B": "IAM Group",
+        "C": "IAM Role",
+        "D": "IAM Policy"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "IAM User",
+          "reason": "A long-term identity for a person or application with permanent credentials."
+        },
+        "B": {
+          "description": "IAM Group",
+          "reason": "A container for organizing multiple IAM Users and assigning shared policies."
+        },
+        "C": {
+          "description": "IAM Role",
+          "reason": "An identity that provides temporary credentials and can be assumed by AWS services, users, or applications."
+        },
+        "D": {
+          "description": "IAM Policy",
+          "reason": "A JSON document defining permissions. It cannot be directly attached to a service instance; it must be attached via a role or user."
+        }
+      },
+      "Tips": "The question asks about granting permissions to an AWS *service*, not a human. Services cannot be added to Groups, and a Policy alone isn't an identity. Between User and Role, only Roles are designed to be *assumed* by services — eliminate User."
+    },
+    {
+      "id": 3,
+      "questionText": "What is the recommended best practice when the AWS root account is first created?",
+      "options": {
+        "A": "Use the root account for all daily administrative tasks",
+        "B": "Delete the root account immediately",
+        "C": "Enable MFA on the root account and avoid using it for everyday tasks",
+        "D": "Share the root credentials with the security team"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Use the root account for all daily administrative tasks",
+          "reason": "Using root for everything exposes the most privileged account to unnecessary risk."
+        },
+        "B": {
+          "description": "Delete the root account immediately",
+          "reason": "The root account cannot be deleted; it is permanently tied to the AWS account."
+        },
+        "C": {
+          "description": "Enable MFA on the root account and avoid using it for everyday tasks",
+          "reason": "Enabling MFA adds a second factor of authentication, significantly reducing the risk of unauthorized access to the most powerful account in AWS."
+        },
+        "D": {
+          "description": "Share the root credentials with the security team",
+          "reason": "Sharing root credentials multiplies the attack surface and violates the principle of least privilege."
+        }
+      },
+      "Tips": "Root account best practice = lock it down, not use it. Eliminate 'use it daily' (too risky) and 'share it' (always wrong). 'Delete' is impossible — AWS won't let you. That leaves MFA + minimal use."
+    },
+    {
+      "id": 4,
+      "questionText": "Which of the following EC2 instance purchasing options provides the highest discount compared to On-Demand pricing?",
+      "options": {
+        "A": "Scheduled Instances",
+        "B": "Spot Instances",
+        "C": "Reserved Instances (1-year, No Upfront)",
+        "D": "On-Demand Instances"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Scheduled Instances",
+          "reason": "A legacy option allowing reservation of capacity on a recurring schedule. Provides modest savings."
+        },
+        "B": {
+          "description": "Spot Instances",
+          "reason": "Spare EC2 capacity offered at up to 90% discount compared to On-Demand. AWS can reclaim them with a 2-minute warning."
+        },
+        "C": {
+          "description": "Reserved Instances (1-year, No Upfront)",
+          "reason": "Provides a ~20–40% discount in exchange for a 1-year commitment with no upfront payment."
+        },
+        "D": {
+          "description": "On-Demand Instances",
+          "reason": "Pay-as-you-go with no commitment. This is the baseline price — no discount at all."
+        }
+      },
+      "Tips": "Highest discount = most risk/restriction. On-Demand has zero discount. Reserved (1yr, no upfront) is moderate. Spot wins with up to 90% off because AWS can interrupt them — maximum savings, maximum risk."
+    },
+    {
+      "id": 5,
+      "questionText": "An EC2 instance needs to read objects from an S3 bucket. What is the most secure way to grant this permission?",
+      "options": {
+        "A": "Hardcode AWS credentials in the application code",
+        "B": "Attach an IAM Role with the required S3 permissions to the EC2 instance",
+        "C": "Create an IAM User and store its access key on the EC2 instance",
+        "D": "Make the S3 bucket publicly accessible"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Hardcode AWS credentials in the application code",
+          "reason": "Embedding access keys directly in code creates a serious security risk, especially if the code is stored in version control."
+        },
+        "B": {
+          "description": "Attach an IAM Role with the required S3 permissions to the EC2 instance",
+          "reason": "IAM Roles provide temporary, automatically rotated credentials to the instance without the need to manage static keys."
+        },
+        "C": {
+          "description": "Create an IAM User and store its access key on the EC2 instance",
+          "reason": "Storing long-term access keys on an instance is risky — if the instance is compromised, the keys can be stolen."
+        },
+        "D": {
+          "description": "Make the S3 bucket publicly accessible",
+          "reason": "Opening the bucket to the public exposes all objects to anyone on the internet, not just the EC2 instance."
+        }
+      },
+      "Tips": "Any option involving hardcoding, static keys, or public access is always wrong for security questions. IAM Role on EC2 is the only option with no long-term credentials stored anywhere."
+    },
+    {
+      "id": 6,
+      "questionText": "Which EC2 instance type family is optimized for compute-intensive workloads such as batch processing and scientific modeling?",
+      "options": {
+        "A": "T-series (e.g., t3.micro)",
+        "B": "R-series (e.g., r6i.large)",
+        "C": "C-series (e.g., c6i.large)",
+        "D": "I-series (e.g., i3.large)"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "T-series (e.g., t3.micro)",
+          "reason": "Burstable general-purpose instances designed for workloads with low baseline CPU usage that occasionally spike."
+        },
+        "B": {
+          "description": "R-series (e.g., r6i.large)",
+          "reason": "Memory-optimized instances designed for workloads that require large amounts of RAM, such as in-memory databases."
+        },
+        "C": {
+          "description": "C-series (e.g., c6i.large)",
+          "reason": "Compute-optimized instances with a high ratio of vCPUs to memory, ideal for batch processing, scientific computing, and high-performance web servers."
+        },
+        "D": {
+          "description": "I-series (e.g., i3.large)",
+          "reason": "Storage-optimized instances with high-speed NVMe SSDs, designed for workloads that need very high I/O throughput."
+        }
+      },
+      "Tips": "Match the letter to the function: C = Compute, R = RAM/Memory, T = burstable (cheap), I = I/O storage. 'Compute-intensive' maps directly to the C-series."
+    },
+    {
+      "id": 7,
+      "questionText": "What is an IAM Policy?",
+      "options": {
+        "A": "A physical data center security rule",
+        "B": "A JSON document that defines permissions granted to an IAM entity",
+        "C": "A billing rule that controls AWS spending limits",
+        "D": "A network firewall configuration"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "A physical data center security rule",
+          "reason": "Physical security at AWS data centers is managed by AWS infrastructure teams, not IAM."
+        },
+        "B": {
+          "description": "A JSON document that defines permissions granted to an IAM entity",
+          "reason": "IAM Policies are structured JSON documents that specify which actions are allowed or denied on which resources and under what conditions."
+        },
+        "C": {
+          "description": "A billing rule that controls AWS spending limits",
+          "reason": "Billing controls are managed through AWS Budgets and Cost Management, not IAM."
+        },
+        "D": {
+          "description": "A network firewall configuration",
+          "reason": "Network-level controls are handled by Security Groups and Network ACLs, not IAM."
+        }
+      },
+      "Tips": "IAM policies are the permission layer, not a network or billing tool. Eliminate the three non-IAM concepts (firewall, billing, physical security). The remaining JSON document definition is the answer."
+    },
+    {
+      "id": 8,
+      "questionText": "Which EC2 feature allows you to run a script automatically when an instance first launches?",
+      "options": {
+        "A": "EC2 Launch Template",
+        "B": "EC2 User Data",
+        "C": "EC2 Metadata",
+        "D": "EC2 Snapshot"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "EC2 Launch Template",
+          "reason": "A reusable configuration template for launching EC2 instances (specifying AMI, instance type, security groups, etc.). It does not execute scripts by itself, though it can include a User Data field."
+        },
+        "B": {
+          "description": "EC2 User Data",
+          "reason": "A script (bash, PowerShell, etc.) that runs automatically as root/administrator the first time an EC2 instance boots. Commonly used to install software and configure the environment."
+        },
+        "C": {
+          "description": "EC2 Metadata",
+          "reason": "A service accessible from within the instance at `169.254.169.254` that provides information about the instance itself (instance ID, region, IAM role, etc.). It does not run scripts."
+        },
+        "D": {
+          "description": "EC2 Snapshot",
+          "reason": "A point-in-time backup of an EBS volume. It has nothing to do with launching or configuring instances."
+        }
+      },
+      "Tips": "User Data runs scripts at first boot. Metadata *reads* info. Snapshots *back up* disks. Launch Templates define config but don't *run* scripts themselves. Only User Data executes code."
+    },
+    {
+      "id": 9,
+      "questionText": "What is the default behavior for a newly created IAM User with no policies attached?",
+      "options": {
+        "A": "The user has full administrator access",
+        "B": "The user has read-only access to all services",
+        "C": "The user has no permissions (implicit deny)",
+        "D": "The user inherits the root account's permissions"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "The user has full administrator access",
+          "reason": "Administrator access is a privilege that must be explicitly granted, typically via the `AdministratorAccess` managed policy."
+        },
+        "B": {
+          "description": "The user has read-only access to all services",
+          "reason": "Read-only access is also an explicit grant, not a default."
+        },
+        "C": {
+          "description": "The user has no permissions (implicit deny)",
+          "reason": "AWS IAM uses a default-deny model. Unless a policy explicitly allows an action, it is denied. A user with no attached policies cannot perform any actions."
+        },
+        "D": {
+          "description": "The user inherits the root account's permissions",
+          "reason": "IAM Users are completely separate identities from the root account. There is no automatic inheritance of root permissions."
+        }
+      },
+      "Tips": "AWS is default-deny. A new user with no policies is like a blank slate — no permissions at all. Eliminate any option suggesting inherited or automatic access."
+    },
+    {
+      "id": 10,
+      "questionText": "Which of the following is a valid EC2 instance state?",
+      "options": {
+        "A": "Archived",
+        "B": "Suspended",
+        "C": "Hibernating",
+        "D": "Stopped"
+      },
+      "correctAnswer": "D",
+      "explanations": {
+        "A": {
+          "description": "Archived",
+          "reason": "Not a valid EC2 instance state. Archiving is a concept used in Amazon S3 Glacier for storage, not for EC2 instances."
+        },
+        "B": {
+          "description": "Suspended",
+          "reason": "Not a valid EC2 state. Suspension is used in other contexts (e.g., AWS account suspension), but not for individual EC2 instances."
+        },
+        "C": {
+          "description": "Hibernating",
+          "reason": "While EC2 Hibernation is a feature, \"Hibernating\" is a transitional action, not a named resting state. The instance enters a stopped state after hibernation completes."
+        },
+        "D": {
+          "description": "Stopped",
+          "reason": "A fully valid EC2 instance state. A stopped instance is not running, is not billed for compute, but retains its EBS volumes and configuration. It can be restarted at any time."
+        }
+      },
+      "Tips": "Know the 5 EC2 states: Pending → Running → Stopping → Stopped → Terminated. 'Archived', 'Suspended', and 'Hibernating' are not named EC2 states. Stopped is the valid resting state."
+    }
+  ]
+}

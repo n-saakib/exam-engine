@@ -1,0 +1,307 @@
+{
+  "setId": "a0a34b32-5188-4502-984f-675e55798362",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Hard Set 1",
+  "difficulty": "Hard",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company has the following setup: An SCP at the AWS Organizations root denies ec2:TerminateInstances. An IAM policy attached to a developer's user allows ec2:*. A resource-based policy on a specific instance allows the developer's ARN to perform ec2:TerminateInstances. What happens when the developer tries to terminate that specific instance?",
+      "options": {
+        "A": "The termination succeeds because the resource-based policy grants explicit access",
+        "B": "The termination succeeds because the identity policy allows ec2:*",
+        "C": "The termination is denied because the SCP overrides all other policies",
+        "D": "The termination succeeds because the Allow policies outnumber the Deny"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Resource-based policy grants explicit access, so it succeeds",
+          "reason": "Resource-based policies on EC2 instances do not exist in the traditional sense — EC2 doesn't support instance-level resource-based policies like S3 does. But even in services where they do exist, SCPs sit above all account-level policies in the evaluation hierarchy."
+        },
+        "B": {
+          "description": "Identity policy allows ec2:*, so it succeeds",
+          "reason": "The identity policy's allow is irrelevant when an SCP explicitly denies the action. SCPs are evaluated before identity policies in the policy evaluation chain."
+        },
+        "C": {
+          "description": "The termination is denied because the SCP overrides all other policies",
+          "reason": "AWS policy evaluation order: (1) SCPs, (2) Resource-based policies, (3) Identity-based policies, (4) Permission Boundaries, (5) Session policies. An SCP Deny is applied first and terminates evaluation — no other policy layer can reverse it. This is the fundamental purpose of SCPs: they are immovable guardrails."
+        },
+        "D": {
+          "description": "Allow policies outnumber the Deny, so it succeeds",
+          "reason": "IAM policy evaluation is not a voting system. One explicit Deny is sufficient to block access regardless of how many Allows exist."
+        }
+      },
+      "Tips": "SCP is evaluated first in the policy hierarchy. No other policy type — identity, resource-based, permission boundary — can override an SCP Deny. The number of Allows is irrelevant. Memorize: SCP Deny = game over, full stop."
+    },
+    {
+      "id": 2,
+      "questionText": "You have an EC2 Auto Scaling Group with a desired capacity of 4, min 2, max 8, using a mixed instances policy with On-Demand base of 2 and 50% On-Demand above the base. A scale-out event increases desired capacity to 6. How many Spot Instances are launched?",
+      "options": {
+        "A": "0 — all new instances are On-Demand",
+        "B": "1 — one Spot and one On-Demand for the 2 new instances",
+        "C": "2 — both new instances are Spot",
+        "D": "4 — all instances are replaced with an equal Spot/On-Demand split"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "0 — all new instances are On-Demand",
+          "reason": "This ignores the mixed instances policy. The 50% On-Demand above the base means only half of the above-base instances are On-Demand."
+        },
+        "B": {
+          "description": "1 Spot and 1 On-Demand for the 2 new instances",
+          "reason": "The base is 2 On-Demand (already satisfied). The scale-out adds 2 new instances above the base. The policy specifies 50% On-Demand above the base, meaning 1 of the 2 new instances is On-Demand and the other is Spot. Result: 3 On-Demand, 1 Spot (existing) + 1 On-Demand, 1 Spot (new) = but from the 2 newly launched, 1 is Spot."
+        },
+        "C": {
+          "description": "2 — both new instances are Spot",
+          "reason": "This would only be correct if the On-Demand percentage above the base were 0%. The policy says 50% On-Demand above base."
+        },
+        "D": {
+          "description": "4 — all instances replaced with equal Spot/On-Demand split",
+          "reason": "Scale-out events only launch new instances to fill the gap; they do not replace existing healthy instances. The existing 4 instances are untouched."
+        }
+      },
+      "Tips": "On-Demand base = 2 (already running). Scale adds 2 new instances above the base. 50% On-Demand above base = 1 On-Demand + 1 Spot from the new 2. Calculate: new instances × (1 - On-Demand%) = Spot count. 2 × 50% = 1 Spot."
+    },
+    {
+      "id": 3,
+      "questionText": "A Lambda function is invoked by API Gateway and needs to write to an RDS instance in a private subnet. The Lambda function also needs to call an external third-party HTTPS API on the internet. Which VPC and IAM configuration is required?",
+      "options": {
+        "A": "Place Lambda in the VPC with a NAT Gateway for internet access; attach an execution role with rds-db:connect permission",
+        "B": "Keep Lambda outside the VPC for internet access; use a VPC Endpoint for RDS",
+        "C": "Place Lambda in the VPC with a NAT Gateway for internet access; use a Security Group allowing outbound 443; attach an execution role with VPC ENI permissions and rds-db:connect",
+        "D": "Place Lambda in the VPC; use an Internet Gateway for both RDS and external API access"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Lambda in VPC with NAT Gateway; execution role with rds-db:connect only",
+          "reason": "This is close but incomplete. Lambda in a VPC requires permissions to create and manage Elastic Network Interfaces (ENIs). The execution role must include `ec2:CreateNetworkInterface`, `ec2:DescribeNetworkInterfaces`, and `ec2:DeleteNetworkInterface` — or equivalently attach the `AWSLambdaVPCAccessExecutionRole` managed policy."
+        },
+        "B": {
+          "description": "Keep Lambda outside the VPC; use a VPC Endpoint for RDS",
+          "reason": "RDS does not support VPC Endpoints — it is a VPC-native service only accessible via private IP within the VPC or over a VPN/Direct Connect. Lambda outside the VPC cannot access private RDS instances."
+        },
+        "C": {
+          "description": "Lambda in VPC with NAT Gateway; SG allowing outbound 443; execution role with VPC ENI permissions and rds-db:connect",
+          "reason": "Placing Lambda in the same VPC as RDS enables private connectivity. The NAT Gateway allows Lambda to reach the external HTTPS API without exposing Lambda directly. The Security Group must allow outbound 443. The execution role needs ENI management permissions for VPC attachment and rds-db:connect for IAM database authentication (if used) or appropriate RDS security group access."
+        },
+        "D": {
+          "description": "Lambda in VPC; Internet Gateway for both RDS and external API",
+          "reason": "An Internet Gateway provides internet access for resources with public IPs. Lambda in a VPC has only a private IP. For Lambda to reach the internet, it needs a NAT Gateway, not a direct IGW route. Additionally, routing internal RDS traffic through an IGW is not how VPC-internal communication works."
+        }
+      },
+      "Tips": "Lambda in VPC needs: (1) NAT Gateway for internet egress, (2) VPC Security Group allowing outbound 443, (3) execution role with ENI management permissions (AWSLambdaVPCAccessExecutionRole). Missing any one of these breaks the setup. Option A is missing the ENI permissions."
+    },
+    {
+      "id": 4,
+      "questionText": "You are reviewing an IAM policy and see the following condition block:",
+      "options": {
+        "A": "The action is allowed only if the request is from eu-west-1 OR MFA is present",
+        "B": "The action is allowed only if the request is to eu-west-1 AND the user authenticated with MFA",
+        "C": "The action is denied if the request comes from any region other than eu-west-1",
+        "D": "MFA is required only for users whose home region is eu-west-1"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The action is allowed if the request is from eu-west-1 OR MFA is present",
+          "reason": "Multiple condition operators at the same level in IAM are evaluated with AND logic, not OR. OR logic requires using separate condition blocks or the `ForAnyValue` set operator."
+        },
+        "B": {
+          "description": "The action is allowed only if request is to eu-west-1 AND MFA is present",
+          "reason": "In IAM policy conditions, when multiple condition operators (StringEquals, Bool) appear at the same level within the same Effect block, they are all evaluated and must ALL be true for the condition to pass. Both `aws:RequestedRegion = eu-west-1` AND `aws:MultiFactorAuthPresent = true` must be satisfied simultaneously."
+        },
+        "C": {
+          "description": "The action is denied if the request is from any region other than eu-west-1",
+          "reason": "This describes the effect of a Deny with the inverse condition, not an Allow with a specific condition. The policy shown uses an Allow effect — it only permits the action when both conditions are met; it does not explicitly deny other scenarios (the implicit deny handles that)."
+        },
+        "D": {
+          "description": "MFA is required only for users whose home region is eu-west-1",
+          "reason": "IAM does not have a concept of a user's \"home region.\" The `aws:RequestedRegion` condition key applies to the region targeted by the API call, not the user's location. Both conditions apply to the same request simultaneously."
+        }
+      },
+      "Tips": "Multiple condition keys in the same condition block = AND logic. If you need OR, use separate condition blocks or ForAnyValue operators. Both conditions must be true simultaneously for the Allow to apply."
+    },
+    {
+      "id": 5,
+      "questionText": "A company needs to run a stateful application that cannot tolerate interruption. They want to maximize cost savings while ensuring the instance keeps running. Reserved Instances are too expensive upfront. Which combination is most cost-effective while meeting the availability requirement?",
+      "options": {
+        "A": "Spot Instances with Spot Instance interruption notices and automated checkpointing",
+        "B": "On-Demand Instances with a Compute Savings Plan",
+        "C": "Spot Instances with Capacity Reservations in the same AZ",
+        "D": "Scheduled Reserved Instances running 24/7"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Spot Instances with checkpointing",
+          "reason": "Spot Instances can be interrupted with only a 2-minute warning. Even with checkpointing, a stateful application that \"cannot tolerate interruption\" fundamentally cannot use Spot. Checkpointing helps resume after interruption but does not prevent it."
+        },
+        "B": {
+          "description": "On-Demand Instances with a Compute Savings Plan",
+          "reason": "Compute Savings Plans offer up to 66% discount over On-Demand with no upfront payment required (hourly commitment). They are flexible across instance type, region, OS, and tenancy. They provide guaranteed availability (On-Demand) while achieving significant cost savings — the best combination when upfront payment is a constraint."
+        },
+        "C": {
+          "description": "Spot Instances with Capacity Reservations",
+          "reason": "Capacity Reservations reserve On-Demand capacity in a specific AZ at On-Demand pricing, but do not inherently prevent Spot interruptions. A Spot Instance is not the same as a Capacity Reservation — you cannot convert Spot to On-Demand via a reservation at runtime."
+        },
+        "D": {
+          "description": "Scheduled Reserved Instances running 24/7",
+          "reason": "Scheduled RIs were designed for recurring windows and are a legacy option. They are not available for all instance types and regions, and a Scheduled RI covering 24/7 would just be a standard Reserved Instance, making this option circular and incorrect."
+        }
+      },
+      "Tips": "Stateful + cannot be interrupted eliminates Spot (always). Too expensive upfront eliminates Standard RIs. Savings Plans require no upfront payment, provide On-Demand-level availability, and offer up to 66% discount — best fit for availability + savings without upfront commitment."
+    },
+    {
+      "id": 6,
+      "questionText": "An EC2 instance has two IAM role policies attached. Policy 1 allows s3:PutObject on arn:aws:s3:::bucket-a/*. Policy 2 allows s3:PutObject on arn:aws:s3:::bucket-b/*. A Permission Boundary allows s3:PutObject on arn:aws:s3:::bucket-a/* only. The instance attempts to PutObject into bucket-b. What is the result?",
+      "options": {
+        "A": "The action succeeds because Policy 2 explicitly allows it",
+        "B": "The action is denied because the Permission Boundary restricts effective permissions to bucket-a only",
+        "C": "The action succeeds because Permission Boundaries only apply to IAM Users, not roles",
+        "D": "The action fails because two policies cannot reference different buckets simultaneously"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The action succeeds because Policy 2 explicitly allows it",
+          "reason": "Policy 2 does grant the permission at the identity policy level, but Permission Boundaries cap the maximum permissions. The boundary does not include bucket-b, so even though the identity policy allows it, the effective permission does not."
+        },
+        "B": {
+          "description": "The action is denied because the Permission Boundary restricts effective permissions to bucket-a",
+          "reason": "Effective permissions = {identity policies} ∩ {Permission Boundary}. Identity policies allow bucket-a and bucket-b. The Permission Boundary allows only bucket-a. The intersection is bucket-a only. Therefore, bucket-b access is outside the effective permission set and is denied."
+        },
+        "C": {
+          "description": "Permission Boundaries only apply to IAM Users, not roles",
+          "reason": "Permission Boundaries apply to both IAM Users and IAM Roles (customer-managed). They do not apply to service-linked roles. EC2 instance profiles attach IAM Roles, which are subject to Permission Boundaries."
+        },
+        "D": {
+          "description": "Two policies cannot reference different buckets simultaneously",
+          "reason": "IAM policies routinely reference multiple different resources. There is no restriction preventing two policies from covering different S3 buckets. Policy aggregation is a fundamental IAM design pattern."
+        }
+      },
+      "Tips": "Effective permissions = Identity Policy ∩ Permission Boundary. Policy 2 allows bucket-b, but the boundary only allows bucket-a. Intersection = bucket-a only. Permission Boundaries apply to Roles too, not just Users. bucket-b falls outside the effective set."
+    },
+    {
+      "id": 7,
+      "questionText": "A security team needs to audit all API calls made across 12 AWS accounts in an organization, including management events and S3 data events, and store the logs centrally. Which architecture is most appropriate?",
+      "options": {
+        "A": "Enable CloudTrail in each account separately and export logs to separate S3 buckets",
+        "B": "Create an Organization-level CloudTrail trail from the management account that logs all accounts, delivers to a central S3 bucket in the management account with bucket policies preventing log deletion",
+        "C": "Use AWS Config in each account and aggregate findings to a central account",
+        "D": "Deploy a CloudWatch agent on all EC2 instances and stream logs to a central log group"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Enable CloudTrail in each account separately with separate S3 buckets",
+          "reason": "Managing 12 separate trails and 12 separate buckets creates operational overhead, increases the chance of misconfiguration, and makes cross-account analysis harder. Some accounts may disable their trail."
+        },
+        "B": {
+          "description": "Organization-level CloudTrail trail from the management account, central S3 bucket with deletion-protection policies",
+          "reason": "AWS CloudTrail supports organization-level trails that automatically apply to all existing and future member accounts. The trail can be configured to log S3 data events globally. Logs are delivered to a central S3 bucket in the management account. A bucket policy preventing deletion (or using Object Lock) ensures tamper-resistant audit logs. This is the AWS Well-Architected recommendation."
+        },
+        "C": {
+          "description": "Use AWS Config in each account, aggregate to central account",
+          "reason": "AWS Config records resource configuration changes and compliance, not API call history. It is complementary to CloudTrail but does not replace it for API audit logging."
+        },
+        "D": {
+          "description": "Deploy CloudWatch agent on all EC2 instances",
+          "reason": "The CloudWatch agent collects OS-level metrics and logs from within instances. It cannot capture account-level API calls made by all services and users. CloudTrail is the correct service for account-level API auditing."
+        }
+      },
+      "Tips": "Organization CloudTrail = one trail covers all accounts automatically, including future ones. Per-account trails are fragile. Config tracks configuration state, not API history. CloudWatch agents are instance-level, not account-level. Centralized S3 + org-level trail is the Well-Architected answer."
+    },
+    {
+      "id": 8,
+      "questionText": "An application on EC2 uses IMDSv1. A security review mandates that IMDSv2 (token-required) must be enforced on all instances. Which approach enforces this for ALL instances across the account, including existing ones?",
+      "options": {
+        "A": "Terminate all instances and relaunch them — IMDSv2 is only configurable at launch time",
+        "B": "Use an IAM Policy with a condition that requires IMDSv2 on ec2:RunInstances for new instances only",
+        "C": "Apply an AWS Config rule to detect non-compliant instances combined with a Lambda remediation that calls ModifyInstanceMetadataOptions to require tokens on existing instances; enforce IMDSv2 in the Launch Template for new ones",
+        "D": "Update the Security Group to block HTTP on port 80, which disables IMDSv1"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Terminate all instances and relaunch — IMDSv2 is only configurable at launch time",
+          "reason": "IMDSv2 can be enforced on running instances via the `ModifyInstanceMetadataOptions` API call without stopping or terminating the instance. Terminating all instances would cause significant downtime and is not accurate."
+        },
+        "B": {
+          "description": "IAM policy with condition requiring IMDSv2 on ec2:RunInstances for new instances only",
+          "reason": "You can add a condition on `ec2:RunInstances` to require `ec2:MetadataHttpTokens = required`, which enforces IMDSv2 for new launches. However, this only covers new instances and does not remediate the many existing instances that are already running with IMDSv1."
+        },
+        "C": {
+          "description": "Config rule + Lambda remediation for existing instances; Launch Template enforcement for new ones",
+          "reason": "This two-pronged approach covers both populations: (1) The Config rule detects all existing EC2 instances where `HttpTokens != required` and triggers a Lambda function that calls `ModifyInstanceMetadataOptions` to set `HttpTokens=required` without any instance restart. (2) Enforcing IMDSv2 in the Launch Template ensures all future instances are compliant from birth."
+        },
+        "D": {
+          "description": "Update the Security Group to block HTTP on port 80 to disable IMDSv1",
+          "reason": "The IMDS endpoint (`169.254.169.254`) is accessed within the instance over a link-local address, not through a Security Group. Security Groups only control VPC-level network traffic. Blocking port 80 in a Security Group would not disable IMDS; it would only block external HTTP traffic to the instance."
+        }
+      },
+      "Tips": "IMDSv2 can be changed on *running* instances via ModifyInstanceMetadataOptions — no restart needed. IAM conditions at launch only cover new instances. Security Groups can't block the link-local IMDS address. The two-pronged approach (Config+Lambda for existing, Launch Template for new) is comprehensive."
+    },
+    {
+      "id": 9,
+      "questionText": "A multi-tier application runs on EC2. The web tier in a public subnet must reach the app tier in a private subnet. The app tier must reach an RDS database in an isolated subnet. Which Security Group configuration correctly implements least privilege?",
+      "options": {
+        "A": "Allow all traffic (0.0.0.0/0) on all tiers for simplicity",
+        "B": "Web SG allows inbound 443 from 0.0.0.0/0; App SG allows inbound on app port from Web SG ID; DB SG allows inbound 3306 from App SG ID",
+        "C": "Web SG allows all inbound; App SG allows inbound from Web SG CIDR; DB SG allows inbound from App SG CIDR",
+        "D": "All three tiers share a single Security Group to reduce management overhead"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Allow all traffic (0.0.0.0/0) on all tiers",
+          "reason": "Opens every port on every tier to the entire internet. Completely eliminates the security benefit of a multi-tier architecture and violates least privilege fundamentally."
+        },
+        "B": {
+          "description": "Web SG: inbound 443 from internet; App SG: inbound from Web SG ID; DB SG: inbound 3306 from App SG ID",
+          "reason": "Referencing Security Group IDs (rather than CIDR ranges) is the AWS best practice for inter-tier rules. It means: only instances in the Web SG can reach the App tier, and only instances in the App SG can reach the DB tier. This creates precise, dynamic rules that automatically accommodate scaling without needing CIDR updates."
+        },
+        "C": {
+          "description": "Web SG allows all inbound; App SG allows from Web CIDR; DB SG allows from App CIDR",
+          "reason": "Two problems: (1) Allowing all inbound on the web tier exposes all ports. (2) Using CIDR-based rules instead of SG ID references means any IP in the subnet CIDR can reach the app tier, not just web tier instances. CIDR rules don't scale cleanly and are less precise."
+        },
+        "D": {
+          "description": "All three tiers share a single Security Group",
+          "reason": "Shared Security Groups mean web, app, and DB instances all have the same inbound and outbound rules. The DB tier would have the same internet-facing rules as the web tier, completely defeating the purpose of network segmentation."
+        }
+      },
+      "Tips": "Multi-tier Security Group best practice: reference Security Group IDs (not CIDRs) for inter-tier rules. SG ID rules are dynamic (scale automatically) and precise (only instances in that SG, not any IP in the subnet). Each tier only opens the exact port needed from the exact upstream SG."
+    },
+    {
+      "id": 10,
+      "questionText": "A company runs EC2 instances across three AWS accounts (Dev, Staging, Prod) in an AWS Organization. An SCP attached to the Prod OU denies ec2:RunInstances unless the tag \"Environment\" equals \"Production\". A Prod account administrator with AdministratorAccess tries to launch an instance without this tag. What is the outcome?",
+      "options": {
+        "A": "The launch succeeds because AdministratorAccess overrides SCPs",
+        "B": "The launch is denied because SCPs are evaluated before identity policies and cannot be overridden by account-level permissions",
+        "C": "The launch succeeds because SCPs only apply to IAM Users, not account administrators",
+        "D": "The launch succeeds because the SCP only restricts child OUs, not the root OU"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The launch succeeds because AdministratorAccess overrides SCPs",
+          "reason": "AdministratorAccess is an IAM policy granting full access within the account. However, SCPs are not IAM policies — they are organization-level guardrails applied from above. AdministratorAccess explicitly cannot override SCPs."
+        },
+        "B": {
+          "description": "The launch is denied because SCPs are evaluated before identity policies",
+          "reason": "SCPs define the maximum permissions available to any principal in a member account, including the account's own root user (with limited exceptions). Even AdministratorAccess is bounded by the SCP. The condition in the SCP (`StringEquals: aws:RequestTag/Environment = Production`) means any launch without that exact tag is denied at the organization layer, before IAM even evaluates the identity policy."
+        },
+        "C": {
+          "description": "SCPs only apply to IAM Users, not account administrators",
+          "reason": "SCPs apply to all principals in a member account — IAM Users, IAM Roles, and even the account root user (for most actions). They do not discriminate between \"administrators\" and other users."
+        },
+        "D": {
+          "description": "The SCP only restricts child OUs, not the root OU",
+          "reason": "SCPs attached to an OU apply to all accounts within that OU and their child OUs. The question states the SCP is on the Prod OU — the Prod account is in that OU, so it is directly affected. There is no \"only restricts children\" behavior; the OU members are also subject to the SCP."
+        }
+      },
+      "Tips": "AdministratorAccess is an IAM policy — it lives below SCPs in the evaluation hierarchy. SCPs define the maximum permissions available in a member account. Even the account root user (for most actions) is constrained by SCPs. AdministratorAccess cannot override SCPs — this is a very common exam trap."
+    }
+  ]
+}

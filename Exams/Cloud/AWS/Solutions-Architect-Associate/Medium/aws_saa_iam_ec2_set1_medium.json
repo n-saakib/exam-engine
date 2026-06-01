@@ -1,0 +1,307 @@
+{
+  "setId": "ef6f51b6-5ce3-4555-88ba-91c69ac51b38",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Medium Set 1",
+  "difficulty": "Medium",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company has multiple developers who need read-only access to S3 and full access to EC2. New developers join frequently. What is the most operationally efficient IAM setup?",
+      "options": {
+        "A": "Create individual IAM Users and attach policies directly to each user",
+        "B": "Create an IAM Group with the required policies and add all developers to the group",
+        "C": "Create a single IAM User and share the credentials among all developers",
+        "D": "Create an IAM Role and have each developer assume it every time they need access"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Attach policies directly to each user",
+          "reason": "Direct policy attachment means you must repeat the same action for every new hire and update every user individually when policies change."
+        },
+        "B": {
+          "description": "Create an IAM Group with required policies and add developers to it",
+          "reason": "Groups let you define permissions once. New developers inherit the correct permissions the moment they are added to the group. Changes to permissions apply instantly to everyone in the group."
+        },
+        "C": {
+          "description": "Create a single IAM User and share credentials",
+          "reason": "Shared credentials destroy accountability (CloudTrail can't distinguish who did what), violate the principle of least privilege, and create serious risk if the credentials are compromised."
+        },
+        "D": {
+          "description": "Create an IAM Role and have each developer assume it every time",
+          "reason": "Roles are the right mechanism for services and temporary access, not for the day-to-day identity of human developers who need persistent, predictable access."
+        }
+      },
+      "Tips": "When you see 'frequently joins' + 'multiple users' + 'same permissions', the answer is always IAM Groups. Sharing credentials is always wrong. Direct per-user attachment is operationally expensive. Role assumption for human day-to-day access is over-engineered."
+    },
+    {
+      "id": 2,
+      "questionText": "An application running on EC2 needs to call the DynamoDB API. The EC2 instance is in a private subnet with no internet access. Which solution allows the application to reach DynamoDB without routing traffic over the internet?",
+      "options": {
+        "A": "Attach an Elastic IP to the EC2 instance",
+        "B": "Create a NAT Gateway in the public subnet",
+        "C": "Create a VPC Endpoint (Gateway type) for DynamoDB",
+        "D": "Open port 443 on the Security Group"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Attach an Elastic IP to the EC2 instance",
+          "reason": "An Elastic IP is a public IP. Instances in a private subnet still cannot reach the internet without a route to an IGW, even with a public IP. Furthermore, assigning a public IP to a private instance is an unusual and insecure pattern."
+        },
+        "B": {
+          "description": "Create a NAT Gateway in a public subnet",
+          "reason": "A NAT Gateway would allow the private instance to reach DynamoDB via the internet, but the question specifically requires that traffic not traverse the internet. NAT Gateway also incurs data processing charges."
+        },
+        "C": {
+          "description": "Create a VPC Endpoint (Gateway type) for DynamoDB",
+          "reason": "Gateway VPC Endpoints for DynamoDB and S3 are free, route traffic entirely within the AWS network, require no internet access, and are implemented via a route table entry. The private subnet route table gets a route for DynamoDB's prefix list pointing to the endpoint."
+        },
+        "D": {
+          "description": "Open port 443 on the Security Group",
+          "reason": "DynamoDB API calls use HTTPS (port 443), and the Security Group does need to allow outbound 443. However, this alone does not solve the routing problem — you still need a path to reach DynamoDB that doesn't involve the internet."
+        }
+      },
+      "Tips": "No internet + need AWS service = VPC Endpoint. NAT Gateway routes traffic over the internet (violates requirement). Elastic IP needs an IGW. Opening port 443 on SG is necessary but not the routing solution. Gateway Endpoint for DynamoDB is free and stays within AWS network."
+    },
+    {
+      "id": 3,
+      "questionText": "A security audit finds that several IAM Users have not logged in for over 180 days. Which AWS tool helps identify these inactive users?",
+      "options": {
+        "A": "AWS CloudTrail",
+        "B": "AWS Config",
+        "C": "IAM Credential Report",
+        "D": "AWS Trusted Advisor"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "AWS CloudTrail",
+          "reason": "Records API call history across AWS services. While you could query CloudTrail logs for login events, it's not designed as a quick summary tool for credential age or last activity across all users."
+        },
+        "B": {
+          "description": "AWS Config",
+          "reason": "Tracks and evaluates resource configurations over time. It can detect compliance violations, but does not natively produce a per-user credential activity summary."
+        },
+        "C": {
+          "description": "IAM Credential Report",
+          "reason": "A downloadable CSV generated directly from the IAM console that lists all IAM Users and their credential details, including password last used, access key last used, and MFA status. Ideal for identifying dormant accounts."
+        },
+        "D": {
+          "description": "AWS Trusted Advisor",
+          "reason": "Provides best-practice recommendations across cost, performance, security, fault tolerance, and service limits. Its security checks include items like unused IAM credentials, but it is less detailed than the Credential Report for per-user analysis."
+        }
+      },
+      "Tips": "The question is about credential *activity* — who hasn't logged in. CloudTrail logs events but isn't a summary tool. Config tracks resource config. Trusted Advisor gives high-level hints. Credential Report is the only tool that generates a per-user activity CSV."
+    },
+    {
+      "id": 4,
+      "questionText": "You have a fleet of EC2 instances behind an Application Load Balancer. You need all instances to use the same software configuration. A new AMI is created with updated software. What is the best way to roll out the new AMI with minimal manual effort?",
+      "options": {
+        "A": "Stop each instance, change its AMI, and restart it one by one",
+        "B": "Update the Launch Template with the new AMI and perform an instance refresh on the Auto Scaling Group",
+        "C": "Terminate all instances and manually re-launch them with the new AMI",
+        "D": "Use EC2 User Data to install the new software on running instances"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Stop each instance, change its AMI, and restart one by one",
+          "reason": "Manual, slow, error-prone, and does not leverage the automation capabilities of Auto Scaling. Causes unnecessary downtime for each instance."
+        },
+        "B": {
+          "description": "Update the Launch Template with the new AMI and perform an instance refresh",
+          "reason": "Instance Refresh is a built-in ASG feature. It replaces instances in rolling batches, respects health checks, and can be configured with a minimum healthy percentage to ensure no downtime. The Launch Template version update feeds the new AMI to all future and refreshed instances."
+        },
+        "C": {
+          "description": "Terminate all instances and manually re-launch with the new AMI",
+          "reason": "Terminating all instances simultaneously causes a complete outage. Even if you immediately relaunch, there is a gap with no serving capacity."
+        },
+        "D": {
+          "description": "Use EC2 User Data to install software on running instances",
+          "reason": "User Data only runs at first boot. Even if you update the User Data script, it will not re-execute on already-running instances. You would need to run the script manually or via SSM Run Command on every instance."
+        }
+      },
+      "Tips": "Rolling out a new config to an existing fleet = Instance Refresh on the ASG after updating the Launch Template. Terminate-all causes downtime. Stop-and-change-one-by-one is manual. User Data doesn't re-run on existing instances."
+    },
+    {
+      "id": 5,
+      "questionText": "A Solutions Architect needs to ensure that no IAM User in the account can delete a specific S3 bucket, even if they have S3 full access. What is the most effective way to enforce this?",
+      "options": {
+        "A": "Apply a Service Control Policy (SCP) to deny S3 DeleteBucket for all users",
+        "B": "Add a Deny statement for s3:DeleteBucket in an IAM Permission Boundary on each user",
+        "C": "Attach a resource-based policy to the S3 bucket that explicitly denies s3:DeleteBucket for all principals",
+        "D": "Remove S3 full access from all IAM Users and replace with a custom policy"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Apply an SCP to deny S3 DeleteBucket",
+          "reason": "SCPs work in AWS Organizations to restrict entire member accounts. If this is a single-account setup, SCPs are not applicable. Even in multi-account setups, SCPs restrict what policies can grant, not what existing grants allow."
+        },
+        "B": {
+          "description": "Add a Deny in an IAM Permission Boundary on each user",
+          "reason": "Permission Boundaries must be individually attached to each user. They don't apply retroactively to existing users unless explicitly set, and adding them to every user is operationally fragile."
+        },
+        "C": {
+          "description": "Attach a resource-based policy with explicit Deny s3:DeleteBucket for all principals",
+          "reason": "A bucket policy with `\"Principal\": \"*\"` and an explicit `Deny` on `s3:DeleteBucket` applies to everyone who accesses that bucket, regardless of their identity policies. Explicit Denies always win in IAM policy evaluation."
+        },
+        "D": {
+          "description": "Remove S3 full access and replace with a custom policy",
+          "reason": "Restricting everyone's existing permissions is disruptive and may break other workflows. You would need to modify every user and role that currently has S3 full access."
+        }
+      },
+      "Tips": "To protect a specific resource from all principals, use a resource-based policy (bucket policy) with an explicit Deny. SCPs need Organizations. Permission Boundaries need per-user attachment. Restricting everyone's permissions is disruptive. The bucket policy Deny is the most targeted and durable control."
+    },
+    {
+      "id": 6,
+      "questionText": "An EC2 instance in a public subnet cannot reach the internet despite having a public IP. The Internet Gateway is attached to the VPC. What is the most likely cause?",
+      "options": {
+        "A": "The EC2 instance does not have an IAM Role attached",
+        "B": "The subnet's route table does not have a route pointing to the Internet Gateway",
+        "C": "The EC2 instance's EBS volume is full",
+        "D": "The VPC does not have DNS resolution enabled"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The EC2 instance does not have an IAM Role attached",
+          "reason": "IAM Roles control API permissions for AWS service calls. They have no bearing on network-level internet connectivity."
+        },
+        "B": {
+          "description": "The subnet's route table does not have a route to the IGW",
+          "reason": "For a subnet to be truly \"public,\" its associated route table must have a route: `0.0.0.0/0 → igw-xxxxxxxx`. Without this route, outbound traffic has no path to the internet even if the IGW exists and the instance has a public IP."
+        },
+        "C": {
+          "description": "The EC2 instance's EBS volume is full",
+          "reason": "A full disk causes filesystem errors within the OS but does not affect network routing or internet connectivity."
+        },
+        "D": {
+          "description": "The VPC does not have DNS resolution enabled",
+          "reason": "DNS resolution affects name lookups. Disabling it means you cannot resolve domain names, but the underlying IP-level internet routing would still work. The symptom described is complete internet inaccessibility, not just DNS failure."
+        }
+      },
+      "Tips": "For EC2 internet connectivity, the checklist is: public IP + IGW + route table entry for 0.0.0.0/0 → IGW. The question says IGW is attached and the instance has a public IP — so the missing piece is the route table entry. IAM, EBS, and DNS are unrelated to routing."
+    },
+    {
+      "id": 7,
+      "questionText": "A company wants to allow users from their on-premises Active Directory to access AWS resources without creating separate IAM Users. Which solution achieves this?",
+      "options": {
+        "A": "Create IAM Users for each AD user and synchronize passwords manually",
+        "B": "Use AWS IAM Identity Center (SSO) with AD as the identity source, federated via SAML 2.0",
+        "C": "Share the AWS root account credentials with the AD administrator",
+        "D": "Create a VPN connection between on-premises and AWS and use shared IAM credentials"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Create IAM Users and synchronize passwords manually",
+          "reason": "Manual synchronization is error-prone, insecure, and duplicates every identity. When AD users are offboarded, you must remember to also delete the IAM User — a common compliance failure."
+        },
+        "B": {
+          "description": "AWS IAM Identity Center with AD as the identity source via SAML 2.0",
+          "reason": "IAM Identity Center (formerly AWS SSO) integrates with on-premises Active Directory via AD Connector or AWS Managed Microsoft AD, using SAML 2.0 for federation. Users log in with their AD credentials, which are mapped to IAM Roles — no separate IAM Users required."
+        },
+        "C": {
+          "description": "Share the AWS root account credentials with the AD administrator",
+          "reason": "Sharing root credentials is one of the most dangerous things you can do in AWS. The root account has unlimited, unrevokable access."
+        },
+        "D": {
+          "description": "Create a VPN and use shared IAM credentials",
+          "reason": "A VPN extends network connectivity; it does not eliminate the need for IAM identities. Sharing credentials is still a security problem regardless of the network path."
+        }
+      },
+      "Tips": "On-premises AD + AWS without IAM Users = federation. SSO/IAM Identity Center with SAML 2.0 is the standard solution. Sharing root credentials is always wrong. VPN solves networking, not identity. Manual password sync defeats the purpose of central identity management."
+    },
+    {
+      "id": 8,
+      "questionText": "You need an EC2 instance that provides consistent, high baseline CPU performance for a sustained workload without burstable credits. Which instance family is most appropriate?",
+      "options": {
+        "A": "T3 (burstable)",
+        "B": "M6i (general purpose)",
+        "C": "T4g (burstable, Graviton)",
+        "D": "T3a (burstable, AMD)"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "T3 (burstable)",
+          "reason": "T-series instances have a baseline CPU level and earn/spend CPU credits. Under sustained load, they throttle once credits are exhausted (unless Unlimited mode is enabled at extra cost). Not suitable for sustained high CPU workloads."
+        },
+        "B": {
+          "description": "M6i (general purpose)",
+          "reason": "M-series instances provide a fixed, guaranteed vCPU performance at all times with no credit mechanism. The M6i uses Intel Ice Lake processors and provides consistent performance suitable for sustained workloads."
+        },
+        "C": {
+          "description": "T4g (burstable, Graviton)",
+          "reason": "Like T3, the T4g uses the burstable credit model. Being Graviton-based makes it cost-efficient for bursty workloads, not sustained CPU-heavy ones."
+        },
+        "D": {
+          "description": "T3a (burstable, AMD)",
+          "reason": "T3a uses AMD EPYC processors and is slightly cheaper than T3, but still uses the burstable credit model. Same limitation applies."
+        }
+      },
+      "Tips": "T-series = burstable (has 'credits'). M-series = general purpose with *fixed* CPU. For sustained high CPU, you need a non-burstable family. All T variants (T3, T3a, T4g) are burstable regardless of processor. M6i provides consistent, non-burstable performance."
+    },
+    {
+      "id": 9,
+      "questionText": "An IAM Policy contains both an explicit Allow for s3:GetObject and an explicit Deny for s3:GetObject on the same resource. What is the outcome when the user tries to call s3:GetObject?",
+      "options": {
+        "A": "The Allow takes precedence and the action succeeds",
+        "B": "The Deny takes precedence and the action is denied",
+        "C": "AWS evaluates both and randomly picks one",
+        "D": "An error is thrown indicating a policy conflict"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The Allow takes precedence",
+          "reason": "This is a common misconception. In AWS IAM, this is never the case when an explicit Deny is present."
+        },
+        "B": {
+          "description": "The Deny takes precedence and the action is denied",
+          "reason": "AWS IAM policy evaluation follows a strict hierarchy: (1) Start with implicit deny, (2) Evaluate all policies, (3) An explicit Deny always wins, regardless of any Allow. This is a fundamental rule with no exceptions (except for AWS Organizations SCPs when root is the principal)."
+        },
+        "C": {
+          "description": "AWS randomly picks one",
+          "reason": "AWS policy evaluation is deterministic, not random. There is a well-defined precedence hierarchy."
+        },
+        "D": {
+          "description": "An error is thrown indicating a policy conflict",
+          "reason": "IAM does not throw errors for conflicting Allow/Deny statements. It silently evaluates and applies the Deny."
+        }
+      },
+      "Tips": "This tests the core IAM rule: explicit Deny ALWAYS beats explicit Allow. No exceptions, no tie-breaking, no randomness. If you see both Allow and Deny on the same action/resource, the answer is always Deny wins."
+    },
+    {
+      "id": 10,
+      "questionText": "A company runs a web application on EC2 instances and wants to reduce costs for workloads that run every weekday from 8 AM to 6 PM. Which purchasing model is most cost-effective?",
+      "options": {
+        "A": "On-Demand Instances running 24/7",
+        "B": "Spot Instances with a defined schedule",
+        "C": "Scheduled Reserved Instances for weekday business hours",
+        "D": "Dedicated Hosts billed monthly"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "On-Demand Instances running 24/7",
+          "reason": "Running On-Demand 24/7 when the workload only runs ~50 hours/week (10 hours × 5 days) means paying for 168 hours but only using 50 — extremely wasteful."
+        },
+        "B": {
+          "description": "Spot Instances with a defined schedule",
+          "reason": "Spot Instances can be interrupted at any time. For a scheduled, predictable business workload that needs reliable availability during working hours, Spot is not dependable."
+        },
+        "C": {
+          "description": "Scheduled Reserved Instances for weekday business hours",
+          "reason": "Scheduled RIs let you reserve capacity for a recurring time window (e.g., Mon–Fri, 8AM–6PM UTC) at a discounted rate compared to On-Demand. You are billed only for the scheduled windows."
+        },
+        "D": {
+          "description": "Dedicated Hosts billed monthly",
+          "reason": "Dedicated Hosts are billed continuously regardless of whether instances are running on them, and at a premium price. They serve software licensing and compliance needs, not cost optimization for part-time workloads."
+        }
+      },
+      "Tips": "Part-time scheduled workload = Scheduled Reserved Instances. On-Demand 24/7 is wasteful. Spot is unreliable for required business hours. Dedicated Hosts are for compliance/licensing at premium cost. Scheduled RIs are the only option designed for recurring time windows."
+    }
+  ]
+}

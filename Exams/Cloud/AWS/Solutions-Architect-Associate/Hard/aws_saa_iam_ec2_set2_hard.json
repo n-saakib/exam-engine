@@ -1,0 +1,307 @@
+{
+  "setId": "5138c868-94fb-47e1-9b0b-b3844e439264",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Hard Set 2",
+  "difficulty": "Hard",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "An IAM Role for EC2 has an attached policy that allows ec2:DescribeInstances and s3:GetObject. A Permission Boundary on the role allows ec2:*, s3:*, and iam:*. A developer modifies the role to also add iam:CreateUser to the role's permission policy. Can the role now create IAM Users?",
+      "options": {
+        "A": "No — because the role's original permission policy did not include iam:CreateUser",
+        "B": "Yes — because the Permission Boundary allows iam:* and the new policy allows iam:CreateUser; effective permissions are the intersection, which includes iam:CreateUser",
+        "C": "No — EC2 instance roles can never have IAM permissions",
+        "D": "Yes — Permission Boundaries only restrict what users can grant to others, not what roles can do directly"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "No — the role's original policy didn't include iam:CreateUser",
+          "reason": "The original policy is irrelevant once it has been updated. IAM policies are evaluated at request time using the current state of all attached policies. The question states the developer has already added iam:CreateUser to the permission policy."
+        },
+        "B": {
+          "description": "Yes — Permission Boundary allows iam:* and policy now allows iam:CreateUser; effective permissions include it",
+          "reason": "Effective permissions = {identity policy} ∩ {Permission Boundary}. The updated identity policy includes iam:CreateUser. The Permission Boundary includes iam:*. The intersection includes iam:CreateUser. Therefore, the role can now create IAM Users."
+        },
+        "C": {
+          "description": "EC2 instance roles can never have IAM permissions",
+          "reason": "There is no such restriction. EC2 instance roles can have any IAM permission, including iam:* if the use case requires it (though granting IAM-management permissions to EC2 roles is a security risk that should be carefully considered)."
+        },
+        "D": {
+          "description": "Permission Boundaries only restrict what users can grant to others",
+          "reason": "This describes part of the \"privilege escalation prevention\" use case for boundaries, but it is not the definition. Permission Boundaries restrict the maximum effective permissions of the entity they are attached to, across all AWS actions."
+        }
+      },
+      "Tips": "Effective permissions = Identity Policy ∩ Permission Boundary. The boundary allows iam:*, and the updated identity policy allows iam:CreateUser. Both sides allow it → effective permission exists. The *original* policy content is irrelevant; evaluate the current state only."
+    },
+    {
+      "id": 2,
+      "questionText": "A company runs a stateless web application on a fleet of EC2 Spot Instances behind an ALB. They receive a Spot interruption notice. Which TWO mechanisms help maintain availability during interruption? (Select TWO answers that together form the best solution)",
+      "options": {
+        "A": "Enable ALB Connection Draining (Deregistration Delay) so in-flight requests complete before the instance is removed",
+        "B": "Use an Auto Scaling Group configured to replace interrupted Spot Instances using a diversified instance pool across multiple instance types and AZs",
+        "C": "Attach an Elastic IP to each Spot Instance so traffic is re-routed automatically",
+        "D": "Switch the Spot Instances to Reserved Instances when an interruption notice arrives"
+      },
+      "correctAnswer": "A and B",
+      "explanations": {
+        "A": {
+          "description": "ALB Connection Draining (Deregistration Delay) keeps in-flight requests alive during the 2-minute Spot interruption window before removing the instance from the target group.",
+          "reason": "Correct — gracefully drains active connections during the interruption window, preventing dropped requests for existing users."
+        },
+        "B": {
+          "description": "An ASG mixed instances policy across multiple instance types and AZs creates a diversified Spot pool so interruptions in one pool are covered by capacity in another.",
+          "reason": "Correct — pool diversification is the primary AWS-recommended strategy for resilient Spot fleets; replacements launch from unaffected pools automatically."
+        },
+        "C": {
+          "description": "An Elastic IP is a static public IP tied to a specific instance; when that instance is interrupted, the EIP becomes unassociated and does not redirect traffic elsewhere automatically.",
+          "reason": "Incorrect — Elastic IPs provide no automated failover; they cannot reroute traffic to a different instance on interruption."
+        },
+        "D": {
+          "description": "Reserved Instances are a billing commitment for On-Demand capacity, not a runtime instance type that can be swapped in during a Spot interruption.",
+          "reason": "Incorrect — there is no mechanism to convert a running Spot Instance to a Reserved Instance at runtime; this capability does not exist."
+        }
+      },
+      "Tips": "Two mechanisms: (1) Connection Draining handles the 2-minute window for in-flight requests gracefully. (2) Diversified ASG pool replaces interrupted instances from other Spot pools or falls back to On-Demand. Elastic IPs don't reroute automatically. You cannot convert running Spot to Reserved at runtime."
+    },
+    {
+      "id": 3,
+      "questionText": "You need to analyze why an IAM principal was denied an API call. CloudTrail shows the call was denied. Which CloudTrail field tells you which specific policy caused the denial?",
+      "options": {
+        "A": "requestParameters",
+        "B": "errorCode and errorMessage",
+        "C": "errorCode \"AccessDenied\" with errorMessage containing the policy evaluation details, and the additionalEventData field",
+        "D": "The \"policyDetails\" field in the CloudTrail event"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "requestParameters",
+          "reason": "Contains the parameters passed with the API call (e.g., which resource was targeted, what values were specified). It tells you what was attempted, not why it was denied."
+        },
+        "B": {
+          "description": "errorCode and errorMessage",
+          "reason": "The `errorCode` field will show \"AccessDenied\" or \"Client.UnauthorizedOperation\". The `errorMessage` often contains a human-readable explanation including which policy type caused the denial (e.g., \"with an explicit deny in a service control policy\"). This is the primary field to inspect for denial reasons."
+        },
+        "C": {
+          "description": "errorCode \"AccessDenied\" + errorMessage with policy evaluation context + additionalEventData",
+          "reason": "For explicit denials, the errorMessage contains encoded authorization details (which can be decoded with the `aws sts decode-authorization-message` command for some services). The `additionalEventData` field may contain encoded context. Together, these fields provide the most complete picture of which specific policy layer (SCP, Permission Boundary, identity policy, etc.) caused the denial."
+        },
+        "D": {
+          "description": "The \"policyDetails\" field in the CloudTrail event",
+          "reason": "There is no \"policyDetails\" field in CloudTrail events. This is a fabricated field name."
+        }
+      },
+      "Tips": "For denied API calls in CloudTrail: check errorCode (AccessDenied) + errorMessage (contains which policy type caused it). Some services also encode full authorization context in additionalEventData, decodable with decode-authorization-message. There is no 'policyDetails' field in CloudTrail."
+    },
+    {
+      "id": 4,
+      "questionText": "An EC2 instance running in us-east-1a has a gp3 EBS root volume. The AZ experiences an outage. You want to restore the instance in us-east-1b as quickly as possible. What is the minimum sequence of steps?",
+      "options": {
+        "A": "Wait for AZ recovery; EBS volumes automatically migrate to healthy AZs",
+        "B": "Create an EBS snapshot of the volume → Create a new EBS volume from the snapshot in us-east-1b → Launch a new EC2 instance in us-east-1b using the new volume as the root device",
+        "C": "Create an AMI from the instance → Copy the AMI to us-east-1b → Launch a new instance from the AMI in us-east-1b",
+        "D": "Detach the EBS volume from the failed AZ → Reattach it directly to an instance in us-east-1b"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Wait for AZ recovery — EBS volumes auto-migrate",
+          "reason": "EBS volumes are AZ-specific resources. They do not automatically migrate to another AZ during an outage. AZ recovery can take an indeterminate amount of time. Waiting is not a viable recovery approach when speed is required."
+        },
+        "B": {
+          "description": "Create an EBS snapshot → Create volume in us-east-1b → Launch new instance using it as root",
+          "reason": "This multi-step manual process works but is more complex and takes longer than creating an AMI. You cannot directly launch an EC2 instance by just specifying a raw EBS volume — you need an AMI that bundles the volume snapshot with instance metadata."
+        },
+        "C": {
+          "description": "Create an AMI from the instance → Copy AMI to us-east-1b → Launch from the AMI",
+          "reason": "AMIs bundle the root volume snapshot along with the instance configuration (architecture, virtualization type, kernel, etc.) needed to launch. Copying the AMI to another region or AZ's context and launching from it is the fastest path to a runnable replacement in us-east-1b. This is the standard EC2 disaster recovery procedure."
+        },
+        "D": {
+          "description": "Detach the EBS volume from failed AZ and reattach in us-east-1b",
+          "reason": "EBS volumes are strictly AZ-scoped. You cannot move or reattach an EBS volume from one AZ to another directly. During an AZ outage, the volume would not even be accessible."
+        }
+      },
+      "Tips": "EBS volumes are AZ-locked — you cannot move them directly. To restore in another AZ: create AMI (bundles snapshot + instance config) → launch in target AZ. Raw snapshot → new volume → launch is also possible but AMI creation is simpler for a complete instance restore. AZs don't auto-migrate EBS."
+    },
+    {
+      "id": 5,
+      "questionText": "A company's policy requires that all EC2 instances must be tagged with \"CostCenter\" and \"Owner\" at launch. If these tags are missing, the launch should fail. Which approach enforces this at scale, automatically, without relying on human review?",
+      "options": {
+        "A": "Train developers on the tagging policy and conduct monthly audits",
+        "B": "Use AWS Config with a rule to flag non-compliant instances after launch and notify the team",
+        "C": "Use an IAM policy with a condition that denies ec2:RunInstances if the required tag keys are not present in the request",
+        "D": "Create a Lambda function that checks for tags daily and terminates non-compliant instances"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Train developers and conduct monthly audits",
+          "reason": "Training and audits are detective and corrective controls, not preventive ones. Instances can still launch without tags; you find out about violations after the fact."
+        },
+        "B": {
+          "description": "AWS Config rule to flag non-compliant instances",
+          "reason": "Config rules detect non-compliance after the instance already exists. The instance launches successfully and then gets flagged. The requirement is that the launch should fail — a preventive control, not a detective one."
+        },
+        "C": {
+          "description": "IAM policy condition that denies ec2:RunInstances without required tags",
+          "reason": "An IAM Deny with `StringLike: aws:RequestTag/CostCenter: *` and `StringLike: aws:RequestTag/Owner: *` with `BoolIfExists: false` (inverted logic) prevents the API call from succeeding unless both tags are present in the launch request. This blocks the launch at the IAM evaluation layer before any resource is created."
+        },
+        "D": {
+          "description": "Lambda function that terminates non-compliant instances daily",
+          "reason": "Terminating instances after the fact causes disruption — the instance ran for up to 24 hours without the required tags, billing may have occurred, and the termination itself causes downtime. Preventive controls are always preferable to reactive ones for mandatory requirements."
+        }
+      },
+      "Tips": "Preventive vs. detective: the question asks for launch *failure* (preventive). Config = detective (post-launch). Lambda terminator = reactive (post-launch). Training = soft control. Only an IAM condition with Deny on ec2:RunInstances if tags are absent blocks at the API level before the instance is created."
+    },
+    {
+      "id": 6,
+      "questionText": "You are troubleshooting EC2 network performance. An instance using an older generation instance type (m4.large) shows high network latency under load. You migrate to an m6i.large. What two network features available on m6i but not m4 could explain the improvement?",
+      "options": {
+        "A": "Security Groups and NACLs — these are only supported on newer generation instances",
+        "B": "Elastic Network Adapter (ENA) with up to 12.5 Gbps bandwidth and EBS-optimized networking by default",
+        "C": "Enhanced Networking (ENA) with higher bandwidth, and support for Elastic Fabric Adapter (EFA) for HPC-grade latency",
+        "D": "Support for IPv6 and VPC Flow Logs, which reduce latency by optimizing packet routing"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Security Groups and NACLs only supported on newer instances",
+          "reason": "Security Groups and NACLs are available on all instance generations and all instance types without exception. This is factually incorrect."
+        },
+        "B": {
+          "description": "Elastic Network Adapter (ENA) with higher bandwidth and EBS-optimized networking by default",
+          "reason": "The m6i supports ENA with up to 12.5 Gbps network bandwidth (vs. m4's up to 1 Gbps on some sizes) and comes EBS-optimized by default with dedicated throughput to EBS (vs. m4 where EBS-optimized was an add-on option). These directly improve both network and storage I/O performance."
+        },
+        "C": {
+          "description": "ENA with higher bandwidth + Elastic Fabric Adapter (EFA) support",
+          "reason": "EFA (Elastic Fabric Adapter) is a specialized network interface for HPC and ML workloads requiring extremely low-latency inter-node communication. It is available on specific instance types (e.g., hpc6a, c5n, p4d) but is NOT a standard feature of m6i general-purpose instances and is not the explanation for general network performance improvement."
+        },
+        "D": {
+          "description": "Support for IPv6 and VPC Flow Logs, which reduce latency",
+          "reason": "IPv6 support and VPC Flow Logs are features of the VPC networking layer, not instance-specific. Flow Logs are a logging feature and have no impact on network latency. IPv6 dual-stack does not reduce latency."
+        }
+      },
+      "Tips": "m4 vs m6i key differences: ENA support (higher bandwidth on m6i), default EBS optimization (add-on on m4, included on m6i). EFA is only for HPC-specific instance types (c5n, p4d, hpc6a), not standard general-purpose instances. Security Groups and NACLs are universal."
+    },
+    {
+      "id": 7,
+      "questionText": "A Solutions Architect is designing a system where EC2 instances in an Auto Scaling Group should only be replaced when their underlying host hardware is degraded, not on a schedule. Which EC2 and Auto Scaling feature enables automatic replacement due to host-level failures only?",
+      "options": {
+        "A": "EC2 Auto Recovery — automatically recovers the instance on the same host",
+        "B": "Auto Scaling Health Checks using EC2 status checks — the ASG replaces instances that fail EC2 system or instance status checks",
+        "C": "Scheduled Scaling Actions set to check every 5 minutes",
+        "D": "CloudWatch alarms on CPUUtilization to trigger scale-in/out"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "EC2 Auto Recovery",
+          "reason": "EC2 Auto Recovery recovers the instance on the same or equivalent underlying hardware when a system status check fails. It preserves the instance ID, private IPs, and Elastic IPs. However, it is a single-instance feature configured per-instance via a CloudWatch alarm, not an ASG-native feature, and it recovers on the same hardware rather than truly replacing the instance."
+        },
+        "B": {
+          "description": "Auto Scaling Health Checks using EC2 status checks",
+          "reason": "ASGs can be configured to use EC2 status checks (in addition to ELB health checks). EC2 provides two status check types: (1) System Status Checks — detect issues with the underlying host hardware/network that AWS must fix. (2) Instance Status Checks — detect OS/software issues. When an ASG instance fails these checks, the ASG terminates and replaces it. This is automatic and hardware-failure-driven, not scheduled."
+        },
+        "C": {
+          "description": "Scheduled Scaling Actions checking every 5 minutes",
+          "reason": "Scheduled Scaling Actions adjust capacity at predefined times (e.g., scale up at 8am). They cannot detect hardware failures and do not trigger on-demand replacement. Checking \"every 5 minutes\" is not how Scheduled Scaling works."
+        },
+        "D": {
+          "description": "CloudWatch alarms on CPUUtilization",
+          "reason": "CPU utilization alarms trigger capacity scaling (more or fewer instances). They respond to load, not hardware failures. A failed instance would show 0% CPU, which might trigger scale-out but not targeted replacement of the failed instance."
+        }
+      },
+      "Tips": "EC2 Auto Recovery responds to *system* status check failures (host hardware). ASG health checks with EC2 status checks respond to both system and instance status failures and launch replacements. Auto Recovery recovers in-place on same AZ; ASG replaces with a new instance. ASG health checks are the right answer for 'hardware-failure-driven replacement'."
+    },
+    {
+      "id": 8,
+      "questionText": "An organization's AWS account has the following policies: (1) An SCP that allows only ec2:* and s3:*. (2) An IAM policy on a user that allows ec2:*, s3:*, and rds:*. (3) A Permission Boundary on the user that allows ec2:*, s3:*, and rds:*. The user attempts to call rds:DescribeDBInstances. What is the result?",
+      "options": {
+        "A": "Allowed — the IAM policy and Permission Boundary both allow rds:*",
+        "B": "Denied — the SCP allows only ec2:* and s3:*, so rds:* is implicitly denied at the organization level",
+        "C": "Allowed — Permission Boundaries take precedence over SCPs",
+        "D": "Denied — the user needs an explicit Allow from all three policy types simultaneously"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Allowed — IAM policy and Permission Boundary both allow rds:*",
+          "reason": "Both the identity policy and Permission Boundary allow rds:*, which is necessary but not sufficient. The SCP must also allow the action. The SCP only allows ec2:* and s3:* — rds:* is not explicitly allowed, meaning it is implicitly denied at the SCP layer."
+        },
+        "B": {
+          "description": "Denied — the SCP only allows ec2:* and s3:*, so rds:* is implicitly denied",
+          "reason": "The effective permission requires allowance from ALL applicable policy types: SCP AND IAM identity policy AND Permission Boundary (for this scenario). The SCP does not include rds:*, so rds:DescribeDBInstances is implicitly denied at the organization level regardless of what the IAM policy or Permission Boundary say."
+        },
+        "C": {
+          "description": "Allowed — Permission Boundaries take precedence over SCPs",
+          "reason": "This is backwards. SCPs take precedence over everything in member accounts, including Permission Boundaries. Permission Boundaries cannot override SCPs."
+        },
+        "D": {
+          "description": "Denied — the user needs explicit Allow from all three policy types simultaneously",
+          "reason": "This is close to the correct reasoning but subtly wrong in framing. SCPs use an \"Allow list\" model — if the SCP does not explicitly allow an action, it is implicitly denied. The other two policies do allow rds:*, but the SCP doesn't — the denial comes from the missing SCP Allow, not from a need for simultaneous explicit grants in all three layers."
+        }
+      },
+      "Tips": "Three-layer check: SCP ∩ Identity Policy ∩ Permission Boundary. SCP allows only ec2:* and s3:*. rds:* is not in the SCP = implicitly denied at org level. The other two layers don't matter — the SCP alone blocks it. When SCP doesn't permit an action, it's denied regardless of IAM policies."
+    },
+    {
+      "id": 9,
+      "questionText": "A company stores sensitive data on EC2 instance store volumes. A security requirement mandates that data at rest must be encrypted. What must be done to encrypt instance store volumes?",
+      "options": {
+        "A": "Enable EBS encryption — this automatically encrypts all instance store volumes",
+        "B": "Use the AWS KMS console to apply a key to the instance store",
+        "C": "Implement encryption at the application or OS level (e.g., dm-crypt/LUKS on Linux) because AWS does not natively encrypt instance store volumes through the console or KMS",
+        "D": "Enable instance store encryption in the EC2 Launch Template settings"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Enable EBS encryption — it automatically encrypts instance store volumes",
+          "reason": "EBS encryption and Instance Store encryption are completely separate. EBS encryption applies only to EBS volumes. Instance Store volumes are physically attached NVMe/SSD drives and are not affected by EBS encryption settings in any way."
+        },
+        "B": {
+          "description": "Use the AWS KMS console to apply a key to the instance store",
+          "reason": "AWS KMS manages encryption keys for AWS-managed services (EBS, S3, RDS, etc.). Instance store volumes are not managed through KMS. There is no KMS option to apply a CMK to instance store storage."
+        },
+        "C": {
+          "description": "Implement encryption at the application or OS level (dm-crypt/LUKS on Linux)",
+          "reason": "Because AWS does not provide native encryption for instance store volumes through the console, CLI, or KMS, the only way to encrypt instance store data at rest is to implement encryption at the OS level. On Linux, dm-crypt with LUKS is the standard approach. On Windows, BitLocker can be used. The application can also encrypt data before writing it to the volume."
+        },
+        "D": {
+          "description": "Enable instance store encryption in the EC2 Launch Template settings",
+          "reason": "Launch Templates do not have an \"instance store encryption\" toggle. This setting does not exist in the EC2 console, CLI, or Launch Template configuration."
+        }
+      },
+      "Tips": "Instance store encryption is NOT available through the AWS console, CLI, or KMS. It must be done at the OS level (dm-crypt/LUKS on Linux, BitLocker on Windows). EBS encryption is completely separate. Launch Templates have no instance store encryption option. This is a fact-based elimination question."
+    },
+    {
+      "id": 10,
+      "questionText": "A developer tries to assume an IAM Role from an EC2 instance. The role's trust policy contains:",
+      "options": {
+        "A": "The instance profile does not have the correct permission policy",
+        "B": "The trust policy only allows Lambda to assume the role; EC2 (or its instance profile principal) is not listed as a trusted principal",
+        "C": "EC2 instances cannot assume external IAM Roles from instance profiles",
+        "D": "The sts:AssumeRole permission must be listed in the role's permission policy, not the trust policy"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The instance profile does not have the correct permission policy",
+          "reason": "The question states the instance profile's permission policy explicitly allows `sts:AssumeRole` on the role's ARN — this condition is met. The permission policy is not the problem."
+        },
+        "B": {
+          "description": "The trust policy only allows Lambda to assume the role; EC2 is not a trusted principal",
+          "reason": "Role assumption requires trust from BOTH sides: (1) The caller (EC2 instance profile) must have permission to call sts:AssumeRole on the target role's ARN — met. (2) The role's trust policy must allow the caller's principal to assume it — not met. The trust policy only allows `lambda.amazonaws.com`, not `ec2.amazonaws.com` or the instance profile's ARN. Without this trust, STS rejects the assumption."
+        },
+        "C": {
+          "description": "EC2 instances cannot assume external IAM Roles from instance profiles",
+          "reason": "EC2 instance profiles are specifically designed to allow EC2 instances to assume IAM Roles and access AWS services. Cross-account role assumption from EC2 is also supported. There is no restriction on EC2 assuming roles."
+        },
+        "D": {
+          "description": "sts:AssumeRole must be listed in the role's permission policy, not the trust policy",
+          "reason": "This reverses the IAM architecture. sts:AssumeRole is the action that the CALLER needs permission for (in their own policy). The role itself defines WHO can assume it in its trust policy. The role's permission policy defines what the role can DO after assumption — not who can assume it."
+        }
+      },
+      "Tips": "Role assumption requires TWO-WAY trust: (1) Caller has sts:AssumeRole permission ✅, (2) Role's trust policy allows the caller's principal ❌ (only lambda.amazonaws.com is trusted, not ec2.amazonaws.com). Both conditions must be met. The trust policy is the blocking side here."
+    }
+  ]
+}

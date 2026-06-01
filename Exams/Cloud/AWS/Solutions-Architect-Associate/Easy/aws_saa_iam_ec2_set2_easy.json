@@ -1,0 +1,307 @@
+{
+  "setId": "1ca8ffc0-9b21-416b-b5ac-1f9ff809e64a",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Easy Set 2",
+  "difficulty": "Easy",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "Which AWS service allows you to manage permissions for users, groups, and roles within your AWS account?",
+      "options": {
+        "A": "AWS Config",
+        "B": "AWS Shield",
+        "C": "AWS IAM",
+        "D": "AWS Organizations"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "AWS Config",
+          "reason": "A service that records and evaluates the configuration of AWS resources over time. It audits compliance but does not manage identities or permissions."
+        },
+        "B": {
+          "description": "AWS Shield",
+          "reason": "A DDoS protection service for AWS applications. It has nothing to do with user permissions."
+        },
+        "C": {
+          "description": "AWS IAM",
+          "reason": "Identity and Access Management is the central AWS service for creating and managing users, groups, roles, and policies that control access to AWS resources."
+        },
+        "D": {
+          "description": "AWS Organizations",
+          "reason": "A service for managing multiple AWS accounts under a single umbrella. While it supports Service Control Policies (SCPs), it is account-level governance, not the per-account user permission management service."
+        }
+      },
+      "Tips": "The question asks which service *manages permissions for users, groups, and roles*. Config = auditing, Shield = DDoS, Organizations = multi-account governance. Only IAM manages identities and permissions."
+    },
+    {
+      "id": 2,
+      "questionText": "What is an EC2 Security Group?",
+      "options": {
+        "A": "An IAM policy that controls access to EC2 instances",
+        "B": "A virtual firewall that controls inbound and outbound traffic to EC2 instances",
+        "C": "A network ACL applied at the subnet level",
+        "D": "An encryption key used to secure EC2 storage"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "An IAM policy that controls access to EC2 instances",
+          "reason": "IAM policies control API-level access (who can call EC2 APIs like `StartInstances`). They do not control network traffic to instances."
+        },
+        "B": {
+          "description": "A virtual firewall that controls inbound and outbound traffic to EC2 instances",
+          "reason": "Security Groups act as stateful firewalls, allowing you to define rules for what traffic can reach (inbound) and leave (outbound) an EC2 instance."
+        },
+        "C": {
+          "description": "A network ACL applied at the subnet level",
+          "reason": "Network ACLs (NACLs) are stateless firewalls applied at the subnet level, not the instance level. Security Groups operate at the instance level and are stateful."
+        },
+        "D": {
+          "description": "An encryption key used to secure EC2 storage",
+          "reason": "Encryption for EC2 storage (EBS) is managed through AWS KMS keys, not Security Groups."
+        }
+      },
+      "Tips": "A Security Group is a firewall, not an IAM policy or encryption tool. Eliminate IAM policy (wrong layer), encryption key (wrong service), and NACL (subnet-level, not instance-level). Security Groups are stateful, instance-level firewalls."
+    },
+    {
+      "id": 3,
+      "questionText": "In AWS IAM, what is the difference between authentication and authorization?",
+      "options": {
+        "A": "Authentication verifies identity; authorization determines what actions are permitted",
+        "B": "Authorization verifies identity; authentication determines what actions are permitted",
+        "C": "They both refer to the same concept in IAM",
+        "D": "Authentication is for users; authorization is only for services"
+      },
+      "correctAnswer": "A",
+      "explanations": {
+        "A": {
+          "description": "Authentication verifies identity; authorization determines what actions are permitted",
+          "reason": "Authentication answers \"Who are you?\" (login credentials, MFA). Authorization answers \"What are you allowed to do?\" (IAM policies)."
+        },
+        "B": {
+          "description": "Authorization verifies identity; authentication determines what actions are permitted",
+          "reason": "This reverses the definitions of authentication and authorization."
+        },
+        "C": {
+          "description": "They both refer to the same concept in IAM",
+          "reason": "Authentication and authorization are distinct steps in the access control process."
+        },
+        "D": {
+          "description": "Authentication is for users; authorization is only for services",
+          "reason": "Both humans (users) and services (roles) go through both authentication and authorization."
+        }
+      },
+      "Tips": "Authentication = proving who you are (login). Authorization = what you can do (permissions). These are never the same thing. If you flip them, the logic of any security system breaks."
+    },
+    {
+      "id": 4,
+      "questionText": "Which EC2 pricing model is best for a workload that runs continuously for 3 years?",
+      "options": {
+        "A": "On-Demand Instances",
+        "B": "Spot Instances",
+        "C": "Reserved Instances (3-year term)",
+        "D": "Dedicated Hosts (On-Demand)"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "On-Demand Instances",
+          "reason": "Pay for compute capacity by the second with no long-term commitment. Best for short-term, unpredictable workloads."
+        },
+        "B": {
+          "description": "Spot Instances",
+          "reason": "Spare capacity available at up to 90% discount. AWS can reclaim them at any time with a 2-minute notice, making them unsuitable for continuously running workloads that cannot tolerate interruption."
+        },
+        "C": {
+          "description": "Reserved Instances (3-year term)",
+          "reason": "Commitment to a specific instance type in exchange for a significant discount (up to 72% over On-Demand). The 3-year term offers the maximum discount for steady-state workloads."
+        },
+        "D": {
+          "description": "Dedicated Hosts (On-Demand)",
+          "reason": "Physical servers dedicated exclusively to one customer, billed at On-Demand rates. Used for licensing or compliance requirements, not cost optimization."
+        }
+      },
+      "Tips": "Continuous 3-year workload = maximum commitment = maximum discount. Spot = interruptible (eliminate). On-Demand = no commitment (eliminate). Dedicated Hosts = compliance tool (eliminate). 3-year RI wins."
+    },
+    {
+      "id": 5,
+      "questionText": "What does EC2 instance metadata allow you to do?",
+      "options": {
+        "A": "Encrypt EBS volumes attached to the instance",
+        "B": "Retrieve information about the running instance from within the instance itself",
+        "C": "Monitor the instance's CPU utilization in CloudWatch",
+        "D": "Automatically scale the instance based on load"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Encrypt EBS volumes attached to the instance",
+          "reason": "EBS encryption is configured at volume creation time and managed through AWS KMS. Metadata has nothing to do with encryption."
+        },
+        "B": {
+          "description": "Retrieve information about the running instance from within the instance itself",
+          "reason": "EC2 Instance Metadata Service (IMDS) is accessible at `http://169.254.169.254/latest/meta-data/` and provides details like instance ID, public IP, IAM role credentials, and more — all accessible from within the instance."
+        },
+        "C": {
+          "description": "Monitor the instance's CPU utilization in CloudWatch",
+          "reason": "CloudWatch collects and displays metrics. While the CloudWatch Agent can run on an instance, metadata itself does not push data to CloudWatch."
+        },
+        "D": {
+          "description": "Automatically scale the instance based on load",
+          "reason": "Auto Scaling is handled by Amazon EC2 Auto Scaling Groups, not instance metadata."
+        }
+      },
+      "Tips": "Instance Metadata answers 'what am I?' from *inside* the instance. Eliminate CloudWatch (external monitoring), encryption (KMS), and Auto Scaling (capacity management). Metadata is an internal self-inspection service."
+    },
+    {
+      "id": 6,
+      "questionText": "An IAM Group is used to:",
+      "options": {
+        "A": "Assign permissions to AWS services",
+        "B": "Organize EC2 instances into logical clusters",
+        "C": "Manage permissions for a collection of IAM Users",
+        "D": "Control network traffic between VPCs"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Assign permissions to AWS services",
+          "reason": "AWS services receive permissions through IAM Roles, not Groups."
+        },
+        "B": {
+          "description": "Organize EC2 instances into logical clusters",
+          "reason": "EC2 organization is done with placement groups, tags, or Auto Scaling Groups. IAM Groups are purely an identity construct."
+        },
+        "C": {
+          "description": "Manage permissions for a collection of IAM Users",
+          "reason": "An IAM Group lets you attach a policy once and have it apply to all users in the group, simplifying permission management for teams."
+        },
+        "D": {
+          "description": "Control network traffic between VPCs",
+          "reason": "Inter-VPC network control is done via VPC Peering, Transit Gateway, and Security Groups. IAM Groups have no networking role."
+        }
+      },
+      "Tips": "Groups are for *human users*, not services or compute resources. Eliminate service permissions (Roles do that), EC2 organization (Tags/Placement Groups do that), and VPC traffic (Security Groups do that)."
+    },
+    {
+      "id": 7,
+      "questionText": "Which EC2 storage type is ephemeral and loses its data when the instance is stopped or terminated?",
+      "options": {
+        "A": "EBS General Purpose SSD (gp3)",
+        "B": "EBS Provisioned IOPS SSD",
+        "C": "Instance Store",
+        "D": "Amazon EFS"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "EBS General Purpose SSD (gp3)",
+          "reason": "A durable, network-attached block storage volume. Data persists independently of the instance lifecycle — the volume continues to exist after the instance stops."
+        },
+        "B": {
+          "description": "EBS Provisioned IOPS SSD",
+          "reason": "A high-performance EBS volume type designed for I/O-intensive workloads. Like all EBS volumes, data is durable and persists beyond the instance lifecycle."
+        },
+        "C": {
+          "description": "Instance Store",
+          "reason": "Physically attached NVMe/SSD storage on the host machine running the instance. It provides very high I/O performance but all data is lost when the instance is stopped, hibernated, or terminated."
+        },
+        "D": {
+          "description": "Amazon EFS",
+          "reason": "A fully managed, scalable network file system that can be shared across many EC2 instances. Data is highly durable and persists regardless of any instance state."
+        }
+      },
+      "Tips": "Instance Store = physically attached = ephemeral. Everything with 'EBS' in the name is durable network-attached storage. EFS is a managed shared file system. Only Instance Store loses data on stop/terminate."
+    },
+    {
+      "id": 8,
+      "questionText": "What is the principle of least privilege in the context of IAM?",
+      "options": {
+        "A": "Always grant administrator access to reduce the number of permission errors",
+        "B": "Grant only the minimum permissions necessary to perform a task",
+        "C": "Share credentials among multiple team members to improve collaboration",
+        "D": "Allow all actions by default and restrict only sensitive operations"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Always grant administrator access to reduce the number of permission errors",
+          "reason": "Granting full admin access to avoid errors is a major security anti-pattern that dramatically increases the blast radius if an account is compromised."
+        },
+        "B": {
+          "description": "Grant only the minimum permissions necessary to perform a task",
+          "reason": "The principle of least privilege means giving each user, role, or service only the exact permissions it needs — no more. This limits the damage from compromised credentials or misconfigured services."
+        },
+        "C": {
+          "description": "Share credentials among multiple team members to improve collaboration",
+          "reason": "Sharing credentials undermines accountability and auditability. Each person or system should have their own identity."
+        },
+        "D": {
+          "description": "Allow all actions by default and restrict only sensitive operations",
+          "reason": "AWS already defaults to deny-all; this option describes the opposite of both AWS defaults and the least-privilege principle."
+        }
+      },
+      "Tips": "Least privilege = minimum necessary permissions. Eliminate 'always grant admin' (opposite), 'share credentials' (security violation), and 'allow all by default' (opposite of least privilege)."
+    },
+    {
+      "id": 9,
+      "questionText": "Which of the following actions can you perform using EC2 User Data?",
+      "options": {
+        "A": "Change the instance type after launch",
+        "B": "Install software packages and run scripts at instance launch",
+        "C": "Attach additional EBS volumes after the instance starts",
+        "D": "Enable Multi-AZ replication for the instance"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Change the instance type after launch",
+          "reason": "Changing an instance type requires stopping the instance and modifying it through the console or CLI. User Data only runs at first boot and cannot alter the instance type."
+        },
+        "B": {
+          "description": "Install software packages and run scripts at instance launch",
+          "reason": "User Data scripts run as root/administrator during the first boot cycle. They are commonly used to install packages (`apt install`, `yum install`), configure services, and pull application code."
+        },
+        "C": {
+          "description": "Attach additional EBS volumes after the instance starts",
+          "reason": "EBS volumes are attached through the EC2 console, CLI, or API. User Data can run `mount` commands, but cannot itself provision and attach new volumes."
+        },
+        "D": {
+          "description": "Enable Multi-AZ replication for the instance",
+          "reason": "Multi-AZ replication is a concept for managed services like RDS and ElastiCache. Individual EC2 instances do not have a Multi-AZ replication toggle."
+        }
+      },
+      "Tips": "User Data runs at first boot only. It cannot change instance type (API operation), attach EBS (management operation), or enable Multi-AZ (not an EC2 concept). It only runs shell/PowerShell scripts."
+    },
+    {
+      "id": 10,
+      "questionText": "Which IAM component is used to grant cross-account access to AWS resources?",
+      "options": {
+        "A": "IAM Group",
+        "B": "IAM Password Policy",
+        "C": "IAM Role with a Trust Policy",
+        "D": "IAM User Access Key"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "IAM Group",
+          "reason": "Used to organize IAM users within a single account and apply shared permissions. Groups have no cross-account capability."
+        },
+        "B": {
+          "description": "IAM Password Policy",
+          "reason": "A set of rules governing password complexity and rotation for IAM Users. It has no relevance to cross-account access."
+        },
+        "C": {
+          "description": "IAM Role with a Trust Policy",
+          "reason": "A Trust Policy defines which principals (users, services, or accounts) are allowed to assume the role. By specifying another AWS account ID in the trust policy, you enable cross-account access through role assumption."
+        },
+        "D": {
+          "description": "IAM User Access Key",
+          "reason": "Access keys are long-term credentials for a specific IAM User in one account. While they can be used programmatically from anywhere, sharing access keys across accounts is insecure and not the intended pattern."
+        }
+      },
+      "Tips": "Cross-account = Role with Trust Policy. Groups are single-account. Password Policy manages passwords only. Access Keys are for programmatic access, not cross-account delegation. Trust Policies are the mechanism."
+    }
+  ]
+}

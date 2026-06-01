@@ -1,0 +1,307 @@
+{
+  "setId": "d9368273-9af1-406b-8711-8219dbe4a14b",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Medium Set 2",
+  "difficulty": "Medium",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "An EC2 instance is running in a private subnet and needs to download OS patches from the internet. There is no direct internet connectivity for the subnet. What should be configured?",
+      "options": {
+        "A": "Attach an Elastic IP to the instance",
+        "B": "Deploy a NAT Gateway in a public subnet and update the private subnet route table to point to it",
+        "C": "Move the instance to a public subnet",
+        "D": "Create a VPC peering connection to another VPC with internet access"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Attach an Elastic IP to the instance",
+          "reason": "Elastic IPs are public IPs. A private subnet instance cannot use a public IP to reach the internet because the subnet has no route to an Internet Gateway. The IP would be visible but non-functional for outbound traffic."
+        },
+        "B": {
+          "description": "Deploy a NAT Gateway in a public subnet and route private subnet traffic through it",
+          "reason": "A NAT Gateway sits in a public subnet with its own Elastic IP and IGW route. Private subnet instances send outbound traffic to the NAT Gateway, which translates the private IP, forwards the request to the internet, and returns the response. The private instance is never directly exposed."
+        },
+        "C": {
+          "description": "Move the instance to a public subnet",
+          "reason": "Moving the instance would work, but contradicts the intent of running it in a private subnet (which typically exists for security reasons). It's not a minimal, appropriate fix."
+        },
+        "D": {
+          "description": "Create a VPC peering connection",
+          "reason": "VPC peering connects two VPCs together for private communication. It does not provide internet access. Peering to a VPC that has internet access also does not work because AWS does not allow transitive routing through peering connections."
+        }
+      },
+      "Tips": "Private subnet + needs internet = NAT Gateway in public subnet. Elastic IP needs IGW. Moving to public subnet breaks the architecture intent. VPC peering doesn't provide internet access (no transitive routing). NAT Gateway is the standard outbound-only internet path for private subnets."
+    },
+    {
+      "id": 2,
+      "questionText": "A developer accidentally committed AWS Access Keys to a public GitHub repository. What should be the FIRST action taken?",
+      "options": {
+        "A": "Rotate the Access Key through the IAM console",
+        "B": "Delete the GitHub repository immediately",
+        "C": "Deactivate and delete the exposed Access Key immediately, then audit CloudTrail for unauthorized activity",
+        "D": "Change the IAM User's console password"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Rotate the Access Key through the IAM console",
+          "reason": "Rotation creates a new key and optionally deactivates the old one. However, \"rotation\" alone is not fast enough — the compromised key is still active until explicitly deactivated. Delay here means unauthorized actors could continue using it."
+        },
+        "B": {
+          "description": "Delete the GitHub repository immediately",
+          "reason": "Deleting the repo removes the secret from future viewers but does not help if the key was already scraped by bots. GitHub public repos are indexed constantly; the key should be treated as compromised the moment it was pushed."
+        },
+        "C": {
+          "description": "Deactivate and delete the exposed Access Key immediately, then audit CloudTrail",
+          "reason": "Deactivating the key stops all further use of it. Deleting it ensures it cannot be reactivated. Auditing CloudTrail identifies any actions that may have already been taken with the compromised key, enabling incident response. This sequence is the AWS-recommended security incident response procedure."
+        },
+        "D": {
+          "description": "Change the IAM User's console password",
+          "reason": "Console passwords are separate from Access Keys. Changing the password does not invalidate or rotate the programmatic Access Keys at all."
+        }
+      },
+      "Tips": "Compromised credential response: FIRST action is always revocation, not investigation. Deleting the repo doesn't invalidate the key. Changing the console password doesn't affect Access Keys. Rotation is close but 'rotate' may leave the old key briefly active — deactivate + delete is faster and safer."
+    },
+    {
+      "id": 3,
+      "questionText": "You need to launch an EC2 instance that requires a software license tied to the physical host's socket count. Which EC2 option must you use?",
+      "options": {
+        "A": "Reserved Instance",
+        "B": "Dedicated Instance",
+        "C": "Dedicated Host",
+        "D": "Spot Instance"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Reserved Instance",
+          "reason": "A billing concept providing a discount for committing to a specific instance type. Instances still run on shared hardware by default. You can combine Reserved Instances with Dedicated Hosts, but Reserved Instances alone do not provide host-level visibility."
+        },
+        "B": {
+          "description": "Dedicated Instance",
+          "reason": "Runs on hardware dedicated to a single customer, but you have no visibility into or control over the number of physical sockets or cores on the host. Not suitable for per-socket licensing."
+        },
+        "C": {
+          "description": "Dedicated Host",
+          "reason": "Provides a dedicated physical server where you have full visibility into the number of sockets, cores, and the host ID. This is the only EC2 option that satisfies per-socket or per-core software licensing requirements (e.g., Windows Server, SQL Server, Oracle)."
+        },
+        "D": {
+          "description": "Spot Instance",
+          "reason": "Runs on spare shared capacity at a discount. No physical isolation or host visibility whatsoever. Completely unsuitable for licensed software tied to hardware."
+        }
+      },
+      "Tips": "Socket-count licensing = physical host visibility = Dedicated Host. Reserved Instances are a billing concept. Dedicated Instances run on dedicated hardware but give no host-level visibility. Spot can be interrupted and shares hardware. Only Dedicated Host lets you see socket/core counts."
+    },
+    {
+      "id": 4,
+      "questionText": "An IAM Role has an attached policy that allows s3:* on all resources. A user assumes this role. The user's own IAM policy explicitly denies s3:DeleteObject. What happens when the user (via the assumed role) attempts to delete an S3 object?",
+      "options": {
+        "A": "The role's Allow overrides the user's Deny and the delete succeeds",
+        "B": "The user's Deny from their own policy applies to the session and the delete is denied",
+        "C": "The delete succeeds because the role has explicit s3:* Allow",
+        "D": "The delete is denied because AWS always denies cross-policy conflicts"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "The role's Allow overrides the user's Deny — same answer as C",
+          "reason": "This framing correctly identifies the outcome but the explanation below clarifies the key nuance."
+        },
+        "B": {
+          "description": "The user's Deny from their own policy applies to the session",
+          "reason": "This would be correct if the user were acting as themselves. However, when a user assumes a role, they temporarily give up their own permissions and operate exclusively under the role's permissions. Their identity policies are no longer in effect during the role session."
+        },
+        "C": {
+          "description": "The delete succeeds because the role has explicit s3:* Allow",
+          "reason": "When a principal assumes a role, they receive the role's permissions only. The user's own IAM policies (including any Denies) do not travel with them into the role session. The role's policy grants s3:* with no Deny, so the delete succeeds."
+        },
+        "D": {
+          "description": "The delete is denied because AWS always denies cross-policy conflicts",
+          "reason": "AWS does not have a rule that denies on cross-policy conflicts. Policy evaluation is well-defined: evaluate all applicable policies and apply the most restrictive result. But in a role session, the user's own policies are not \"applicable\" — only the role's policies are."
+        }
+      },
+      "Tips": "Key insight: when a user *assumes a role*, their own IAM policies are completely suspended for that session. The role's permissions are the only ones that apply. The user's Deny does not follow them into the role session."
+    },
+    {
+      "id": 5,
+      "questionText": "A company needs to ensure that EC2 instances in their Auto Scaling Group always launch with a specific IAM Role, key pair, and Security Group, without requiring operators to manually specify these each time. What is the best approach?",
+      "options": {
+        "A": "Save these settings in a runbook and train operators to follow it",
+        "B": "Use an EC2 Launch Template with the required configuration pre-defined",
+        "C": "Create a custom AMI that includes IAM credentials",
+        "D": "Attach the settings to the VPC so they apply to all new instances"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Save settings in a runbook and train operators",
+          "reason": "Runbooks rely on humans following instructions consistently. Any deviation leads to misconfigured instances. This introduces human error and is not scalable."
+        },
+        "B": {
+          "description": "Use an EC2 Launch Template",
+          "reason": "Launch Templates store a versioned configuration including AMI, instance type, IAM instance profile, key pair, Security Groups, User Data, and more. Auto Scaling Groups reference a Launch Template, guaranteeing every launched instance uses the exact defined configuration automatically."
+        },
+        "C": {
+          "description": "Create a custom AMI that includes IAM credentials",
+          "reason": "Baking IAM credentials into an AMI is a critical security risk. Credentials become static, cannot be rotated easily, and are accessible to anyone who has access to the AMI."
+        },
+        "D": {
+          "description": "Attach settings to the VPC",
+          "reason": "VPCs control network topology and have no mechanism to define or enforce IAM Roles, key pairs, or Security Groups for launched instances."
+        }
+      },
+      "Tips": "Consistent launch config for ASG = Launch Template. Runbooks rely on humans (error-prone). Baking credentials into AMIs is a security violation. VPCs don't manage instance-level settings. Launch Templates are version-controlled, reusable configuration blueprints."
+    },
+    {
+      "id": 6,
+      "questionText": "Which of the following statements correctly describes the difference between an IAM Role's Trust Policy and its Permission Policy?",
+      "options": {
+        "A": "The Trust Policy defines what the role can do; the Permission Policy defines who can assume it",
+        "B": "The Permission Policy defines what the role can do; the Trust Policy defines who can assume it",
+        "C": "Both policies define what the role can do on different resource types",
+        "D": "The Trust Policy is only used for cross-account roles; Permission Policies are used for all other roles"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Trust Policy defines what it can do; Permission Policy defines who can assume it",
+          "reason": "This reverses the definitions. This is the most common point of confusion on the SAA exam."
+        },
+        "B": {
+          "description": "Permission Policy defines what the role can do; Trust Policy defines who can assume it",
+          "reason": "The Trust Policy (a resource-based policy on the role itself) specifies the trusted principals — AWS services, users, or other accounts — that are allowed to call sts:AssumeRole for this role. The Permission Policy (identity-based policy attached to the role) specifies what AWS actions the role can perform once assumed."
+        },
+        "C": {
+          "description": "Both policies define what the role can do on different resource types",
+          "reason": "Trust Policies do not define what the role can do at all. They only define who can assume the role."
+        },
+        "D": {
+          "description": "Trust Policy is only for cross-account roles",
+          "reason": "Trust Policies exist on all IAM Roles, including same-account service roles (e.g., trusting ec2.amazonaws.com). Cross-account use is one application, not the exclusive one."
+        }
+      },
+      "Tips": "Trust Policy = who can assume the role (the door). Permission Policy = what the role can do (the keys). They are always reversed in trick questions. Remember: Trust = external identity; Permission = internal capability."
+    },
+    {
+      "id": 7,
+      "questionText": "A Solutions Architect is designing a system where a Lambda function and an EC2 instance both need read access to the same DynamoDB table. What is the most secure and maintainable approach?",
+      "options": {
+        "A": "Create one IAM User with DynamoDB read access and share its credentials with both services",
+        "B": "Embed the AWS credentials in the Lambda function's environment variables and EC2 User Data",
+        "C": "Create separate IAM Roles for Lambda and EC2, each with a policy allowing read access to the DynamoDB table",
+        "D": "Make the DynamoDB table publicly accessible"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Create one IAM User and share credentials with both services",
+          "reason": "Sharing a single IAM User's credentials between different services makes it impossible to audit which service performed which action. It also creates a single point of failure — rotating the key requires updating both services simultaneously."
+        },
+        "B": {
+          "description": "Embed credentials in Lambda environment variables and EC2 User Data",
+          "reason": "Hardcoding credentials in Lambda environment variables and User Data means they are visible in plaintext in the console and logs. If either service is compromised, the credentials are immediately exposed."
+        },
+        "C": {
+          "description": "Create separate IAM Roles for Lambda and EC2",
+          "reason": "Lambda's execution role and EC2's instance profile are the proper mechanisms for granting each service access to AWS resources. Each role gets only the DynamoDB read permissions it needs. Credentials are temporary, automatically rotated, and never need to be managed manually."
+        },
+        "D": {
+          "description": "Make the DynamoDB table publicly accessible",
+          "reason": "DynamoDB tables cannot be made publicly accessible in the same way S3 buckets can. Even if they could, it would expose the data to everyone on the internet."
+        }
+      },
+      "Tips": "Services should never share credentials. Each AWS service (Lambda, EC2) should have its own IAM Role with only the permissions it needs. Separate roles provide auditability, least privilege, and independent rotation."
+    },
+    {
+      "id": 8,
+      "questionText": "An EC2 instance is stopped. Which of the following resources continue to incur charges?",
+      "options": {
+        "A": "EC2 compute (vCPU and RAM)",
+        "B": "Data transfer out to the internet",
+        "C": "EBS volumes attached to the instance",
+        "D": "Elastic Network Interface (ENI)"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "EC2 compute (vCPU and RAM)",
+          "reason": "Compute charges stop when the instance is stopped. You are only billed for vCPU and RAM while the instance is in the Running state."
+        },
+        "B": {
+          "description": "Data transfer out to the internet",
+          "reason": "No data transfer occurs when an instance is stopped, so no transfer charges apply."
+        },
+        "C": {
+          "description": "EBS volumes attached to the instance",
+          "reason": "EBS volumes are billed for the provisioned capacity (in GB-months) regardless of whether the attached instance is running or stopped. The storage exists and is reserved on AWS infrastructure even when not in use."
+        },
+        "D": {
+          "description": "Elastic Network Interface (ENI)",
+          "reason": "Primary ENIs (created automatically with the instance) are not billed separately. Additional ENIs do not incur per-attachment charges beyond data transfer when the instance is stopped."
+        }
+      },
+      "Tips": "Stopped instance = no compute charges. What's left? EBS volumes are provisioned storage — you pay for the GB regardless of instance state. ENI attachment and data transfer don't generate charges on a stopped instance."
+    },
+    {
+      "id": 9,
+      "questionText": "A company wants to restrict IAM Users in their account so they can only launch EC2 instances of type t3.micro or t3.small, regardless of what other policies allow. What IAM feature enforces this boundary?",
+      "options": {
+        "A": "Service Control Policies (SCPs) via AWS Organizations",
+        "B": "IAM Permission Boundaries",
+        "C": "IAM Resource-Based Policies",
+        "D": "IAM Session Policies"
+      },
+      "correctAnswer": "A",
+      "explanations": {
+        "A": {
+          "description": "Service Control Policies (SCPs) via AWS Organizations",
+          "reason": "SCPs are account-level guardrails. A Deny SCP on ec2:RunInstances unless `ec2:InstanceType` is in `[t3.micro, t3.small]` applies to every principal in the account — no identity policy can override it. This is the strongest account-wide enforcement mechanism."
+        },
+        "B": {
+          "description": "IAM Permission Boundaries",
+          "reason": "Permission Boundaries are attached per entity (user or role). They limit the maximum permissions for that specific entity but must be set individually. If a new user is created without the boundary, they can launch any instance type."
+        },
+        "C": {
+          "description": "IAM Resource-Based Policies",
+          "reason": "Resource-based policies are attached to resources (like S3 buckets). EC2 instances don't have resource-based policies that restrict who can launch them."
+        },
+        "D": {
+          "description": "IAM Session Policies",
+          "reason": "Session policies are passed inline when assuming a role or federating, limiting permissions for that specific session only. They don't apply broadly to all users."
+        }
+      },
+      "Tips": "Account-wide restriction overriding all IAM = SCP via Organizations. Permission Boundaries are per-entity. Resource-based policies are per-resource (EC2 doesn't support them for launch). Session policies are temporary. SCPs are the only account-wide guardrail."
+    },
+    {
+      "id": 10,
+      "questionText": "An application on EC2 calls the EC2 metadata service to retrieve its IAM Role credentials. Which URL does it use, and what type of credentials are returned?",
+      "options": {
+        "A": "https://169.254.169.254/latest/meta-data/iam/security-credentials/ — permanent access keys",
+        "B": "http://169.254.169.254/latest/meta-data/iam/security-credentials/ — temporary credentials (AccessKeyId, SecretAccessKey, Token)",
+        "C": "https://iam.amazonaws.com/credentials — permanent access keys",
+        "D": "http://169.254.169.254/latest/user-data/ — temporary credentials"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "https://169.254.169.254/... — permanent access keys",
+          "reason": "The metadata endpoint uses HTTP, not HTTPS (it is a link-local address within the VPC, never transmitted externally). The returned credentials are always temporary, not permanent."
+        },
+        "B": {
+          "description": "http://169.254.169.254/latest/meta-data/iam/security-credentials/ — temporary credentials (AccessKeyId, SecretAccessKey, Token)",
+          "reason": "The EC2 Instance Metadata Service (IMDS) is available at this well-known link-local IPv4 address. The credentials returned include an AccessKeyId, SecretAccessKey, and a mandatory Token (session token), plus an Expiration timestamp. The AWS SDKs automatically retrieve and refresh these credentials."
+        },
+        "C": {
+          "description": "https://iam.amazonaws.com/credentials — permanent access keys",
+          "reason": "This is not a valid credential endpoint. IAM API endpoints are used for managing IAM resources, not for vending runtime credentials to EC2 instances."
+        },
+        "D": {
+          "description": "http://169.254.169.254/latest/user-data/ — temporary credentials",
+          "reason": "The user-data endpoint returns the EC2 User Data script (bootstrap commands), not IAM credentials. These are completely different data types."
+        }
+      },
+      "Tips": "The metadata endpoint is http (not https) at 169.254.169.254 — this is a link-local address. Credentials retrieved are always *temporary* (they include a Token field and Expiration). The user-data endpoint returns bootstrap scripts, not credentials."
+    }
+  ]
+}

@@ -1,0 +1,1062 @@
+{
+  "setId": "fc455650-edad-4772-8565-c0bd9a1cd211",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Practice Exam 1",
+  "difficulty": "Exam Style",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company is deploying a three-tier web application on AWS. The web tier runs on EC2 instances behind an Application Load Balancer. The application tier runs on EC2 instances in private subnets. The database tier uses Amazon RDS in isolated subnets. A security review requires that each tier can only communicate with the adjacent tier and that no tier has broader access than necessary. Which Security Group configuration meets these requirements?",
+      "options": {
+        "A": "Create one shared Security Group for all three tiers with rules allowing all internal traffic on all ports",
+        "B": "Web SG: inbound 443 from 0.0.0.0/0; App SG: inbound on app port sourced from the Web SG ID; DB SG: inbound 3306 sourced from the App SG ID",
+        "C": "Web SG: inbound 443 from 0.0.0.0/0; App SG: inbound from 10.0.0.0/8; DB SG: inbound from 10.0.0.0/8",
+        "D": "Create NACLs to block cross-tier traffic and use a single Security Group allowing all traffic within the VPC CIDR"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "A single shared Security Group with all-internal traffic allows every tier to communicate with every other tier, eliminating isolation.",
+          "reason": "Incorrect — this grants the database tier direct access from the web tier, violating the adjacency-only requirement and least privilege."
+        },
+        "B": {
+          "description": "Three separate Security Groups where each tier's inbound rules reference the upstream tier's Security Group ID rather than a CIDR range.",
+          "reason": "Correct — referencing Security Group IDs creates precise, dynamic rules: only web-tier instances reach the app tier, and only app-tier instances reach the DB tier, regardless of IP changes from scaling."
+        },
+        "C": {
+          "description": "App and DB tiers use the VPC CIDR 10.0.0.0/8 as the inbound source, which allows any resource in that CIDR to reach those tiers.",
+          "reason": "Incorrect — a broad CIDR rule allows any instance in the entire 10.x.x.x address space to reach the app and DB tiers, not just the adjacent tier."
+        },
+        "D": {
+          "description": "NACLs combined with a single Security Group relying on VPC CIDR for isolation.",
+          "reason": "Incorrect — NACLs are stateless and subnet-level; they are harder to manage than Security Group ID references. A single SG with VPC CIDR allows all tiers to reach each other."
+        }
+      },
+      "Tips": "When you see 'least privilege' + 'tier-to-tier only', the answer is always Security Group ID references. CIDR-based rules allow too broad a range (anything in that subnet/VPC). Eliminate shared SGs (no isolation) and CIDR rules (too broad). SG ID referencing is the AWS-recommended pattern for multi-tier architectures."
+    },
+    {
+      "id": 2,
+      "questionText": "A startup is building a data processing pipeline. They have an Auto Scaling Group of EC2 Spot Instances processing jobs from an SQS queue. Occasionally, a Spot interruption terminates an instance mid-job. The job must eventually complete, but the team wants to minimize wasted compute. What is the MOST resilient and cost-efficient architecture?",
+      "options": {
+        "A": "Switch to On-Demand instances to eliminate interruptions entirely",
+        "B": "Configure the ASG with a mixed instances policy using multiple Spot instance types and AZs; implement a message visibility timeout in SQS longer than the maximum job duration so that interrupted jobs return to the queue",
+        "C": "Use a single Spot instance type and implement a Lambda function that polls for interruption notices and resubmits jobs to SQS",
+        "D": "Use Reserved Instances for the processing fleet to guarantee capacity and avoid interruptions"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Switching to On-Demand eliminates interruptions but removes the cost savings that Spot instances provide for fault-tolerant workloads.",
+          "reason": "Incorrect — On-Demand is significantly more expensive; the pipeline is described as fault-tolerant (jobs can retry), making Spot the right choice with proper design."
+        },
+        "B": {
+          "description": "A diversified Spot pool across multiple instance types and AZs reduces interruption probability; SQS visibility timeout ensures interrupted jobs become visible again for reprocessing.",
+          "reason": "Correct — this is the canonical pattern: Spot diversification minimizes simultaneous interruptions, and SQS naturally handles job retries when the visibility timeout expires after an interruption."
+        },
+        "C": {
+          "description": "A single Spot instance type with a Lambda-based resubmission mechanism when interruption notices arrive.",
+          "reason": "Incorrect — a single instance type has higher interruption risk; the 2-minute interruption window may not be enough to complete a Lambda invocation and graceful resubmission. SQS visibility timeout handles this natively without custom code."
+        },
+        "D": {
+          "description": "Reserved Instances commit to a specific instance type for 1 or 3 years at a discount but provide On-Demand-level availability, not Spot pricing.",
+          "reason": "Incorrect — Reserved Instances reduce cost compared to On-Demand but cost far more than Spot. For interruptible, queue-driven workloads, Spot is the correct choice."
+        }
+      },
+      "Tips": "For fault-tolerant queue-processing workloads, Spot + SQS is always the pattern. The key mechanism is SQS visibility timeout — it naturally makes interrupted jobs reappear in the queue without any custom code. Eliminate On-Demand and Reserved (too expensive for this use case). Eliminate single-type Spot (higher interruption risk than diversified pool)."
+    },
+    {
+      "id": 3,
+      "questionText": "A company uses AWS Organizations with multiple accounts. The security team wants to ensure that developers in all member accounts cannot create IAM Users with console access — only programmatic access (Access Keys) should be allowed. The restriction must apply even if a developer has AdministratorAccess in their own account. Which solution achieves this?",
+      "options": {
+        "A": "Attach an IAM policy to every developer IAM User in every account that denies iam:CreateLoginProfile",
+        "B": "Apply an SCP at the root or relevant OU level that denies iam:CreateLoginProfile and iam:UpdateLoginProfile",
+        "C": "Enable AWS Config with a managed rule that detects IAM Users with console passwords and triggers remediation",
+        "D": "Configure an IAM password policy in each account that prevents password creation"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Attaching a Deny policy for iam:CreateLoginProfile to every developer in every account requires manual maintenance across all accounts and can be circumvented by account admins who can modify or remove policies.",
+          "reason": "Incorrect — account-level administrators can remove per-user policies; this does not survive an admin with AdministratorAccess."
+        },
+        "B": {
+          "description": "An SCP denying iam:CreateLoginProfile (creates a console password for new users) and iam:UpdateLoginProfile (sets/resets the password) at the OU or root level prevents console-enabled IAM Users across all member accounts.",
+          "reason": "Correct — SCPs are above account-level administrative permissions; even AdministratorAccess cannot override an SCP Deny. This is the only mechanism that survives account-level admin access."
+        },
+        "C": {
+          "description": "AWS Config detects non-compliant resources after the fact and can trigger automated remediation, but it is a detective/corrective control, not a preventive one.",
+          "reason": "Incorrect — Config will find the violation after the IAM User with console access already exists. The requirement is to prevent creation, not detect it."
+        },
+        "D": {
+          "description": "IAM account-level password policies set complexity and rotation requirements for existing passwords but do not prevent a privileged user from creating login profiles.",
+          "reason": "Incorrect — password policies govern password requirements, not whether a login profile (console password) can be created. They also require per-account configuration and can be changed by account admins."
+        }
+      },
+      "Tips": "Any time a restriction must survive AdministratorAccess in a member account, the answer is SCP. IAM policies, Config, and password policies can all be modified or bypassed by an account admin. SCPs sit above all account-level permissions in the evaluation hierarchy. The key API actions are iam:CreateLoginProfile (new console password) and iam:UpdateLoginProfile (change it)."
+    },
+    {
+      "id": 4,
+      "questionText": "A financial services company runs a mission-critical OLTP application on an EC2 instance with an EBS gp3 root volume. The instance must recover automatically from underlying hardware failures with the same private IP address, Elastic IP, and instance ID. The recovery must require no manual intervention. Which solution meets these requirements?",
+      "options": {
+        "A": "Create an Auto Scaling Group with a minimum capacity of 1 and a Launch Template that specifies the same Elastic IP",
+        "B": "Configure EC2 Auto Recovery using a CloudWatch alarm on the StatusCheckFailed_System metric",
+        "C": "Create a daily AMI backup and a Lambda function that detects failures via CloudWatch Events and launches a replacement",
+        "D": "Deploy the instance in a Multi-AZ configuration with an Application Load Balancer to route traffic during failures"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "An ASG with minimum 1 will replace terminated instances, but the replacement gets a new instance ID, new private IP, and the Elastic IP must be re-associated programmatically.",
+          "reason": "Incorrect — ASG replacements create entirely new instances and cannot preserve the original instance ID, private IP, or automatically re-associate the same Elastic IP."
+        },
+        "B": {
+          "description": "EC2 Auto Recovery is triggered by the StatusCheckFailed_System CloudWatch alarm, which fires when underlying host hardware or connectivity to the instance fails. Recovery moves the instance to healthy hardware in the same AZ, preserving all attributes.",
+          "reason": "Correct — Auto Recovery is the only EC2 mechanism that preserves instance ID, private IPv4 addresses, Elastic IP associations, and all instance metadata while moving to new underlying hardware in the same AZ."
+        },
+        "C": {
+          "description": "AMI-based Lambda recovery creates a brand-new instance from the snapshot, giving it a new instance ID, new private IP, and requiring Elastic IP re-association.",
+          "reason": "Incorrect — this approach creates a new instance, not a recovery of the existing one. It cannot meet the same-private-IP and same-instance-ID requirements."
+        },
+        "D": {
+          "description": "Multi-AZ with ALB provides high availability by routing traffic to healthy instances, but does not recover the specific failed instance or preserve its identity.",
+          "reason": "Incorrect — this is a different availability pattern; ALB routes around failures to other instances. It doesn't recover the original instance with its original attributes."
+        }
+      },
+      "Tips": "The keywords 'same private IP', 'same instance ID', and 'same Elastic IP' uniquely identify EC2 Auto Recovery — it is the ONLY mechanism that preserves all of these. ASG and Lambda-based recovery always create new instances. Auto Recovery requires gp2/gp3 EBS (not instance store) and works for StatusCheckFailed_System (hardware) not StatusCheckFailed_Instance (OS-level)."
+    },
+    {
+      "id": 5,
+      "questionText": "A DevOps engineer needs to allow a third-party CI/CD platform (running outside AWS) to deploy infrastructure to an AWS account. The security team prohibits storing long-term AWS credentials in the CI/CD platform. The CI/CD platform supports OpenID Connect (OIDC). What is the MOST secure approach?",
+      "options": {
+        "A": "Create an IAM User with deployment permissions and store the Access Key ID and Secret Access Key as encrypted secrets in the CI/CD platform",
+        "B": "Create an IAM OIDC Identity Provider for the CI/CD platform, create an IAM Role with a trust policy allowing the CI/CD platform to assume it via OIDC, and configure the CI/CD pipeline to assume this role",
+        "C": "Share the AWS root account credentials with the CI/CD platform using a secrets manager",
+        "D": "Create a cross-account IAM Role and have the CI/CD platform's AWS account assume it using static credentials stored in the pipeline"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Creating an IAM User and storing its long-term Access Keys in the CI/CD platform, even encrypted, means a static credential exists that can be leaked or stolen.",
+          "reason": "Incorrect — storing long-term credentials violates the security team's requirement. If the CI/CD platform is compromised, those credentials remain valid until manually rotated."
+        },
+        "B": {
+          "description": "OIDC federation creates a trust relationship between AWS and the CI/CD platform's identity provider. The pipeline presents a short-lived OIDC token, which AWS STS exchanges for temporary role credentials — no long-term keys stored anywhere.",
+          "reason": "Correct — this is the AWS-recommended and industry-standard approach. GitHub Actions, GitLab CI, CircleCI, and others support OIDC; credentials are ephemeral and scoped to each pipeline run."
+        },
+        "C": {
+          "description": "Root account credentials have unrestricted, unrevokable access to all AWS resources and should never be used for automation.",
+          "reason": "Incorrect — using root credentials for CI/CD is a critical security violation; root access cannot be limited by IAM policies and represents the highest possible blast radius."
+        },
+        "D": {
+          "description": "Cross-account role assumption from a CI/CD platform using static credentials still requires storing long-term credentials (for the initial AssumeRole call), violating the no-long-term-credentials requirement.",
+          "reason": "Incorrect — the question states the CI/CD platform supports OIDC, which eliminates the need for any stored credentials. Using static credentials for the AssumeRole call defeats the purpose."
+        }
+      },
+      "Tips": "No long-term credentials + CI/CD + OIDC support = OIDC federation with IAM Identity Provider. This is the modern zero-credential pattern. Eliminate any option that stores Access Keys (A, D). Root credentials are always wrong. The OIDC flow: CI/CD gets JWT from its IdP → presents to AWS STS → receives temporary creds for that run only."
+    },
+    {
+      "id": 6,
+      "questionText": "A company has 200 EC2 instances across development, staging, and production environments in a single AWS account. The finance team needs to track costs per environment. Developers frequently launch instances without environment tags, making cost allocation difficult. The company wants to enforce tagging at launch without disrupting existing workflows. Which combination of services achieves this? (Choose TWO)",
+      "options": {
+        "A": "Use AWS Cost Explorer to detect untagged instances and send weekly reports to developers",
+        "B": "Apply an IAM policy with a Deny on ec2:RunInstances if the required environment tag is not present in the request",
+        "C": "Enable AWS Config with the 'required-tags' managed rule to detect non-compliant instances after launch",
+        "D": "Use AWS Tag Editor to retroactively apply tags to existing untagged instances",
+        "E": "Apply an SCP that denies ec2:RunInstances unless the aws:RequestTag/Environment condition key is present"
+      },
+      "correctAnswer": "B and E",
+      "explanations": {
+        "A": {
+          "description": "Cost Explorer provides visibility into spending and can show untagged resource costs, but it is a reporting tool, not an enforcement mechanism.",
+          "reason": "Incorrect — reporting after the fact does not prevent untagged instances from being launched. This is a detective tool, not a preventive control."
+        },
+        "B": {
+          "description": "An IAM policy with a Deny on ec2:RunInstances using the aws:RequestTag condition key prevents the API call from succeeding unless the required tag is included at launch time.",
+          "reason": "Correct — IAM condition-based launch enforcement is a preventive control applied at the API level; the instance cannot be created without the tag."
+        },
+        "C": {
+          "description": "The AWS Config required-tags rule detects instances that were launched without the required tags, but the instances already exist by the time the violation is flagged.",
+          "reason": "Incorrect — Config is a detective/corrective control. Instances can still launch untagged; the rule only identifies them after creation."
+        },
+        "D": {
+          "description": "AWS Tag Editor allows bulk retroactive tagging of existing resources but does not prevent future untagged launches.",
+          "reason": "Incorrect — Tag Editor addresses existing untagged resources but provides no enforcement for future launches."
+        },
+        "E": {
+          "description": "An SCP with a Deny on ec2:RunInstances conditioned on aws:RequestTag/Environment being present enforces tagging at the organization level across all accounts in the OU.",
+          "reason": "Correct — SCPs provide an account-wide guardrail that no account-level admin can override, making this a strong preventive control when Organizations is in use."
+        }
+      },
+      "Tips": "Two preventive mechanisms exist for tag enforcement at launch: IAM policy conditions (per-account, per-user) and SCPs (account-wide via Organizations). Both use aws:RequestTag condition key on ec2:RunInstances. Config and Cost Explorer are detective — they find problems after launch. Tag Editor is retroactive. The question asks for enforcement, not detection."
+    },
+    {
+      "id": 7,
+      "questionText": "An application running on EC2 reads configuration secrets stored in AWS Secrets Manager. The EC2 instances are in private subnets with no internet access or NAT Gateway. The instances are unable to reach Secrets Manager. What is the MOST cost-effective solution to enable access without routing traffic over the internet?",
+      "options": {
+        "A": "Provision a NAT Gateway in a public subnet and update the private subnet route table",
+        "B": "Move the EC2 instances to a public subnet so they can reach Secrets Manager directly",
+        "C": "Create an Interface VPC Endpoint for AWS Secrets Manager in the VPC and update the Security Group to allow HTTPS outbound to the endpoint",
+        "D": "Store the secrets in an S3 bucket and use a Gateway VPC Endpoint for S3 to access them"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "A NAT Gateway enables private subnet instances to initiate outbound internet connections but routes traffic over the public internet and incurs hourly and data processing charges.",
+          "reason": "Incorrect — while functional, NAT Gateway routes Secrets Manager traffic over the internet (violating the no-internet requirement) and adds per-GB data processing costs."
+        },
+        "B": {
+          "description": "Moving instances to a public subnet gives them direct internet access via an Internet Gateway, enabling Secrets Manager access but eliminating the network security benefits of private subnets.",
+          "reason": "Incorrect — this exposes the instances directly to the internet, which is architecturally undesirable for instances running backend application logic."
+        },
+        "C": {
+          "description": "An Interface VPC Endpoint (powered by AWS PrivateLink) for Secrets Manager creates a private endpoint within the VPC. All Secrets Manager API calls stay within the AWS network and never traverse the internet.",
+          "reason": "Correct — Interface VPC Endpoints are the correct mechanism for accessing AWS services like Secrets Manager from private subnets without internet access. Traffic stays entirely within the AWS backbone network."
+        },
+        "D": {
+          "description": "Storing secrets in S3 is not a recommended secrets management approach (lacks encryption-at-rest features, rotation, and access auditing of Secrets Manager); S3 Gateway Endpoints solve a different problem.",
+          "reason": "Incorrect — S3 is not designed for secrets management. This approach loses Secrets Manager features like automatic rotation, versioning, and fine-grained access auditing."
+        }
+      },
+      "Tips": "Private subnet + needs to reach an AWS service + no internet = VPC Endpoint. Know the two types: Gateway Endpoints (S3 and DynamoDB only, free) and Interface Endpoints (all other AWS services including Secrets Manager, SSM, KMS, etc., have an hourly charge). NAT Gateway routes over the internet. Moving to public subnet trades security for convenience."
+    },
+    {
+      "id": 8,
+      "questionText": "A company's IAM policy evaluation results in an unexpected AccessDenied error when an IAM User tries to launch an EC2 instance. The user's identity policy explicitly allows ec2:RunInstances. The account is a member of an AWS Organization. Which of the following is the MOST likely cause, and what should the administrator check FIRST?",
+      "options": {
+        "A": "The IAM User's password has expired, preventing API calls",
+        "B": "An explicit Deny for ec2:RunInstances exists somewhere — likely in an SCP attached to the account's OU, a Permission Boundary on the user, or a second identity policy attached to the user",
+        "C": "EC2 requires a separate IAM role for the user to launch instances",
+        "D": "The user's Access Key has been deactivated, causing all API calls to fail with AccessDenied"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "An expired console password prevents web console login but does not affect programmatic API calls made with Access Keys, which use separate credentials.",
+          "reason": "Incorrect — console passwords and Access Key credentials are independent; an expired password does not cause API AccessDenied errors."
+        },
+        "B": {
+          "description": "In IAM, an explicit Allow can be overridden by an explicit Deny at any policy layer: SCPs (organization level), Permission Boundaries (entity level), or another identity policy attached to the user.",
+          "reason": "Correct — when an Allow exists but access is denied, an explicit Deny somewhere in the policy evaluation chain is the most likely cause. In an Organization context, the SCP is the first place to check."
+        },
+        "C": {
+          "description": "EC2 does not require an IAM Role for the user to call the ec2:RunInstances API. IAM Roles for EC2 are for granting permissions to the running instance, not to the user launching it.",
+          "reason": "Incorrect — IAM Users call EC2 APIs directly using their own permissions; a separate role is not required for launching instances."
+        },
+        "D": {
+          "description": "A deactivated Access Key would return an AuthFailure error, not an AccessDenied error. These are different error types in AWS.",
+          "reason": "Incorrect — deactivated or invalid credentials produce authentication errors (AuthFailure), not authorization errors (AccessDenied). An AccessDenied error means the credentials were valid but the action was not permitted."
+        }
+      },
+      "Tips": "AuthFailure = identity problem (bad/deactivated credentials). AccessDenied = authorization problem (valid identity, action not permitted). When Allow exists but AccessDenied occurs, check for explicit Denies in this order: (1) SCPs, (2) Permission Boundaries, (3) other attached identity policies, (4) resource-based policies. In an Organization, SCP is always the first thing to check."
+    },
+    {
+      "id": 9,
+      "questionText": "A company runs a web application on a fleet of EC2 instances in an Auto Scaling Group behind an Application Load Balancer. Traffic peaks significantly during business hours and drops at night. The company wants to optimize costs while ensuring sufficient capacity during peak times. They have analyzed traffic patterns and found peaks are predictable and consistent. What is the MOST cost-effective purchasing strategy?",
+      "options": {
+        "A": "Run all instances as On-Demand and rely on the ASG to scale down overnight",
+        "B": "Use Compute Savings Plans to cover the baseline number of instances always running, and use On-Demand for peak capacity above the baseline",
+        "C": "Use Reserved Instances (Standard, 1-year) for the baseline load and Spot Instances for the predictable peak hours",
+        "D": "Use Spot Instances for all instances and implement fault-tolerant retries in the application"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "On-Demand instances scaled by ASG is the simplest setup but the most expensive option; there are no discounts applied to any of the compute.",
+          "reason": "Incorrect — On-Demand is the baseline price. With predictable baseline usage, Savings Plans or Reserved Instances should be used to reduce costs."
+        },
+        "B": {
+          "description": "Compute Savings Plans offer up to 66% discount over On-Demand with no instance type lock-in. They cover baseline usage automatically, while On-Demand handles additional capacity during peaks.",
+          "reason": "Correct — this matches the cost optimization best practice: commit to the predictable baseline with Savings Plans (flexibility + discount), and use On-Demand for the variable peak capacity."
+        },
+        "C": {
+          "description": "Reserved Instances for baseline plus Spot for peak hours is a viable pattern for predictable peaks, but Spot Instances can be interrupted, which is risky for a customer-facing web application.",
+          "reason": "Partially correct but not the best answer — Spot interruptions during peak business hours would impact customers. Compute Savings Plans provide the same or better discount with more flexibility and no interruption risk for baseline, while On-Demand covers peaks reliably."
+        },
+        "D": {
+          "description": "All-Spot provides maximum cost savings but means the entire fleet can be interrupted simultaneously during high-demand periods when AWS reclaims capacity.",
+          "reason": "Incorrect — for customer-facing web applications, an all-Spot fleet is too risky. Spot is appropriate for fault-tolerant background workloads, not the primary fleet of a web application."
+        }
+      },
+      "Tips": "Cost optimization pattern for predictable baseline + variable peak: commit to baseline (Savings Plans or RIs) + flexible on-demand/spot for peaks. Key distinction: Savings Plans > Standard RIs for flexibility (no instance type lock). Spot is risky for customer-facing peaks. When questions mention 'predictable baseline', think Savings Plans. When they mention 'variable/unpredictable', think On-Demand or Spot."
+    },
+    {
+      "id": 10,
+      "questionText": "A Solutions Architect is designing a system where an EC2 instance in Account A needs to write objects to an S3 bucket in Account B. The instance uses an IAM Role (RoleA) with S3 write permissions. The bucket policy in Account B grants s3:PutObject to RoleA's ARN. However, when the instance tries to put an object, it receives an AccessDenied error. What is the MOST likely cause?",
+      "options": {
+        "A": "S3 cross-account access is not supported; the bucket must be in the same account as the EC2 instance",
+        "B": "RoleA's permission policy in Account A does not explicitly allow s3:PutObject on the specific bucket ARN in Account B",
+        "C": "The EC2 instance must be in the same VPC as the S3 bucket to use cross-account access",
+        "D": "Cross-account S3 access requires both accounts to use the same AWS Region"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "S3 cross-account access is fully supported and is a standard AWS pattern using bucket policies, ACLs, or cross-account role assumption.",
+          "reason": "Incorrect — S3 cross-account access is a supported and common architecture pattern."
+        },
+        "B": {
+          "description": "For cross-account access where the principal is an IAM Role in Account A and the resource is in Account B, BOTH sides must grant permission: (1) Account B's bucket policy grants access to RoleA, AND (2) RoleA's permission policy in Account A must also allow s3:PutObject on that specific bucket ARN.",
+          "reason": "Correct — cross-account resource access requires a two-sided grant: the resource-based policy grants access AND the identity policy must permit the action. The bucket policy alone is insufficient; RoleA also needs an explicit Allow for the cross-account bucket."
+        },
+        "C": {
+          "description": "S3 is a globally accessible service; VPC placement of the EC2 instance has no bearing on cross-account S3 access (though VPC Endpoints can provide private routing).",
+          "reason": "Incorrect — S3 access is not constrained by VPC placement; cross-account bucket access is independent of where the EC2 instance resides."
+        },
+        "D": {
+          "description": "S3 bucket names are globally unique and S3 is accessible globally; cross-account access does not require the same region, though data transfer costs may differ.",
+          "reason": "Incorrect — cross-account S3 access works across all regions; region alignment is not a requirement."
+        }
+      },
+      "Tips": "Cross-account access requires a two-sided grant: resource policy (bucket policy) AND identity policy (role permission). Within the same account, a resource policy alone can grant access. Across accounts, both must allow the action. If the bucket policy grants access but it still fails, check RoleA's permission policy for the cross-account bucket ARN. This is a frequently tested IAM cross-account concept."
+    },
+    {
+      "id": 11,
+      "questionText": "An EC2 instance is failing health checks from an Application Load Balancer. The instance passes EC2 status checks (both instance and system). The instance's application is running and responding to requests from within the VPC. What is the MOST likely cause of the ALB health check failure?",
+      "options": {
+        "A": "The instance's IAM Role does not have permission to register with the ALB",
+        "B": "The Security Group attached to the EC2 instance does not allow inbound traffic from the ALB's Security Group on the health check port",
+        "C": "The instance is not in the same Availability Zone as the ALB",
+        "D": "The ALB requires the instance to have a public IP address for health checks"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "ALB target registration and health checks are managed by the load balancer service; the EC2 instance's IAM Role is irrelevant to ALB connectivity.",
+          "reason": "Incorrect — health check failures are network-level issues, not IAM permission issues. EC2 instances do not need specific IAM permissions to receive health check traffic."
+        },
+        "B": {
+          "description": "The ALB sends health check requests from its own Security Group to the instance. If the instance's Security Group does not have an inbound rule allowing traffic from the ALB Security Group on the health check port, the health check packets are dropped.",
+          "reason": "Correct — the most common cause of ALB health check failures when the application is otherwise healthy is a missing inbound Security Group rule allowing the ALB's SG ID on the health check port."
+        },
+        "C": {
+          "description": "ALBs operate across multiple Availability Zones and can route to instances in any registered AZ. Instances in different AZs can be healthy targets.",
+          "reason": "Incorrect — ALBs support cross-AZ load balancing; the AZ of the instance does not affect health check reachability."
+        },
+        "D": {
+          "description": "ALB health checks communicate with instances using their private IP addresses within the VPC; public IPs are not required or used for health check communication.",
+          "reason": "Incorrect — ALBs use private VPC networking for health checks and request routing; public IPs are not involved in ALB-to-instance communication."
+        }
+      },
+      "Tips": "ALB health check failure when app is working = Security Group issue almost every time. The ALB sends health checks FROM its own Security Group. The instance's Security Group must allow INBOUND from the ALB's Security Group ID on the health check port. Eliminate IAM (irrelevant for network health checks), same-AZ requirement (ALBs are multi-AZ), and public IP (ALBs use private IPs)."
+    },
+    {
+      "id": 12,
+      "questionText": "A company is migrating a legacy application that is licensed per physical CPU socket. The application vendor's license agreement requires the company to track and report the exact number of physical sockets used. Which EC2 purchasing option allows the company to comply with this licensing requirement?",
+      "options": {
+        "A": "Reserved Instances (Standard, 3-year, All Upfront) for maximum discount on dedicated hardware",
+        "B": "Dedicated Instances to ensure the application runs on hardware dedicated to the company",
+        "C": "Dedicated Hosts, which provide visibility into the number of physical sockets and cores on the underlying server",
+        "D": "Spot Instances with a defined host affinity to maintain socket-level licensing compliance"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Standard Reserved Instances are a pricing model applied to On-Demand or Dedicated Instance usage; they do not provide physical socket or core visibility.",
+          "reason": "Incorrect — Reserved Instances are a billing commitment, not a hardware isolation or visibility feature. They can be combined with Dedicated Hosts but do not themselves provide socket-level visibility."
+        },
+        "B": {
+          "description": "Dedicated Instances run on hardware that no other AWS customer uses, but they do not provide the customer with visibility into the number of physical sockets or cores on the host.",
+          "reason": "Incorrect — Dedicated Instances provide hardware isolation but not host-level visibility. The customer cannot determine or report socket counts with Dedicated Instances."
+        },
+        "C": {
+          "description": "Dedicated Hosts provide a dedicated physical server where the customer can see the host's physical properties including the number of sockets, cores, and vCPUs. This is essential for per-socket or per-core software licensing.",
+          "reason": "Correct — Dedicated Hosts are the only EC2 option designed for bring-your-own-license (BYOL) scenarios requiring physical socket or core visibility. The host ID and physical topology are available to the customer."
+        },
+        "D": {
+          "description": "Spot Instances run on shared infrastructure, can be interrupted, and provide no physical socket visibility or affinity guarantees.",
+          "reason": "Incorrect — Spot Instances have no dedicated hardware, no socket visibility, and can be interrupted — completely unsuitable for per-socket licensed software."
+        }
+      },
+      "Tips": "Per-socket or per-core software licensing = Dedicated Host, always. Dedicated Instances = isolation without visibility. Dedicated Hosts = isolation WITH visibility (socket count, core count, host ID). This distinction is heavily tested. Reserved Instances are a pricing model that can be applied ON TOP of Dedicated Hosts but are not the answer here."
+    },
+    {
+      "id": 13,
+      "questionText": "A security engineer is implementing a zero-trust architecture. They want to ensure that an IAM Role used by an EC2 instance can only be assumed from within a specific VPC. Any attempt to assume the role from outside that VPC should be denied. How should the trust policy be configured?",
+      "options": {
+        "A": "Add a condition to the role's permission policy using aws:SourceVpc to restrict API calls",
+        "B": "Add a condition to the role's trust policy using aws:SourceVpc matching the specific VPC ID, so the AssumeRole action is only allowed from that VPC",
+        "C": "Attach a Security Group to the IAM Role that only allows traffic from the specific VPC CIDR",
+        "D": "Create a VPC Endpoint for IAM and configure endpoint policies to restrict role assumption to the VPC"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The permission policy defines what the role can do after it is assumed; it does not control who or where the role can be assumed from.",
+          "reason": "Incorrect — aws:SourceVpc in the permission policy would restrict where the role's permissions can be exercised, not where the role can be assumed. The trust policy controls who can assume the role."
+        },
+        "B": {
+          "description": "Adding a Condition block with aws:SourceVpc to the trust policy's Allow statement ensures that sts:AssumeRole is only permitted when the request originates from the specified VPC.",
+          "reason": "Correct — the trust policy (a resource-based policy on the role) controls who can assume the role. The aws:SourceVpc condition in the trust policy restricts assumption to requests originating from the specific VPC."
+        },
+        "C": {
+          "description": "Security Groups are VPC network controls for EC2 instances and other resources; they cannot be attached to IAM Roles, which are not network entities.",
+          "reason": "Incorrect — IAM Roles are logical identity constructs, not network resources. Security Groups cannot be attached to them."
+        },
+        "D": {
+          "description": "VPC Endpoints for STS exist (Interface Endpoint for sts.amazonaws.com) and can have endpoint policies, but this is more complex. The simpler and more direct approach is a condition in the trust policy.",
+          "reason": "Incorrect — while VPC Endpoints for STS with endpoint policies can restrict which calls go through the VPC, the trust policy condition is the direct and simpler mechanism to restrict assumption to a specific VPC."
+        }
+      },
+      "Tips": "Restricting WHERE a role can be assumed = condition in the Trust Policy. Restricting WHAT the role can do = condition in the Permission Policy. Trust Policy = who/where can assume. Permission Policy = what can be done after assumption. The condition key aws:SourceVpc restricts to calls originating from within a specific VPC (requires a VPC Endpoint for STS to be fully effective)."
+    },
+    {
+      "id": 14,
+      "questionText": "A company needs to run a large-scale genomics analysis job on EC2 that requires nodes to exchange large amounts of data at very low latency. The job runs for 6 hours, is not time-sensitive enough to require guaranteed capacity, and the company wants to minimize cost. Which EC2 configuration is MOST appropriate?",
+      "options": {
+        "A": "On-Demand instances in a Spread Placement Group",
+        "B": "Spot Instances in a Cluster Placement Group using instance types that support Elastic Fabric Adapter (EFA)",
+        "C": "Reserved Instances in a Partition Placement Group",
+        "D": "Dedicated Hosts in a Cluster Placement Group"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "On-Demand instances in a Spread Placement Group distributes instances across racks for fault isolation, which maximizes the physical distance between nodes — the opposite of what HPC networking requires.",
+          "reason": "Incorrect — Spread PGs deliberately separate instances across hardware, increasing latency. On-Demand also costs more than Spot for a fault-tolerant 6-hour batch job."
+        },
+        "B": {
+          "description": "Spot Instances provide up to 90% cost savings for fault-tolerant batch workloads. Cluster Placement Groups co-locate instances on the same physical rack for maximum bandwidth and minimum latency. EFA provides OS-bypass networking for HPC-grade inter-node communication.",
+          "reason": "Correct — this combination addresses all three requirements: maximum inter-node performance (Cluster PG + EFA), minimum cost (Spot), and the job's fault-tolerant nature makes Spot interruption acceptable."
+        },
+        "C": {
+          "description": "Reserved Instances provide cost savings for committed usage over 1-3 years, not for a single 6-hour job. Partition Placement Groups are for large distributed systems, not low-latency HPC clusters.",
+          "reason": "Incorrect — Reserved Instances are appropriate for sustained 24/7 workloads, not one-time batch jobs. Partition PGs introduce latency between partitions, which is unsuitable for tightly coupled HPC."
+        },
+        "D": {
+          "description": "Dedicated Hosts provide physical server dedication for licensing compliance and are significantly more expensive than Spot Instances; they provide no additional HPC networking benefit over Spot in a Cluster PG.",
+          "reason": "Incorrect — Dedicated Hosts are for BYOL licensing scenarios and are far more expensive than Spot. There is no HPC benefit to using Dedicated Hosts over Spot Instances in a Cluster PG."
+        }
+      },
+      "Tips": "HPC checklist: Cluster PG (co-location) + EFA (OS-bypass networking) + Spot (cost for fault-tolerant batch). Spread PG is the opposite of what HPC needs (it separates instances). Partition PG is for distributed databases. EFA is only needed for HPC workloads requiring MPI-style communication. Spot + Cluster PG + EFA is the canonical AWS HPC batch pattern."
+    },
+    {
+      "id": 15,
+      "questionText": "A company's IAM administrator created a new IAM Role for an EC2 instance. The role has an attached policy allowing s3:GetObject and s3:PutObject on a specific bucket. A Permission Boundary is attached to the role, allowing s3:*, ec2:*, and cloudwatch:*. A developer later modifies the role's attached policy to add iam:CreateRole. Can the role now create IAM Roles?",
+      "options": {
+        "A": "Yes — the developer added iam:CreateRole to the identity policy and it is now in effect",
+        "B": "No — Permission Boundaries permanently lock the role's permissions to only what was defined at creation time",
+        "C": "No — the Permission Boundary allows s3:*, ec2:*, and cloudwatch:* but does not allow iam:*; iam:CreateRole is outside the boundary and therefore not in the effective permissions",
+        "D": "Yes — iam:CreateRole is always permitted for IAM Roles regardless of Permission Boundaries"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Adding iam:CreateRole to the identity policy is technically valid, but effective permissions require the action to be allowed by BOTH the identity policy AND the Permission Boundary.",
+          "reason": "Incorrect — effective permissions = identity policy ∩ Permission Boundary. iam:CreateRole is in the identity policy but not in the Permission Boundary (which only allows s3:*, ec2:*, cloudwatch:*). The intersection does not include iam:CreateRole."
+        },
+        "B": {
+          "description": "Permission Boundaries do not permanently lock permissions at creation time; they define an ongoing ceiling. The boundary's content can be updated, and the effective permissions will adjust accordingly.",
+          "reason": "Incorrect — Permission Boundaries are not time-locked. They can be updated to include new permissions. The current boundary simply doesn't include iam:*, which is why iam:CreateRole is not effective."
+        },
+        "C": {
+          "description": "Effective permissions are the intersection of what the identity policy allows and what the Permission Boundary allows. The boundary allows s3:*, ec2:*, cloudwatch:* — iam:CreateRole falls outside this set, so the effective permission set excludes it.",
+          "reason": "Correct — the Permission Boundary acts as a ceiling. Even though the identity policy now grants iam:CreateRole, the boundary does not permit iam:* in any form, so the effective permission does not include iam:CreateRole."
+        },
+        "D": {
+          "description": "No AWS permission is automatically allowed regardless of boundaries; all permissions must survive the full policy evaluation process including Permission Boundaries.",
+          "reason": "Incorrect — there are no permissions that bypass Permission Boundary evaluation. All IAM actions, including iam:CreateRole, must be within the boundary to be effective."
+        }
+      },
+      "Tips": "Permission Boundary = ceiling. Effective permissions = identity policy ∩ boundary. Both must allow the action. If the action is in the identity policy but NOT in the boundary, it is NOT effective — no exceptions. To add iam:CreateRole to effective permissions here, the Permission Boundary itself would need to be updated to include iam:* or iam:CreateRole."
+    },
+    {
+      "id": 16,
+      "questionText": "A company is running an EC2 instance that processes sensitive financial data. The instance uses an EBS gp3 volume. A compliance requirement states that all data at rest must be encrypted using customer-managed keys (CMK) that the company controls. Currently the volume is unencrypted. What is the correct procedure to encrypt the existing volume with a CMK?",
+      "options": {
+        "A": "Enable EBS encryption in the EC2 console and select the CMK — it will encrypt the existing volume in-place",
+        "B": "Create an encrypted snapshot of the volume using the CMK, create a new EBS volume from the encrypted snapshot, detach the original volume, and attach the new volume",
+        "C": "Reboot the EC2 instance with encryption enabled — AWS automatically encrypts the root volume on restart",
+        "D": "Use the AWS KMS console to apply the CMK to the existing EBS volume directly"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "EBS encryption cannot be enabled in-place on an existing unencrypted volume. AWS does not support converting an existing unencrypted volume to encrypted without creating a new volume.",
+          "reason": "Incorrect — there is no in-place encryption option for existing EBS volumes. A new encrypted volume must be created from an encrypted snapshot."
+        },
+        "B": {
+          "description": "The correct encryption migration path is: create a snapshot of the unencrypted volume → copy the snapshot with encryption enabled and specify the CMK → create a new EBS volume from the encrypted snapshot → replace the original volume on the instance.",
+          "reason": "Correct — this is the documented AWS procedure for encrypting an existing unencrypted EBS volume. The snapshot copy step is where encryption is applied using the specified CMK."
+        },
+        "C": {
+          "description": "Rebooting an EC2 instance does not encrypt its EBS volumes; encryption state does not change based on instance operations.",
+          "reason": "Incorrect — rebooting has no effect on the encryption state of existing EBS volumes. Encryption must be explicitly applied via the snapshot-copy workflow."
+        },
+        "D": {
+          "description": "AWS KMS manages encryption keys but does not apply those keys to existing EBS volumes directly; KMS is used during volume or snapshot creation/copy operations.",
+          "reason": "Incorrect — KMS does not have a direct 'encrypt this volume' operation. KMS keys are specified when creating new encrypted volumes or copying snapshots with encryption."
+        }
+      },
+      "Tips": "EBS encryption is immutable on an existing volume — you cannot encrypt it in-place. The workflow is always: snapshot → encrypted copy (specifying CMK) → new volume from copy → swap volumes. Remember: the 'copy snapshot' step is where you enable encryption. You can also create an AMI from the instance and re-register it with an encrypted root snapshot, then launch a new instance."
+    },
+    {
+      "id": 17,
+      "questionText": "A company runs 50 EC2 instances continuously for a web application. Currently all instances are On-Demand. The CTO wants to reduce costs by at least 40% without changing the application architecture. The instance types may need to change over the next year as the team optimizes performance. Which purchasing option provides at least 40% savings with the most flexibility for instance type changes?",
+      "options": {
+        "A": "Standard Reserved Instances (1-year, All Upfront) for all 50 instances",
+        "B": "Convertible Reserved Instances (1-year, No Upfront) for all 50 instances",
+        "C": "Compute Savings Plans (1-year commitment) covering the current On-Demand spend",
+        "D": "Spot Instances for all 50 instances"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Standard Reserved Instances (1-year, All Upfront) provide up to ~40-72% discount but lock in a specific instance type, size, region, and OS for the full term; changes require selling on the RI Marketplace.",
+          "reason": "Incorrect — Standard RIs do provide the discount but are inflexible; if instance types change, the RIs no longer match and the company effectively over-pays for unused reservations while paying On-Demand for new types."
+        },
+        "B": {
+          "description": "Convertible Reserved Instances allow changing instance family, OS, and tenancy during the term by converting the RI, providing more flexibility than Standard RIs at slightly lower discount (~20-54%).",
+          "reason": "Partially correct — Convertible RIs provide flexibility but the conversion process is manual and has restrictions. Compute Savings Plans provide equivalent or better savings with automatic applicability to any instance type."
+        },
+        "C": {
+          "description": "Compute Savings Plans commit to a consistent amount of compute usage (measured in $/hour) and automatically apply up to ~66% discount to any EC2 instance regardless of type, family, size, region, OS, or tenancy.",
+          "reason": "Correct — Compute Savings Plans provide the best combination of significant savings (up to 66%) and complete flexibility. They automatically apply to any EC2 usage without conversion steps, making them ideal when instance types may change."
+        },
+        "D": {
+          "description": "Spot Instances provide up to 90% savings but can be interrupted with 2 minutes' notice, making them unsuitable as the sole compute option for a continuous web application.",
+          "reason": "Incorrect — Spot Instances are not suitable for customer-facing web applications that must run continuously; interruptions would cause availability issues."
+        }
+      },
+      "Tips": "Flexibility for instance type changes + significant savings = Compute Savings Plans. Savings Plans (Compute type) automatically apply to any instance type, unlike Standard RIs (locked) or Convertible RIs (manual conversion needed). Compute Savings Plans provide ~66% discount — well above the 40% target. Spot is not viable for continuous web application. This is a core cost optimization concept in the SAA exam."
+    },
+    {
+      "id": 18,
+      "questionText": "A company has a web application deployed on EC2 instances in two Availability Zones behind an Application Load Balancer. The application stores user session state in the local memory of each EC2 instance. Users are reporting that they are intermittently logged out when their requests are routed to a different instance. What changes should the Solutions Architect recommend?",
+      "options": {
+        "A": "Enable ALB sticky sessions (session affinity) to route each user's requests to the same EC2 instance",
+        "B": "Increase the number of EC2 instances to reduce the probability of a user being routed to a different instance",
+        "C": "Migrate session state to a shared, external store such as Amazon ElastiCache (Redis) or DynamoDB, and remove local session storage from the EC2 instances",
+        "D": "Use Network Load Balancer instead of Application Load Balancer since it provides better session persistence"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "ALB sticky sessions route a user to the same instance for the duration of the session cookie, which addresses the immediate symptom but is a fragile solution — if the instance is replaced or terminated, the user is still logged out.",
+          "reason": "Incorrect — sticky sessions are a band-aid, not an architectural fix. They break on instance replacement, scaling events, and instance failures. The root cause (stateful EC2 instances) remains unresolved."
+        },
+        "B": {
+          "description": "Adding more EC2 instances increases the probability of being routed to a different instance on each request, making the problem worse, not better.",
+          "reason": "Incorrect — more instances means more targets for the ALB to route to, increasing the likelihood of cross-instance routing and session loss. This actively worsens the problem."
+        },
+        "C": {
+          "description": "Externalized session state in a shared cache (ElastiCache Redis) or database (DynamoDB) means any EC2 instance can serve any request for any user; instances become stateless and interchangeable.",
+          "reason": "Correct — externalizing session state is the architectural best practice for horizontally scalable applications behind a load balancer. It eliminates the dependency on specific instances and enables true scale-out without session loss."
+        },
+        "D": {
+          "description": "Network Load Balancer operates at Layer 4 and also distributes connections across targets. It does not solve the stateful session problem; users will still be routed to different instances.",
+          "reason": "Incorrect — NLB does not provide session persistence that would solve this problem. Switching load balancer types does not address the root cause of stateful EC2 instances."
+        }
+      },
+      "Tips": "Stateful EC2 = anti-pattern for scalable web apps. The solution is always to externalize state (ElastiCache for session/cache, DynamoDB for structured state). Sticky sessions are a temporary workaround that breaks during scaling events. More instances makes the problem worse. This question tests whether you know to make EC2 instances stateless — a fundamental cloud-native design principle."
+    },
+    {
+      "id": 19,
+      "questionText": "An organization uses AWS Organizations with 15 member accounts. The security team wants to audit all IAM Role assumption events across all accounts from a single location. Which solution requires the LEAST operational overhead?",
+      "options": {
+        "A": "Enable CloudTrail in each member account and configure each trail to deliver logs to a separate S3 bucket per account",
+        "B": "Create an Organization CloudTrail trail from the management account that logs AssumeRole events from all member accounts and delivers them to a single centralized S3 bucket",
+        "C": "Deploy a CloudWatch agent on all EC2 instances in each account to capture IAM events",
+        "D": "Configure AWS Config in each account to record IAM Role changes and aggregate findings to a central account"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Per-account CloudTrail trails with separate S3 buckets creates 15 separate trails, 15 separate buckets, and requires querying each bucket independently for cross-account analysis.",
+          "reason": "Incorrect — 15 separate trails and buckets creates significant operational overhead for configuration, maintenance, and querying. This does not meet the 'least operational overhead' requirement."
+        },
+        "B": {
+          "description": "An Organization-level CloudTrail trail created from the management account automatically applies to all existing and future member accounts, logs all specified events to a single S3 bucket, and covers all accounts without per-account configuration.",
+          "reason": "Correct — Organization CloudTrail is the purpose-built solution for centralized multi-account audit logging. One trail covers all accounts with no per-account setup required. AssumeRole events (management events) are captured by default."
+        },
+        "C": {
+          "description": "CloudWatch agents collect OS-level metrics and application logs from EC2 instances; they cannot capture IAM API events, which are account-level API calls not tied to specific instances.",
+          "reason": "Incorrect — CloudWatch agents are for instance-level monitoring. IAM AssumeRole events are API-level events that must be captured via CloudTrail, not CloudWatch agents."
+        },
+        "D": {
+          "description": "AWS Config records resource configuration changes over time and can aggregate findings, but it does not capture the detailed API call history (caller identity, timestamp, parameters) that CloudTrail provides for AssumeRole events.",
+          "reason": "Incorrect — Config tracks resource configuration state, not API call audit trails. AssumeRole events require CloudTrail, not Config."
+        }
+      },
+      "Tips": "Multi-account audit logging with least overhead = Organization CloudTrail trail. One trail in the management account covers all member accounts automatically, including new ones added later. CloudWatch agents are for OS/application logs, not AWS API events. Config tracks resource state, not API call history. The phrase 'from a single location' combined with 'multiple accounts' points directly to Organization-level CloudTrail."
+    },
+    {
+      "id": 20,
+      "questionText": "A Solutions Architect needs to ensure that EC2 instances in an Auto Scaling Group always launch in a specific subnet within a specific Availability Zone. When the ASG scales out, new instances must be placed in us-east-1a only. How is this configured?",
+      "options": {
+        "A": "Set the Availability Zone parameter in the EC2 Launch Template to us-east-1a",
+        "B": "Configure the Auto Scaling Group's VPC subnets to include only the subnet in us-east-1a",
+        "C": "Use a Cluster Placement Group scoped to us-east-1a and associate it with the ASG",
+        "D": "Add a Condition to the ASG's IAM Role that restricts ec2:RunInstances to us-east-1a"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "EC2 Launch Templates specify instance configuration parameters like AMI, instance type, security groups, and key pairs; they do not contain ASG subnet or AZ placement configuration.",
+          "reason": "Incorrect — Launch Templates define the instance configuration blueprint, not where the ASG should launch instances. AZ and subnet selection are ASG-level settings."
+        },
+        "B": {
+          "description": "The ASG's subnet configuration determines which AZs instances are launched in. By specifying only the subnet in us-east-1a, all ASG-launched instances will be placed in that AZ.",
+          "reason": "Correct — ASG subnet configuration is the mechanism for controlling which AZs and subnets instances are launched in. Removing all other subnets from the ASG configuration restricts launches to the specified AZ."
+        },
+        "C": {
+          "description": "Cluster Placement Groups control the physical placement of instances for low-latency networking; they do not restrict or configure which AZ an ASG launches in.",
+          "reason": "Incorrect — Placement Groups are about physical hardware proximity, not subnet or AZ assignment. They are associated with individual instances, not with ASG subnet selection."
+        },
+        "D": {
+          "description": "IAM conditions on ec2:RunInstances can restrict which regions or configurations are allowed, but are not the mechanism for configuring where an ASG launches its instances.",
+          "reason": "Incorrect — ASG placement is a configuration property of the ASG itself, not an IAM permission constraint. Using IAM conditions for this purpose would be overly complex and fragile."
+        }
+      },
+      "Tips": "ASG subnet = AZ selection. To restrict an ASG to a specific AZ, configure only the subnet(s) in that AZ. Launch Templates define instance configuration (AMI, type, SG). ASG settings define capacity management (min/max/desired, subnets, health checks, scaling policies). Placement Groups control hardware proximity, not AZ assignment. IAM is not the right tool for configuring ASG placement."
+    },
+    {
+      "id": 21,
+      "questionText": "A company's security team has implemented an IAM policy with the following condition on all user policies: { \"Condition\": { \"BoolIfExists\": { \"aws:MultiFactorAuthPresent\": \"false\" } } } with Effect: Deny. A user without MFA tries to call ec2:DescribeInstances. What is the result?",
+      "options": {
+        "A": "The call succeeds because ec2:DescribeInstances is a read-only action that does not require MFA",
+        "B": "The call is denied because the Deny condition evaluates to true: the key aws:MultiFactorAuthPresent exists (as false) or is absent, and BoolIfExists evaluates to true in both cases when the value is false",
+        "C": "The call succeeds because BoolIfExists only evaluates when the condition key is present; if MFA was never configured, the key is absent and the condition is skipped",
+        "D": "The call is denied only if the user has MFA devices configured but chose not to use them"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The MFA Deny condition applies to all API calls regardless of whether they are read-only or write operations; MFA enforcement is not scoped by action type in this policy.",
+          "reason": "Incorrect — the condition does not exempt read-only calls. The Deny applies to all actions covered by the policy when the MFA condition is met."
+        },
+        "B": {
+          "description": "BoolIfExists evaluates to true if: (a) the key is present and equals false (MFA not used in this session), OR (b) the key is absent entirely (no MFA configured). In both cases, the Deny fires, ensuring users without active MFA sessions are blocked.",
+          "reason": "Correct — BoolIfExists is specifically designed to deny access both when MFA is present-but-false AND when MFA is absent (key doesn't exist). This prevents the bypass of using sessions where the MFA key is simply not set."
+        },
+        "C": {
+          "description": "BoolIfExists is specifically designed to handle the absent-key case; it does NOT skip evaluation when the key is absent — instead, it evaluates to true, triggering the Deny.",
+          "reason": "Incorrect — this describes the behavior of Bool (without IfExists). BoolIfExists was created precisely to cover the case where the key is absent, preventing users without MFA from bypassing the condition."
+        },
+        "D": {
+          "description": "The BoolIfExists condition fires for users with no MFA configured (key absent) as well as users who authenticated without MFA (key present but false); it is not limited to users with configured-but-unused MFA.",
+          "reason": "Incorrect — BoolIfExists covers both scenarios: key absent (no MFA configured) and key present-but-false (MFA configured but not used). Both result in a Deny."
+        }
+      },
+      "Tips": "BoolIfExists vs Bool for MFA enforcement: Bool skips the condition if the key is absent (vulnerability — users with no MFA can bypass). BoolIfExists denies when the key is absent OR false (closes the bypass). This is an important exam distinction. The policy 'Deny if aws:MultiFactorAuthPresent is false (BoolIfExists)' means: deny anyone whose session does not have MFA, whether they have no MFA configured or simply didn't use it."
+    },
+    {
+      "id": 22,
+      "questionText": "An EC2 instance running in a private subnet needs to periodically download software updates from the internet and also needs to access Amazon S3 to retrieve configuration files. The team wants to minimize costs. What is the MOST cost-effective network architecture?",
+      "options": {
+        "A": "One NAT Gateway for internet access; one S3 Gateway VPC Endpoint for S3 access",
+        "B": "Two NAT Gateways for redundancy, covering both internet and S3 access",
+        "C": "One NAT Gateway for all traffic (both internet and S3)",
+        "D": "One Interface VPC Endpoint for S3 and one NAT Gateway for internet access"
+      },
+      "correctAnswer": "A",
+      "explanations": {
+        "A": {
+          "description": "A NAT Gateway handles outbound internet access for software updates; an S3 Gateway VPC Endpoint (which is free) routes S3 traffic through the AWS private network, avoiding NAT Gateway data processing fees on all S3 traffic.",
+          "reason": "Correct — S3 Gateway Endpoints are free and eliminate NAT Gateway data processing charges on S3 traffic (which can be substantial). NAT Gateway handles only the internet-bound traffic. This is the most cost-effective combination."
+        },
+        "B": {
+          "description": "Two NAT Gateways provide redundancy across AZs but double the hourly cost; routing S3 traffic through NAT Gateways incurs data processing charges that could be avoided with a free S3 Gateway Endpoint.",
+          "reason": "Incorrect — two NAT Gateways for redundancy is a valid HA pattern but is not the most cost-effective approach, especially since S3 traffic should bypass the NAT Gateway entirely via a free Gateway Endpoint."
+        },
+        "C": {
+          "description": "A single NAT Gateway for all traffic including S3 works functionally but incurs NAT Gateway data processing charges ($0.045/GB) on all S3 traffic, which can become expensive at scale.",
+          "reason": "Incorrect — routing S3 traffic through a NAT Gateway is wasteful when a free S3 Gateway Endpoint eliminates those data processing charges entirely."
+        },
+        "D": {
+          "description": "An S3 Interface VPC Endpoint (PrivateLink-based) has an hourly charge per AZ plus data processing charges; an S3 Gateway Endpoint is free and has no ongoing charges.",
+          "reason": "Incorrect — while functional, using an Interface Endpoint for S3 costs money when a free Gateway Endpoint achieves the same result for S3 access from within the VPC."
+        }
+      },
+      "Tips": "Cost optimization for S3 + internet access: S3 Gateway Endpoint = free (always use it). NAT Gateway data processing charges can be significant for high S3 traffic volumes. The pattern is: S3 traffic → Gateway Endpoint (free, private); internet traffic → NAT Gateway (charged). Interface Endpoints for S3 exist but cost money; Gateway Endpoints for S3 (and DynamoDB) are always the cheaper choice within the same VPC."
+    },
+    {
+      "id": 23,
+      "questionText": "A company has a policy that EC2 instances must only communicate with pre-approved external IP ranges. A new instance is launched without any Security Group restrictions and receives a public IP. A malware sample on the internet probes the instance on port 22. What happens by default?",
+      "options": {
+        "A": "The probe succeeds because default Security Groups allow all inbound traffic",
+        "B": "The probe is blocked because EC2 instances are not reachable from the internet by default; an explicit inbound rule must be added to the Security Group",
+        "C": "The probe succeeds because any EC2 instance with a public IP is accessible from the internet on all ports",
+        "D": "The probe is blocked by AWS Shield, which protects all EC2 instances by default"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Default Security Groups (the VPC's default SG) allow inbound traffic only from other instances associated with the same default Security Group; they do not allow all inbound traffic from the internet.",
+          "reason": "Incorrect — the default Security Group allows inbound traffic from members of the same SG (intra-SG communication) but denies all other inbound traffic by default."
+        },
+        "B": {
+          "description": "Security Groups are deny-all by default for inbound traffic; no inbound traffic is allowed unless an explicit allow rule is created. A public IP provides routable addressing but does not bypass Security Group evaluation.",
+          "reason": "Correct — Security Groups deny all inbound traffic that does not match an explicit allow rule. Even with a public IP, an instance is unreachable from the internet until an inbound rule is explicitly added."
+        },
+        "C": {
+          "description": "A public IP makes the instance routable from the internet but does not open any ports; all inbound connections are still evaluated against Security Group rules.",
+          "reason": "Incorrect — a public IP is a routing mechanism, not a Security Group bypass. All inbound traffic is still subject to Security Group allow/deny evaluation."
+        },
+        "D": {
+          "description": "AWS Shield Standard provides protection against volumetric DDoS attacks at the infrastructure level; it does not act as an instance-level firewall or block port probing.",
+          "reason": "Incorrect — Shield Standard protects against DDoS at Layers 3/4 at the network level; it is not an instance firewall and does not block targeted port probing on individual instances."
+        }
+      },
+      "Tips": "Security Groups are stateful, explicit-allow-only firewalls. Default = deny all inbound. A public IP ≠ open ports. The default Security Group only allows traffic from members of the same SG. Shield protects against DDoS, not port scanning. This question tests whether you know that EC2 instances are not publicly accessible by default even with a public IP — you must explicitly open ports."
+    },
+    {
+      "id": 24,
+      "questionText": "A company uses AWS IAM Identity Center (SSO) to provide federated access to multiple AWS accounts. A user can access Account A (DevOps) and Account B (Production). The user's permission set for Account A allows ec2:* and Account B allows ec2:Describe* only. The user tries to terminate an instance in Account B. What is the result?",
+      "options": {
+        "A": "The termination succeeds because the user has ec2:* in Account A, which applies across accounts",
+        "B": "The termination is denied because the user's permission set for Account B only allows ec2:Describe*, which does not include ec2:TerminateInstances",
+        "C": "The termination succeeds because IAM Identity Center users have implicit full access to all assigned accounts",
+        "D": "The termination requires the user to explicitly assume a cross-account role before the permission set takes effect"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Permission sets in IAM Identity Center are account-specific; permissions granted for Account A do not carry over to Account B.",
+          "reason": "Incorrect — IAM Identity Center permission sets are scoped per account assignment. ec2:* in Account A has absolutely no effect in Account B."
+        },
+        "B": {
+          "description": "When the user accesses Account B through IAM Identity Center, they assume an automatically managed IAM Role with the permissions defined in the Account B permission set (ec2:Describe* only). ec2:TerminateInstances is not in ec2:Describe*, so the action is denied.",
+          "reason": "Correct — IAM Identity Center creates temporary roles per account using the assigned permission set. The user's Account B role only has read-only EC2 permissions; termination is not included in Describe-only access."
+        },
+        "C": {
+          "description": "IAM Identity Center users only have permissions defined in their specific permission set for each account; there is no implicit full access.",
+          "reason": "Incorrect — permission sets are explicitly configured; there is no default full access. Users can only perform actions allowed by their assigned permission set for the specific account."
+        },
+        "D": {
+          "description": "IAM Identity Center handles role assumption transparently; users access accounts through a portal without manually assuming roles. The permission set defines the role that is assumed.",
+          "reason": "Incorrect — IAM Identity Center automates role assumption behind the scenes. Users do not need to manually call sts:AssumeRole; the SSO portal handles this when the user selects an account and permission set."
+        }
+      },
+      "Tips": "IAM Identity Center permission sets are per-account and per-user. Permissions from one account never bleed into another. The permission set becomes an IAM Role in the target account — all standard IAM evaluation rules apply. ec2:Describe* is read-only (list/describe) — it does NOT include create, modify, terminate, or stop actions. Map ec2:TerminateInstances → not in Describe* → denied."
+    },
+    {
+      "id": 25,
+      "questionText": "A company recently migrated to AWS and stores sensitive PII data in an EBS volume attached to an EC2 instance. A compliance auditor asks: 'How do you prevent the EBS volume data from being accessible if the volume is detached and attached to an unauthorized instance?' What is the CORRECT technical control?",
+      "options": {
+        "A": "Enable EBS encryption using a customer-managed KMS key; control access to the KMS key using a key policy that only allows authorized IAM principals to use the key for decryption",
+        "B": "Apply a Security Group to the EBS volume that restricts which EC2 instances can attach to it",
+        "C": "Enable EBS volume encryption using the default AWS-managed key; this prevents any cross-instance access",
+        "D": "Use instance store volumes instead of EBS since instance store data is tied to the specific instance hardware"
+      },
+      "correctAnswer": "A",
+      "explanations": {
+        "A": {
+          "description": "EBS encryption with a CMK means the volume's data encryption key (DEK) is wrapped by the CMK. To read the data, the KMS key must be used to unwrap the DEK. By restricting kms:Decrypt on the key policy to only authorized IAM roles/principals, unauthorized instances cannot decrypt the volume even if they physically attach it.",
+          "reason": "Correct — CMK-based EBS encryption with a restrictive key policy is the technical control that ensures data is unreadable on unauthorized instances. The encryption is at the block level and tied to the key's access controls."
+        },
+        "B": {
+          "description": "EBS volumes cannot have Security Groups attached to them. Security Groups are applied to EC2 network interfaces, not to storage volumes.",
+          "reason": "Incorrect — Security Groups are network-layer controls and cannot be applied to EBS volumes. There is no volume-level Security Group feature."
+        },
+        "C": {
+          "description": "AWS-managed (default) EBS encryption encrypts the volume with a key managed by AWS. AWS allows any authorized principal in the account to use the default key, which means any EC2 instance in the account could potentially decrypt the volume.",
+          "reason": "Incorrect — the default AWS-managed key does not provide fine-grained access control. Any role in the account with kms:GenerateDataKeyWithoutPlaintext can effectively use it. A CMK with a restrictive key policy is required for access control."
+        },
+        "D": {
+          "description": "Instance store data is ephemeral and tied to the physical hardware of the host, making it unextractable when the instance stops or terminates. However, instance store cannot satisfy persistent storage requirements and is not available on all instance types.",
+          "reason": "Incorrect — while instance store data is tied to the hardware, it is not a practical PII storage solution due to its ephemeral nature; data is lost on instance stop, termination, or hardware failure."
+        }
+      },
+      "Tips": "EBS encryption with CMK + key policy = the data security control for unauthorized detach/re-attach. Default AWS-managed keys don't restrict within-account access. CMK key policies can restrict to specific IAM principals. The flow: attacker attaches volume → tries to read data → OS calls KMS to decrypt → KMS key policy denies decryption for attacker's instance role → data is unreadable. Security Groups cannot be applied to EBS volumes."
+    },
+    {
+      "id": 26,
+      "questionText": "An application team is designing a new microservices architecture on EC2. Service A (in subnet-a) needs to call Service B's REST API (in subnet-b). Both subnets are in the same VPC. The team wants to ensure Service A can ONLY reach Service B on port 8080 and no other ports or services. How should Security Groups be configured?",
+      "options": {
+        "A": "Service B's Security Group: inbound rule allowing TCP port 8080 sourced from Service A's Security Group ID",
+        "B": "Service A's Security Group: outbound rule allowing all TCP to Service B's Security Group ID",
+        "C": "Service B's Security Group: inbound rule allowing all traffic from subnet-a's CIDR block",
+        "D": "Create a Network ACL allowing TCP port 8080 between subnet-a and subnet-b"
+      },
+      "correctAnswer": "A",
+      "explanations": {
+        "A": {
+          "description": "Configuring an inbound rule on Service B's Security Group that allows TCP 8080 from Service A's Security Group ID ensures only instances with Service A's SG can reach Service B on that specific port.",
+          "reason": "Correct — this is the principle of least privilege applied to inter-service communication. The SG ID reference is dynamic (works as Service A scales), precise (only Service A instances, not anything else in the subnet), and port-specific."
+        },
+        "B": {
+          "description": "An outbound rule on Service A's Security Group allowing all TCP to Service B's SG allows Service A to initiate connections on any port to any instance in Service B's SG, which is broader than needed.",
+          "reason": "Incorrect — outbound rules on the source are secondary; Security Group rules on the destination are what actually protect Service B. Also, allowing 'all TCP' on outbound is too permissive. Security Groups are stateful, so the return traffic is automatically allowed."
+        },
+        "C": {
+          "description": "Allowing all traffic from subnet-a's CIDR block allows any instance in subnet-a to reach Service B on any port — not just Service A on port 8080.",
+          "reason": "Incorrect — CIDR-based rules allow any instance in the subnet, regardless of what it is. SG ID references provide instance-level precision that CIDR ranges cannot."
+        },
+        "D": {
+          "description": "Network ACLs are stateless, subnet-level controls that can restrict port-level traffic between subnets but cannot identify traffic by which specific instance sent it.",
+          "reason": "Incorrect — NACLs are stateless (require both inbound and outbound rules) and subnet-level (cannot distinguish between different services within the same subnet). Security Groups are the correct tool for service-level access control."
+        }
+      },
+      "Tips": "For service-to-service access control: configure the INBOUND rule on the DESTINATION (Service B) referencing the SOURCE's Security Group ID. This is the canonical pattern. SG ID = instance-level precision. CIDR = subnet-level (too broad). NACLs = stateless, subnet-level, harder to manage. Security Groups are stateful — you only need the inbound rule on Service B; return traffic is automatically permitted."
+    },
+    {
+      "id": 27,
+      "questionText": "A company is running an HPC cluster of 20 c5n.18xlarge EC2 instances in a Cluster Placement Group. They want to add 5 more instances to the cluster. AWS returns an InsufficientCapacityError for the new c5n.18xlarge instances. What is the RECOMMENDED course of action?",
+      "options": {
+        "A": "Submit an AWS Service Quota increase request for c5n.18xlarge instances in the Region",
+        "B": "Stop all 20 existing instances in the Cluster Placement Group, then restart all 25 instances together to allow AWS to find a single contiguous block of hardware for all 25",
+        "C": "Create a new Cluster Placement Group and launch the 5 additional instances there, then peer the two placement groups",
+        "D": "Switch to a Spread Placement Group, which can accommodate more instances than a Cluster Placement Group"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Service Quota increases address per-account limits on the number of instances of a given type; InsufficientCapacityError is a physical availability issue (not enough hardware in the current placement group's footprint), not a quota issue.",
+          "reason": "Incorrect — InsufficientCapacityError in a placement group is a physical hardware space issue, not a quota limit. Increasing quotas would not resolve a physical capacity constraint in the specific cluster footprint."
+        },
+        "B": {
+          "description": "Cluster Placement Groups require all instances to fit on adjacent hardware. By stopping all instances and relaunching all 25 together, AWS can search for a contiguous block of hardware large enough to accommodate the entire group, rather than trying to squeeze 5 more into an already-placed cluster.",
+          "reason": "Correct — this is the documented AWS recommendation for InsufficientCapacityError in Cluster Placement Groups. Stopping all instances and restarting together gives the scheduler the opportunity to place all instances as a unit on suitable hardware."
+        },
+        "C": {
+          "description": "Creating a second Cluster Placement Group for the 5 additional instances would physically separate them from the original 20; Placement Groups cannot be peered or connected for shared low-latency networking.",
+          "reason": "Incorrect — Cluster Placement Groups cannot be peered. Instances in separate placement groups would have higher inter-node latency, defeating the purpose of the cluster."
+        },
+        "D": {
+          "description": "Spread Placement Groups deliberately distribute instances across separate physical racks, increasing network distance between nodes — the opposite architecture to HPC requirements.",
+          "reason": "Incorrect — Spread PGs are for fault isolation, not HPC performance. Switching to Spread would eliminate the low-latency networking that HPC workloads require."
+        }
+      },
+      "Tips": "InsufficientCapacityError in a Cluster PG: the fix is to stop-all and restart-all together. AWS can't fit 5 more instances into the existing cluster footprint, but can find a new larger footprint for all 25 if given a clean slate. Service Quota increases fix quota limits, not physical capacity. Two Cluster PGs can't be merged or peered. This is a documented, tested AWS operational pattern for Cluster Placement Groups."
+    },
+    {
+      "id": 28,
+      "questionText": "A company's developer accidentally ran a script that terminated 50 production EC2 instances. The instances were part of an Auto Scaling Group. The operations team wants to prevent this from happening again without removing the developer's ability to terminate instances in development environments. What is the MOST targeted solution?",
+      "options": {
+        "A": "Remove ec2:TerminateInstances from all developer IAM policies",
+        "B": "Apply a Deny policy on ec2:TerminateInstances with a condition requiring the aws:RequestedRegion to be the development region only",
+        "C": "Apply a Deny on ec2:TerminateInstances with a condition using StringNotEquals on ec2:ResourceTag/Environment: Development — denying termination of any instance not tagged as Development",
+        "D": "Enable MFA Delete on all EC2 instances so terminations require a second factor"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Removing ec2:TerminateInstances entirely would prevent accidental production terminations but also remove the developer's ability to terminate development instances, which is required.",
+          "reason": "Incorrect — this is too broad; it removes the ability to terminate development instances as well, which violates the requirement to preserve development access."
+        },
+        "B": {
+          "description": "Restricting ec2:TerminateInstances to a specific development region works if development and production are in different regions, but many organizations use different accounts, VPCs, or tags within the same region for environment separation.",
+          "reason": "Partially correct but fragile — region-based separation only works if environments are strictly region-separated. Tag-based conditions are more precise and work regardless of region placement."
+        },
+        "C": {
+          "description": "A Deny on ec2:TerminateInstances with a StringNotEquals condition on the ec2:ResourceTag/Environment tag prevents termination of any instance that is NOT tagged 'Development', effectively protecting all non-development instances while allowing development instance termination.",
+          "reason": "Correct — tag-based conditions provide environment-level access control that is precise, flexible, and works regardless of region, AZ, or account structure. This is the most targeted and maintainable approach."
+        },
+        "D": {
+          "description": "MFA Delete is a feature for S3 buckets, not EC2 instances; there is no MFA Delete concept for EC2 instance termination.",
+          "reason": "Incorrect — MFA Delete is an S3 feature that prevents deletion of versioned objects without MFA authentication. It does not apply to EC2 instances."
+        }
+      },
+      "Tips": "Environment-level access control = tag-based IAM conditions. Pattern: Deny ec2:TerminateInstances where ec2:ResourceTag/Environment != 'Development'. This protects prod/staging while allowing dev terminations. Region-based conditions are fragile if environments share regions. MFA Delete is S3-only. Removing the permission entirely is too broad. Tag-based conditions are the most common SAA answer for 'allow in env A but not env B'."
+    },
+    {
+      "id": 29,
+      "questionText": "An operations team uses a bastion host (jump server) EC2 instance to access instances in private subnets via SSH. The bastion host is in a public subnet. The team wants to eliminate the operational overhead of managing the bastion host and SSH keys while maintaining secure access to private instances. Which AWS-native solution should the architect recommend?",
+      "options": {
+        "A": "Replace the bastion host with an Internet-facing Application Load Balancer that forwards SSH traffic",
+        "B": "Use AWS Systems Manager Session Manager to establish secure shell-like sessions directly to private instances without bastion hosts or open SSH ports",
+        "C": "Move all private instances to a public subnet so they can be accessed directly over SSH",
+        "D": "Use AWS Direct Connect to create a dedicated private connection for SSH access"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Application Load Balancers operate at Layer 7 (HTTP/HTTPS) and cannot proxy or forward SSH (Layer 4/TCP) traffic; NLBs can forward TCP but still leave ports open and don't eliminate key management.",
+          "reason": "Incorrect — ALBs cannot handle SSH traffic. Even with an NLB, this approach still requires SSH keys and open port 22, addressing neither problem."
+        },
+        "B": {
+          "description": "AWS Systems Manager Session Manager uses the SSM Agent on instances and IAM-based authentication to establish interactive sessions without requiring inbound SSH ports, bastion hosts, or SSH key management.",
+          "reason": "Correct — Session Manager is the AWS-recommended replacement for bastion hosts. It requires no open inbound ports (instances initiate outbound HTTPS to SSM endpoint), no SSH keys, and provides full audit logging through CloudTrail and Session Manager logs."
+        },
+        "C": {
+          "description": "Moving instances to public subnets exposes them directly to the internet with public IPs, increasing the attack surface dramatically — the opposite of a security improvement.",
+          "reason": "Incorrect — exposing private instances to the internet to simplify access management is an unacceptable security trade-off in any production environment."
+        },
+        "D": {
+          "description": "AWS Direct Connect provides a dedicated private network link from on-premises to AWS, which is a network connectivity solution rather than a secure access management tool; it does not eliminate SSH keys or bastion host complexity.",
+          "reason": "Incorrect — Direct Connect is an enterprise network connectivity product for hybrid cloud scenarios; it is not an instance access management solution and does not eliminate bastion hosts."
+        }
+      },
+      "Tips": "Eliminate bastion hosts + no SSH keys + no open port 22 = AWS Systems Manager Session Manager. This is one of the most commonly tested operational best practices on the SAA exam. Session Manager uses SSM Agent + IAM authentication + outbound HTTPS only (port 443 from instance to SSM endpoint). No inbound rules needed. All sessions logged to CloudTrail and S3/CloudWatch Logs."
+    },
+    {
+      "id": 30,
+      "questionText": "A company is designing a disaster recovery solution for a critical EC2-based application. The RPO (Recovery Point Objective) is 1 hour and the RTO (Recovery Time Objective) is 30 minutes. The primary region is us-east-1. Which combination BEST meets these requirements at the lowest cost?",
+      "options": {
+        "A": "Run identical EC2 instances in us-west-2 at all times (hot standby) with active-active traffic routing",
+        "B": "Create hourly AMI backups in us-east-1, cross-region copy AMIs to us-west-2, and use EC2 Auto Scaling in us-west-2 configured to launch from the latest AMI on demand (warm standby pilot light)",
+        "C": "Create daily EBS snapshots in us-east-1 only; manually restore from snapshots in case of a disaster",
+        "D": "Cross-region replicate hourly AMIs to us-west-2; maintain a scaled-down Auto Scaling Group in us-west-2 (minimum 1 instance) that can quickly scale to full capacity when activated (warm standby)"
+      },
+      "correctAnswer": "D",
+      "explanations": {
+        "A": {
+          "description": "A hot standby with active-active routing provides near-zero RTO and RPO but is the most expensive option — full capacity runs continuously in two regions.",
+          "reason": "Incorrect — while it meets the objectives, running full capacity in two regions simultaneously is far more expensive than necessary for a 30-minute RTO and 1-hour RPO requirement."
+        },
+        "B": {
+          "description": "Hourly AMI backups cross-copied to us-west-2 with an ASG ready to scale from zero meets the RPO (1-hour AMI intervals) but may not meet the 30-minute RTO if the ASG starts from zero — instance launch, bootstrapping, and health checks take time.",
+          "reason": "Incorrect — launching from zero (pure pilot light) risks exceeding the 30-minute RTO if instance initialization and application startup take more than 30 minutes."
+        },
+        "C": {
+          "description": "Daily EBS snapshots in one region with manual restoration would have an RPO of up to 24 hours (far exceeding 1 hour) and an RTO measured in hours for manual restoration (far exceeding 30 minutes).",
+          "reason": "Incorrect — daily snapshots plus manual recovery does not come close to the required 1-hour RPO or 30-minute RTO."
+        },
+        "D": {
+          "description": "Hourly cross-region AMI copies satisfy the 1-hour RPO. A warm standby with minimum 1 instance in the DR region means the ASG already has a running, healthy instance that can scale rapidly; the 30-minute RTO is achievable by scaling from 1 to full capacity rather than from zero.",
+          "reason": "Correct — warm standby balances cost (minimal ongoing compute) and RTO (instances are already running and serving traffic at reduced capacity, enabling rapid scale-out). This is the optimal cost-vs-recovery balance for the given RPO/RTO targets."
+        }
+      },
+      "Tips": "DR strategy cost vs recovery speed: Hot Standby (active-active) > Warm Standby (pilot light with running instances) > Pilot Light (minimal running resources) > Backup & Restore. For 30-min RTO, warm standby with pre-running instances is key — cold launch from zero may exceed 30 minutes. Hourly AMIs match 1-hour RPO. Daily snapshots = too long. Cross-region copy of AMIs = meets the RPO/RTO at lower cost than full active-active."
+    },
+    {
+      "id": 31,
+      "questionText": "A Solutions Architect is reviewing IAM policies and finds the following policy attached to an EC2 instance role:\n{\n  \"Effect\": \"Allow\",\n  \"Action\": \"s3:*\",\n  \"Resource\": \"*\",\n  \"Condition\": {\n    \"StringEquals\": {\n      \"s3:prefix\": [\"finance/\", \"hr/\"]\n    }\n  }\n}\nThe instance attempts to call s3:ListBucket on a bucket named 'company-data'. Will the call succeed?",
+      "options": {
+        "A": "Yes — the policy allows s3:* on all resources, so ListBucket succeeds regardless of the condition",
+        "B": "No — the s3:prefix condition only applies to s3:GetObject, not to s3:ListBucket",
+        "C": "The behavior depends on whether the ListBucket request includes a prefix parameter matching 'finance/' or 'hr/'",
+        "D": "No — the condition restricts all S3 actions to the finance/ and hr/ prefixes only, and ListBucket without a matching prefix is implicitly denied"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "The policy allows s3:* but the Condition block must evaluate to true for the Allow to apply; the Allow does not fire unconditionally.",
+          "reason": "Incorrect — conditions are not optional; an Allow with a condition only applies when the condition evaluates to true. The s3:prefix condition must match for the Allow to take effect."
+        },
+        "B": {
+          "description": "The s3:prefix condition key applies to both s3:GetObject and s3:ListBucket; for ListBucket, it refers to the prefix parameter in the list request.",
+          "reason": "Incorrect — s3:prefix is a valid condition key for s3:ListBucket (used for listing objects with specific prefixes) as well as for s3:GetObject. It is not exclusive to GetObject."
+        },
+        "C": {
+          "description": "For s3:ListBucket, the s3:prefix condition evaluates the prefix query parameter in the request. If the request includes Prefix=finance/ or Prefix=hr/, the condition is met and the Allow applies. Without a matching prefix, the condition fails and the request falls back to implicit deny.",
+          "reason": "Correct — the s3:prefix condition key applies to the list request's prefix parameter. A ListBucket call with Prefix=finance/ satisfies the condition; a ListBucket call with no prefix or a different prefix does not."
+        },
+        "D": {
+          "description": "The policy does not explicitly Deny ListBucket without a matching prefix; the effect is an implicit deny (the Allow condition is not met, so no explicit Allow applies).",
+          "reason": "Incorrect as stated — the policy does not Deny the action; it simply does not Allow it when the condition is unmet. The result is an implicit deny, but framing it as 'the condition restricts all S3 actions' is technically imprecise."
+        }
+      },
+      "Tips": "IAM condition keys that apply to S3: s3:prefix restricts ListBucket and GetObject to specific key prefixes. s3:ExistingObjectTag restricts based on object tags. For ListBucket, the condition evaluates the request's Prefix query parameter. An Allow with an unmet condition = implicit deny (same as no matching policy). Know that s3:prefix is relevant for BOTH ListBucket (listing) and GetObject (reading) operations."
+    },
+    {
+      "id": 32,
+      "questionText": "A company is launching a new product globally and expects sudden, massive traffic spikes that are impossible to predict precisely. The application is stateless and runs on EC2 instances. The architecture must handle any scale of traffic spike with minimal management. What is the MOST appropriate EC2 scaling strategy?",
+      "options": {
+        "A": "Pre-provision 10x the expected average capacity as On-Demand instances to handle any possible spike",
+        "B": "Use an Auto Scaling Group with a target tracking scaling policy based on average CPU utilization or request count per target, with a combination of On-Demand base instances and Spot Instances for burst capacity",
+        "C": "Use Scheduled Scaling to add instances at hourly intervals throughout the day",
+        "D": "Use Reserved Instances sized for the maximum expected load to ensure capacity availability"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Pre-provisioning 10x capacity is enormously wasteful; instances idle at full cost when traffic is normal, and the exact spike magnitude is unpredictable.",
+          "reason": "Incorrect — this is the antithesis of cloud economics. Static over-provisioning for unpredictable spikes is wasteful and does not leverage AWS's elastic scaling capabilities."
+        },
+        "B": {
+          "description": "Target tracking policies automatically adjust capacity to maintain a target metric (CPU%, requests per target), scaling out proactively during spikes and in during lulls. On-Demand base + Spot burst provides cost efficiency without interruption risk at the base level.",
+          "reason": "Correct — target tracking scaling is the most autonomous and responsive policy type; it dynamically adjusts to any scale of traffic without manual tuning. On-Demand base ensures availability; Spot burst reduces cost for additional capacity."
+        },
+        "C": {
+          "description": "Scheduled scaling adds instances at pre-defined times; this is appropriate for predictable patterns (like business hours) but not for unpredictable sudden spikes.",
+          "reason": "Incorrect — scheduled scaling requires knowing when spikes will occur. 'Impossible to predict precisely' makes scheduled scaling inappropriate; dynamic scaling policies are required."
+        },
+        "D": {
+          "description": "Reserved Instances sized for maximum load would be extremely expensive (paying for peak capacity 24/7), and reservations do not guarantee unlimited capacity for unprecedented spikes.",
+          "reason": "Incorrect — Reserved Instances are a cost optimization tool for predictable baseline capacity, not a solution for unpredictable massive traffic spikes. They also require significant upfront commitment to a specific size."
+        }
+      },
+      "Tips": "Unpredictable spikes + stateless = Auto Scaling Group with target tracking policy. Target tracking is self-managing (no manual tuning of scale-in/scale-out thresholds). Step scaling requires manual threshold configuration. Scheduled scaling requires predictable patterns. On-Demand base + Spot burst = cost-optimal for variable workloads. Pre-provisioning is the anti-pattern ASGs are designed to replace."
+    },
+    {
+      "id": 33,
+      "questionText": "A company's IAM policy includes: Effect: Deny, Action: [ec2:StopInstances, ec2:TerminateInstances], Resource: *, Condition: StringNotEquals ec2:ResourceTag/CriticalSystem: true. An administrator with AdministratorAccess tries to stop an instance tagged CriticalSystem=true. What happens?",
+      "options": {
+        "A": "The stop fails — the Deny applies to all instances and AdministratorAccess cannot override explicit Denies",
+        "B": "The stop succeeds — the Deny condition evaluates to false for instances tagged CriticalSystem=true (StringNotEquals: true ≠ true is false), so the Deny does not apply; AdministratorAccess provides the needed Allow",
+        "C": "The stop fails — AdministratorAccess cannot override any IAM policy with a Deny statement",
+        "D": "The stop succeeds only if the administrator uses the root account, not AdministratorAccess"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The Deny does NOT apply to instances tagged CriticalSystem=true because the StringNotEquals condition evaluates to false for that tag value; the Deny only fires for instances where CriticalSystem is NOT true.",
+          "reason": "Incorrect — this misreads the condition. StringNotEquals evaluates to true only when the value does NOT equal 'true'. For an instance tagged CriticalSystem=true, StringNotEquals returns false, so the Deny does not apply."
+        },
+        "B": {
+          "description": "StringNotEquals on CriticalSystem=true: 'true' == 'true' → StringNotEquals returns FALSE → the Condition is not met → the Deny does NOT apply. With no applicable Deny, AdministratorAccess provides the ec2:StopInstances Allow, so the stop succeeds.",
+          "reason": "Correct — the Deny is a conditional Deny specifically designed to protect instances NOT tagged as critical. For instances tagged CriticalSystem=true, the condition fails (StringNotEquals is false), the Deny does not fire, and the normal AdministratorAccess Allow takes effect."
+        },
+        "C": {
+          "description": "AdministratorAccess cannot override an active explicit Deny; however, in this case, the Deny is conditional and does NOT apply to CriticalSystem=true instances.",
+          "reason": "Incorrect — while AdministratorAccess cannot override an active Deny, this statement is only half of the analysis. The critical step is evaluating whether the Deny's condition is met, which it is not for this tagged instance."
+        },
+        "D": {
+          "description": "The root user bypasses most IAM restrictions but is not required here; since the Deny condition is not met for this instance, a standard IAM principal with AdministratorAccess can perform the action.",
+          "reason": "Incorrect — root account access is not necessary; the conditional Deny simply doesn't apply to CriticalSystem=true instances, making this a normal authorized action for AdministratorAccess."
+        }
+      },
+      "Tips": "Conditional Deny logic: the Deny fires ONLY when the condition is TRUE. StringNotEquals CriticalSystem=true → TRUE when tag != 'true' (untagged or differently tagged instances). For CriticalSystem=true instances, StringNotEquals returns FALSE → Deny does not apply → Allow from AdministratorAccess takes effect. Always evaluate conditions before concluding a Deny applies. Conditions gate the Deny, they don't change explicit Deny precedence — only whether the Deny fires at all."
+    },
+    {
+      "id": 34,
+      "questionText": "A startup is building a SaaS platform on AWS. Different customers should never be able to access each other's data. The team uses a single AWS account with a multi-tenant architecture on EC2, where each customer's data is in a separate S3 prefix. Customer workloads run on the same EC2 instances but with different IAM Roles per customer. A customer's IAM Role should only access their own prefix. How should the IAM Roles be configured?",
+      "options": {
+        "A": "Create one IAM Role for all customers with access to the entire bucket and enforce tenant isolation in the application code",
+        "B": "Create a separate IAM Role per customer with an S3 policy that allows access only to the customer-specific prefix using the role name or a dynamic variable as the prefix path",
+        "C": "Use IAM Groups to separate customer permissions and assign users to groups based on their customer ID",
+        "D": "Enable S3 bucket versioning and use version IDs to isolate customer data"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "A single shared IAM Role for all customers with application-level isolation means a bug or vulnerability in the application could allow cross-tenant data access, as the role itself permits it.",
+          "reason": "Incorrect — application-level isolation without IAM-level enforcement is insufficient for a SaaS platform; a misconfiguration or security bug in the application could expose all customer data. IAM provides an independent enforcement layer."
+        },
+        "B": {
+          "description": "Per-customer IAM Roles with prefix-specific S3 policies use IAM policy variables (like ${aws:PrincipalTag/CustomerID}) or explicit ARNs to restrict each role to its customer's S3 prefix, enforcing isolation at the IAM level independently of application logic.",
+          "reason": "Correct — IAM-level prefix isolation ensures that even if the application has a bug, a customer's role cannot access another customer's prefix. IAM policy variables enable scalable per-customer roles without creating a unique policy per customer."
+        },
+        "C": {
+          "description": "IAM Groups are for human IAM Users; they cannot be assumed by EC2 instances or applications. EC2 instances use IAM Roles via instance profiles, not Groups.",
+          "reason": "Incorrect — IAM Groups cannot be assumed by EC2 instances; they are an organizational tool for human users. Instance profiles attach IAM Roles, not group memberships."
+        },
+        "D": {
+          "description": "S3 versioning maintains multiple versions of objects for recovery and audit purposes; it has nothing to do with access isolation between tenants.",
+          "reason": "Incorrect — versioning is a data retention/recovery feature, not an access isolation mechanism. All versions of all objects in the bucket would still be accessible to a role with bucket-wide access."
+        }
+      },
+      "Tips": "Multi-tenant SaaS isolation = per-tenant IAM Roles + S3 prefix conditions. IAM policy variables (${aws:PrincipalTag/CustomerID} in the resource ARN) enable one role template to dynamically restrict to the right prefix based on the role's tags. This scales without creating a new policy per customer. Groups are for users, not instances. Application-only isolation is insufficient for security-sensitive SaaS — always enforce at the IAM level."
+    },
+    {
+      "id": 35,
+      "questionText": "A company has a hybrid architecture with EC2 instances in a VPC and an on-premises data center connected via AWS Direct Connect. The EC2 instances use instance metadata (IMDSv1) to retrieve IAM credentials. A security scan identifies the IMDSv1 endpoint as a SSRF (Server-Side Request Forgery) vulnerability risk. What should the architect do to mitigate this risk without impacting application functionality?",
+      "options": {
+        "A": "Disable the instance metadata service entirely using iptables on each instance",
+        "B": "Migrate all instances to instance store volumes, which do not use the metadata service",
+        "C": "Enforce IMDSv2 (token-based metadata access) on all instances using ModifyInstanceMetadataOptions, which requires a PUT request to obtain a session token before metadata can be accessed, mitigating SSRF attacks",
+        "D": "Move all IAM credentials to AWS Secrets Manager and remove the IAM Role from the EC2 instances"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Disabling the metadata service entirely prevents applications from retrieving IAM credentials via the instance profile, breaking all AWS SDK operations that rely on instance profile credentials.",
+          "reason": "Incorrect — disabling the metadata service would break IAM credential retrieval for the instance's applications; this eliminates the vulnerability but also eliminates functionality."
+        },
+        "B": {
+          "description": "Instance store volumes are ephemeral local storage; they are unrelated to the metadata service or SSRF vulnerabilities. All instance types use the metadata service for IAM credentials regardless of storage type.",
+          "reason": "Incorrect — the type of storage volume has no effect on the instance metadata service. All instances use IMDS for credential retrieval regardless of whether they have EBS or instance store volumes."
+        },
+        "C": {
+          "description": "IMDSv2 requires a PUT request with an X-aws-ec2-metadata-token-ttl-seconds header to first obtain a session token, then uses that token in subsequent GET requests. SSRF attacks typically only make GET requests, so they cannot obtain the token and therefore cannot access metadata through a SSRF vulnerability.",
+          "reason": "Correct — IMDSv2's token-based flow is specifically designed to mitigate SSRF attacks. The two-step PUT-then-GET flow requires intent; a SSRF payload that only does GET requests cannot retrieve credentials. ModifyInstanceMetadataOptions can enforce this without stopping instances."
+        },
+        "D": {
+          "description": "Storing credentials in Secrets Manager and removing the IAM Role would require application code changes to retrieve credentials from Secrets Manager, introduces rotation complexity, and removes the primary benefit of IAM instance profiles (no credentials to manage).",
+          "reason": "Incorrect — removing IAM Roles from instances and replacing with Secrets Manager credentials adds operational complexity and still doesn't address the SSRF risk for applications that need other metadata. IMDSv2 is the purpose-built mitigation."
+        }
+      },
+      "Tips": "IMDSv1 SSRF risk: attacker tricks the app into making a GET request to 169.254.169.254 and receives credentials. IMDSv2 mitigation: requires PUT first to get a session token → SSRF GET can't get the token → can't access metadata. ModifyInstanceMetadataOptions = sets HttpTokens=required on running instances without restart. This is one of the most important EC2 security concepts on the SAA exam. Remember: IMDSv2 specifically mitigates SSRF."
+    }
+  ]
+}

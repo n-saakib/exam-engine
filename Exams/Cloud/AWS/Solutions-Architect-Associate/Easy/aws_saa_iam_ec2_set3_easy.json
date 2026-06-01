@@ -1,0 +1,307 @@
+{
+  "setId": "0661303e-4862-451b-b9a8-bcedb6021871",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Easy Set 3",
+  "difficulty": "Easy",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "Which of the following IAM credentials is used for programmatic access to AWS services via the CLI or SDK?",
+      "options": {
+        "A": "Username and password",
+        "B": "Access Key ID and Secret Access Key",
+        "C": "X.509 certificate",
+        "D": "MFA token"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Username and password",
+          "reason": "The standard login credentials for accessing the AWS Management Console (the web UI). They are not used for CLI or SDK calls."
+        },
+        "B": {
+          "description": "Access Key ID and Secret Access Key",
+          "reason": "A credential pair generated for IAM Users that authenticates API calls made through the AWS CLI, SDKs, and HTTP requests. The Access Key ID is a public identifier; the Secret Access Key is the private signing key."
+        },
+        "C": {
+          "description": "X.509 certificate",
+          "reason": "Used for some legacy AWS services and SOAP-based APIs. Not commonly used today and not the standard credential for CLI/SDK access."
+        },
+        "D": {
+          "description": "MFA token",
+          "reason": "A time-based one-time password used as a second factor for console login or for assuming sensitive roles. It does not by itself grant programmatic access."
+        }
+      },
+      "Tips": "Programmatic access = Access Keys (ID + Secret). Username/password is for the web console. X.509 certs are legacy/SOAP. MFA is a second factor only. Access Keys are the only programmatic credential pair."
+    },
+    {
+      "id": 2,
+      "questionText": "What happens to an EC2 instance's public IP address when it is stopped and restarted?",
+      "options": {
+        "A": "The public IP remains the same",
+        "B": "The public IP is permanently deleted",
+        "C": "A new public IP is assigned upon restart",
+        "D": "The public IP is converted to a private IP"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "The public IP remains the same",
+          "reason": "Dynamic public IPs in EC2 are not persistent. Only Elastic IPs (static public IPs you explicitly allocate) remain the same across stop/start cycles."
+        },
+        "B": {
+          "description": "The public IP is permanently deleted",
+          "reason": "The IP is released back to AWS's pool, not deleted. It will be reassigned to another resource or become available for allocation."
+        },
+        "C": {
+          "description": "A new public IP is assigned upon restart",
+          "reason": "When a non-Elastic-IP-attached instance stops, its dynamic public IP is released. When it starts again, a new IP from the public pool is assigned."
+        },
+        "D": {
+          "description": "The public IP is converted to a private IP",
+          "reason": "Public and private IPs are separate concepts in VPC networking. A released public IP is not converted to anything; the instance retains only its private IP when stopped."
+        }
+      },
+      "Tips": "Dynamic public IPs in EC2 are ephemeral — they are released when the instance stops. Only *Elastic IPs* persist. The IP is not deleted (returned to the pool) and never converts to a private IP."
+    },
+    {
+      "id": 3,
+      "questionText": "Which of the following best describes an Amazon Machine Image (AMI)?",
+      "options": {
+        "A": "A virtual firewall that protects EC2 instances",
+        "B": "A pre-configured template used to launch EC2 instances",
+        "C": "A storage volume attached to an EC2 instance",
+        "D": "A monitoring tool for tracking EC2 performance"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "A virtual firewall that protects EC2 instances",
+          "reason": "Virtual firewall functionality is provided by Security Groups and Network ACLs. An AMI has nothing to do with network traffic control."
+        },
+        "B": {
+          "description": "A pre-configured template used to launch EC2 instances",
+          "reason": "An AMI packages together the operating system, application software, and configuration needed to launch an EC2 instance. It serves as a reusable blueprint and can be shared, copied across regions, or used to create Auto Scaling fleets."
+        },
+        "C": {
+          "description": "A storage volume attached to an EC2 instance",
+          "reason": "EBS (Elastic Block Store) volumes are the block storage attached to EC2 instances. An AMI references a root volume snapshot, but it is not the volume itself."
+        },
+        "D": {
+          "description": "A monitoring tool for tracking EC2 performance",
+          "reason": "Performance monitoring for EC2 is done through Amazon CloudWatch, not AMIs."
+        }
+      },
+      "Tips": "AMI = template for launching instances. Eliminate firewall (Security Group), storage (EBS), and monitoring (CloudWatch). An AMI is a pre-configured snapshot that defines what an instance looks like at launch."
+    },
+    {
+      "id": 4,
+      "questionText": "In IAM, what is a managed policy?",
+      "options": {
+        "A": "A policy written inline directly on a single IAM user",
+        "B": "A standalone policy created and managed by AWS or the customer that can be attached to multiple entities",
+        "C": "A policy that only applies to the root account",
+        "D": "A policy that automatically expires after 90 days"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "A policy written inline directly on a single IAM user",
+          "reason": "This describes an inline policy — one that is embedded directly into a single user, group, or role and cannot be reused."
+        },
+        "B": {
+          "description": "A standalone policy created and managed by AWS or the customer that can be attached to multiple entities",
+          "reason": "Managed policies exist independently of IAM identities. AWS provides pre-built ones (e.g., `AmazonS3ReadOnlyAccess`) and you can also create custom ones. They can be attached to multiple users, groups, or roles simultaneously."
+        },
+        "C": {
+          "description": "A policy that only applies to the root account",
+          "reason": "IAM policies do not apply to the root account. Root account permissions are unrestricted and cannot be limited by IAM policies."
+        },
+        "D": {
+          "description": "A policy that automatically expires after 90 days",
+          "reason": "IAM policies do not have automatic expiration dates. Credential rotation and policy lifecycle management must be done manually or via automation."
+        }
+      },
+      "Tips": "Managed policies are reusable and standalone. Inline policies are embedded in one entity. Eliminate 'root account only' (policies don't apply to root) and 'auto-expire' (no such feature in IAM)."
+    },
+    {
+      "id": 5,
+      "questionText": "Which EC2 feature helps ensure that instances are distributed across multiple physical hardware hosts to reduce correlated failures?",
+      "options": {
+        "A": "Auto Scaling Groups",
+        "B": "Placement Groups (Spread strategy)",
+        "C": "Elastic Load Balancing",
+        "D": "EC2 Hibernation"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Auto Scaling Groups",
+          "reason": "Automatically adjusts the number of EC2 instances based on demand. While it can span multiple Availability Zones, it does not specifically control which physical hardware hosts instances land on."
+        },
+        "B": {
+          "description": "Placement Groups (Spread strategy)",
+          "reason": "A Spread Placement Group places each instance on a different physical rack with its own network and power source. This reduces the risk of simultaneous failure across instances, making it ideal for high-availability workloads with a small number of critical instances."
+        },
+        "C": {
+          "description": "Elastic Load Balancing",
+          "reason": "Distributes incoming traffic across multiple targets (instances, containers). It improves availability and fault tolerance at the application level but does not control the physical placement of instances."
+        },
+        "D": {
+          "description": "EC2 Hibernation",
+          "reason": "Saves the instance's in-memory state to EBS when the instance is stopped and restores it on restart. Completely unrelated to placement or hardware redundancy."
+        }
+      },
+      "Tips": "Spread = separate racks for fault isolation. Cluster = same rack for low latency. Auto Scaling = capacity. ELB = traffic distribution. The word 'spread' in 'Spread Placement Group' directly matches 'distributed across hardware'."
+    },
+    {
+      "id": 6,
+      "questionText": "What is the purpose of enabling Multi-Factor Authentication (MFA) on an IAM User?",
+      "options": {
+        "A": "To allow the user to access multiple AWS accounts simultaneously",
+        "B": "To add an extra layer of security by requiring a second form of verification at login",
+        "C": "To grant the user temporary credentials for cross-account access",
+        "D": "To automatically rotate the user's access keys every 30 days"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "To allow the user to access multiple AWS accounts simultaneously",
+          "reason": "Accessing multiple accounts simultaneously is not how MFA works. Multi-account access is handled through IAM Role switching or AWS SSO."
+        },
+        "B": {
+          "description": "To add an extra layer of security by requiring a second form of verification at login",
+          "reason": "MFA requires the user to provide something they know (password) AND something they have (a one-time code from a hardware device or authenticator app). This ensures that stolen passwords alone are not enough to gain access."
+        },
+        "C": {
+          "description": "To grant the user temporary credentials for cross-account access",
+          "reason": "Temporary credentials for cross-account access are generated when assuming an IAM Role, not by enabling MFA on a user. MFA can be required as a condition for role assumption, but MFA itself is not what grants the credentials."
+        },
+        "D": {
+          "description": "To automatically rotate the user's access keys every 30 days",
+          "reason": "Access key rotation is a separate security best practice managed independently (manually or via automation). MFA does not trigger key rotation."
+        }
+      },
+      "Tips": "MFA = second verification factor at login. Eliminate multi-account access (SSO/Organizations), temporary credentials (STS/role assumption), and key rotation (separate feature). MFA is purely a login security layer."
+    },
+    {
+      "id": 7,
+      "questionText": "An EC2 instance has been launched in a public subnet. Which of the following is required for the instance to send and receive traffic from the internet?",
+      "options": {
+        "A": "A NAT Gateway",
+        "B": "An Internet Gateway attached to the VPC",
+        "C": "A Direct Connect connection",
+        "D": "A VPN Gateway"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "A NAT Gateway",
+          "reason": "A NAT Gateway allows instances in a **private subnet** to initiate outbound connections to the internet while blocking unsolicited inbound connections. It is not used for instances in public subnets that need full bidirectional internet access."
+        },
+        "B": {
+          "description": "An Internet Gateway attached to the VPC",
+          "reason": "An Internet Gateway (IGW) is the VPC component that enables two-way communication between instances in public subnets and the internet. The public subnet's route table must have a route pointing to the IGW."
+        },
+        "C": {
+          "description": "A Direct Connect connection",
+          "reason": "AWS Direct Connect provides a dedicated private network connection from on-premises to AWS. It is not used for general internet access for EC2 instances."
+        },
+        "D": {
+          "description": "A VPN Gateway",
+          "reason": "A Virtual Private Gateway enables Site-to-Site VPN connections from on-premises networks to a VPC. It does not provide internet access for EC2 instances."
+        }
+      },
+      "Tips": "Public subnet + internet access = Internet Gateway in the VPC route table. NAT Gateway is for *private* subnets. Direct Connect and VPN are for on-premises connectivity. IGW is the only public internet gateway."
+    },
+    {
+      "id": 8,
+      "questionText": "Which of the following statements about IAM Roles is correct?",
+      "options": {
+        "A": "IAM Roles are assigned permanent long-term credentials",
+        "B": "IAM Roles provide temporary security credentials when assumed",
+        "C": "IAM Roles can only be used by human users",
+        "D": "IAM Roles must always be attached to an IAM Group"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "IAM Roles are assigned permanent long-term credentials",
+          "reason": "Unlike IAM Users, Roles do not have permanent credentials like access keys. Credentials are generated dynamically by AWS STS each time the role is assumed."
+        },
+        "B": {
+          "description": "IAM Roles provide temporary security credentials when assumed",
+          "reason": "When a role is assumed (by a user, service, or application), AWS STS issues short-lived credentials with a configurable expiration period. This improves security by limiting the validity window of any credential."
+        },
+        "C": {
+          "description": "IAM Roles can only be used by human users",
+          "reason": "Roles are specifically designed to be assumed by AWS services, EC2 instances, Lambda functions, external identity providers, and users alike. They are not limited to humans."
+        },
+        "D": {
+          "description": "IAM Roles must always be attached to an IAM Group",
+          "reason": "Roles are standalone IAM entities. They are not attached to groups; they are assumed by principals defined in the role's Trust Policy."
+        }
+      },
+      "Tips": "Roles provide *temporary* credentials — this is their key differentiator from Users. Eliminate permanent credentials (that's Users), human-only use (Roles serve services too), and Group attachment (Roles are standalone)."
+    },
+    {
+      "id": 9,
+      "questionText": "What is the default tenancy model for EC2 instances?",
+      "options": {
+        "A": "Dedicated Host",
+        "B": "Dedicated Instance",
+        "C": "Shared Tenancy",
+        "D": "Isolated Tenancy"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Dedicated Host",
+          "reason": "An entire physical server dedicated to a single customer. Required for certain bring-your-own-license software. It is the most expensive option and must be explicitly selected."
+        },
+        "B": {
+          "description": "Dedicated Instance",
+          "reason": "An EC2 instance that runs on hardware dedicated to a single customer, but without full host-level control. More expensive than shared, and also must be explicitly selected."
+        },
+        "C": {
+          "description": "Shared Tenancy",
+          "reason": "By default, EC2 instances run on physical hardware that is shared with other AWS customers (with strong isolation). This is the most cost-effective option and is what you get unless you specifically request dedicated hardware."
+        },
+        "D": {
+          "description": "Isolated Tenancy",
+          "reason": "Not a valid EC2 tenancy model. The three valid tenancy options are Shared (default), Dedicated Instance, and Dedicated Host."
+        }
+      },
+      "Tips": "Default tenancy = shared hardware = cheapest = the default. Dedicated Host and Dedicated Instance must be explicitly requested. 'Isolated Tenancy' is not a real EC2 term."
+    },
+    {
+      "id": 10,
+      "questionText": "Which AWS tool can be used to test whether an IAM policy grants a specific permission before applying it?",
+      "options": {
+        "A": "AWS Trusted Advisor",
+        "B": "AWS Config",
+        "C": "IAM Policy Simulator",
+        "D": "AWS Inspector"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "AWS Trusted Advisor",
+          "reason": "A service that provides best-practice recommendations across cost optimization, security, fault tolerance, performance, and service limits. It does not simulate IAM policy evaluation."
+        },
+        "B": {
+          "description": "AWS Config",
+          "reason": "Records configuration changes to AWS resources over time and evaluates them against compliance rules. It does not evaluate hypothetical IAM policy scenarios."
+        },
+        "C": {
+          "description": "IAM Policy Simulator",
+          "reason": "A built-in tool in the IAM console that lets you test the effects of IAM policies. You can simulate API calls and see whether they would be allowed or denied by the current or hypothetical policies, helping you validate permissions before deployment."
+        },
+        "D": {
+          "description": "AWS Inspector",
+          "reason": "An automated vulnerability assessment service for EC2 instances and container images. It scans for software vulnerabilities and unintended network exposure, not IAM policy permissions."
+        }
+      },
+      "Tips": "*Simulator* in the name is the clue. Trusted Advisor gives recommendations. Config checks compliance. Inspector scans for vulnerabilities. Only the IAM Policy Simulator tests hypothetical policy outcomes."
+    }
+  ]
+}

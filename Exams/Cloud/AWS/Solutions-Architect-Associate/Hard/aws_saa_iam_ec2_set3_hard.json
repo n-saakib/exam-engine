@@ -1,0 +1,307 @@
+{
+  "setId": "a4a9a30c-dfc0-473e-a27e-fdc687bcae26",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Hard Set 3",
+  "difficulty": "Hard",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company has a single AWS account. IAM User Alice has these policies: (1) Identity policy allows s3:PutObject on bucket-a. (2) Permission Boundary allows s3:PutObject and s3:GetObject on all resources. (3) S3 bucket policy on bucket-a allows s3:* for Alice's ARN. Alice tries to delete an object from bucket-a. What is the result?",
+      "options": {
+        "A": "Allowed — the bucket policy allows s3:* for Alice",
+        "B": "Denied — the Permission Boundary does not include s3:DeleteObject, so effective permissions exclude it",
+        "C": "Allowed — bucket policies override Permission Boundaries for the specific resource",
+        "D": "Denied — Alice's identity policy does not include s3:DeleteObject so it is implicitly denied"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Allowed — the bucket policy allows s3:* for Alice",
+          "reason": "The bucket policy is a resource-based policy. For same-account access, resource-based policies grant permission but the effective permission is still bounded by identity policies AND Permission Boundaries. The bucket policy alone cannot elevate Alice's permissions beyond what her Permission Boundary allows."
+        },
+        "B": {
+          "description": "Denied — the Permission Boundary does not include s3:DeleteObject",
+          "reason": "Effective permissions = {identity policy} ∩ {Permission Boundary}. For same-account access with a resource-based policy, the calculation includes: (resource-based policy) AND ({identity policy} ∩ {Permission Boundary}). The Permission Boundary only allows s3:PutObject and s3:GetObject. s3:DeleteObject is not in the boundary, so it is excluded from the effective permissions regardless of what the bucket policy or identity policy say."
+        },
+        "C": {
+          "description": "Bucket policies override Permission Boundaries for specific resources",
+          "reason": "This is incorrect for same-account scenarios. Cross-account bucket policy grants work differently (the resource-based policy alone can grant access), but for same-account principals, the Permission Boundary still applies as a ceiling."
+        },
+        "D": {
+          "description": "Denied — identity policy doesn't include s3:DeleteObject",
+          "reason": "While this is also true (the identity policy only grants s3:PutObject), this answer identifies a secondary reason. The primary and definitive reason for denial in this scenario is the Permission Boundary — the boundary is the ceiling that restricts the effective permissions, which is the more precise explanation the SAA exam tests."
+        }
+      },
+      "Tips": "For same-account S3 access: effective permissions = (identity policy ∩ Permission Boundary) combined with resource-based policy. The Permission Boundary only allows PutObject and GetObject — DeleteObject is not in it. The bucket policy cannot elevate permissions beyond the boundary ceiling for same-account users."
+    },
+    {
+      "id": 2,
+      "questionText": "An EC2 fleet needs to process a large batch job. The job is fault-tolerant and can resume from checkpoints. The company wants maximum cost savings. Spot Instances are selected. During the job, an interruption notice is received. Which TWO actions minimize data loss and keep costs low? (Choose TWO)",
+      "options": {
+        "A": "Save checkpoint data to an EBS volume immediately upon receiving the interruption notice (2-minute window)",
+        "B": "Automatically launch a new Spot Instance (or fall back to On-Demand) from the same checkpoint using an Auto Scaling Group with a mixed instances policy",
+        "C": "Migrate the running instance to a Reserved Instance using the instance conversion tool",
+        "D": "Pause the batch job and wait 30 minutes for the Spot capacity to become available again"
+      },
+      "correctAnswer": "A and B",
+      "explanations": {
+        "A": {
+          "description": "When a Spot interruption notice arrives, there is a 2-minute window before termination; writing checkpoint data to an EBS volume (durable, survives instance termination) during this window preserves job progress.",
+          "reason": "Correct — using the 2-minute window for EBS checkpointing is the core pattern for fault-tolerant Spot batch workloads, minimizing recomputation on restart."
+        },
+        "B": {
+          "description": "An ASG with a mixed instances policy can automatically launch a replacement from a different Spot pool or fall back to On-Demand when the interrupted instance's pool is unavailable, continuing from the last checkpoint.",
+          "reason": "Correct — diversified pool replacement from checkpoint is the complete, cost-conscious recovery strategy; it minimizes both data loss and cost."
+        },
+        "C": {
+          "description": "An 'instance conversion tool' for converting running Spot Instances to Reserved Instances at runtime does not exist in AWS; Reserved Instances are billing commitments, not a swap-in instance type.",
+          "reason": "Incorrect — this capability does not exist; you cannot convert a running Spot Instance to a Reserved Instance."
+        },
+        "D": {
+          "description": "Waiting passively 30 minutes for Spot capacity to return has no guaranteed timeline and leaves the batch job completely stalled with no active replacement attempt.",
+          "reason": "Incorrect — passive waiting is not a resilience strategy; Spot capacity availability is unpredictable and could remain unavailable far longer than 30 minutes."
+        }
+      },
+      "Tips": "Two-part strategy: (1) Use the 2-minute window to checkpoint to durable storage (EBS survives termination). (2) Auto-replace from another Spot pool or On-Demand fallback via ASG. You cannot convert running Spot to Reserved. Waiting passively has no guaranteed timeline."
+    },
+    {
+      "id": 3,
+      "questionText": "A company uses cross-account IAM Role assumption. Account A (trusted) has IAM User Bob. Account B (trusting) has Role CrossAccountRole. The role's trust policy allows Account A's root ARN. Bob's identity policy in Account A allows sts:AssumeRole on CrossAccountRole's ARN. Bob tries to assume the role and is denied. What is the most likely cause?",
+      "options": {
+        "A": "IAM Users cannot assume cross-account roles — only IAM Roles can",
+        "B": "The trust policy allows Account A root, which means ALL users in Account A can assume the role by default — the issue must be Bob's lack of sts:AssumeRole permission",
+        "C": "The trust policy is correct; Bob has the right permission; but no explicit Allow exists in Account B's SCP for sts:AssumeRole",
+        "D": "Bob's permission policy in Account A allows the AssumeRole action, but Bob's account also needs an explicit Allow on the role's resource-based policy in addition to the trust policy"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "IAM Users cannot assume cross-account roles",
+          "reason": "This is factually wrong. IAM Users can and do assume cross-account IAM Roles routinely. This is a standard, supported AWS pattern."
+        },
+        "B": {
+          "description": "Trust policy allows Account A root, meaning all Account A users can assume it by default",
+          "reason": "This is a common misconception. Trusting `arn:aws:iam::ACCOUNT-A:root` in a trust policy grants Account A the ability to delegate access to its principals, but it does NOT automatically allow all Account A users to assume the role. Each individual IAM user in Account A still needs an explicit `sts:AssumeRole` permission in their own identity policy for that specific role ARN. The question says Bob does have this permission, so if the trust policy and Bob's permission are both correct, the issue must be elsewhere — an SCP in Account B is the most likely additional blocking layer."
+        },
+        "C": {
+          "description": "Trust policy and permission are both correct; SCP in Account B blocks sts:AssumeRole",
+          "reason": "With both sides correctly configured (Bob has `sts:AssumeRole` in Account A, trust policy allows Account A), a denial must come from a third layer. An SCP in Account B restricting `sts:AssumeRole` for external principals, or an SCP in Account A restricting outbound assumption, would cause this. Alternatively, an SCP in Account B that doesn't explicitly allow `sts:AssumeRole` in an allow-list model would block it. This is the type of multi-layer reasoning the SAA exam tests."
+        },
+        "D": {
+          "description": "Account B needs an explicit Allow in the role's resource-based policy in addition to the trust policy",
+          "reason": "The Trust Policy IS the resource-based policy for IAM Roles — there is no separate \"resource-based policy\" for a role in addition to its trust policy. The trust policy defines who can assume the role. This option conflates two different concepts."
+        }
+      },
+      "Tips": "Cross-account assumption troubleshooting: trust policy allows Account A root (meaning Account A can *delegate* access, but each user still needs their own sts:AssumeRole permission). Bob has the permission. Both sides look correct — so the next layer to check is an SCP in Account B blocking sts:AssumeRole."
+    },
+    {
+      "id": 4,
+      "questionText": "An architect is reviewing costs. The company runs 50 EC2 instances 24/7, all t3.large. They want to commit to 1 year. Some instances may change type during the year. Which reservation type provides the best balance of savings and flexibility for potential type changes?",
+      "options": {
+        "A": "Standard Reserved Instances for t3.large with All Upfront payment",
+        "B": "Convertible Reserved Instances, which allow changing instance family, OS, and tenancy during the term",
+        "C": "Savings Plans (Compute Savings Plans), which apply to any EC2 instance type, region, OS, and tenancy",
+        "D": "Scheduled Reserved Instances for 24/7 usage"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Standard Reserved Instances for t3.large, All Upfront",
+          "reason": "Provides the highest discount (~72%) for the t3.large specifically, but locks you into the t3.large instance family, size, region, and OS for the entire year. If any instance changes type, the RI no longer applies and you pay On-Demand for the new type while still paying for the unused RI."
+        },
+        "B": {
+          "description": "Convertible Reserved Instances",
+          "reason": "Allow changing instance family, OS, and tenancy during the term by converting the RI. More flexible than Standard RIs but the conversion process requires manual steps and has some restrictions (size must be equivalent in normalization units). Discounts are lower (~54% vs ~72%)."
+        },
+        "C": {
+          "description": "Savings Plans (Compute Savings Plans)",
+          "reason": "Compute Savings Plans offer up to 66% discount over On-Demand and apply automatically to any EC2 usage regardless of instance family, size, region, OS, or tenancy. You commit to a consistent spend per hour (e.g., $X/hour) and AWS applies the discount to all eligible compute usage. If instance types change, the savings plan automatically adjusts — no manual conversions needed. This is the most flexible and operationally simplest way to commit to savings with potential instance type changes."
+        },
+        "D": {
+          "description": "Scheduled Reserved Instances for 24/7 usage",
+          "reason": "Scheduled RIs are for recurring time windows, not continuous 24/7 usage. A 24/7 Scheduled RI would simply be a regular RI, making this circular. Additionally, Scheduled RIs are a legacy offering with limited availability."
+        }
+      },
+      "Tips": "Instance type may change = need flexibility. Standard RIs are locked to the type. Convertible RIs allow changes but require manual conversion steps. Compute Savings Plans automatically apply to any usage without conversion — set your hourly commitment and AWS handles the rest across any instance type."
+    },
+    {
+      "id": 5,
+      "questionText": "An EC2 instance in a private subnet needs to access S3 and DynamoDB without traversing the internet or NAT Gateway. Which solution achieves this and what type of endpoint is used for each service?",
+      "options": {
+        "A": "S3 — Interface Endpoint; DynamoDB — Interface Endpoint",
+        "B": "S3 — Gateway Endpoint (free); DynamoDB — Gateway Endpoint (free)",
+        "C": "S3 — Gateway Endpoint; DynamoDB — Interface Endpoint",
+        "D": "Both services require a NAT Gateway as VPC Endpoints are not available for DynamoDB"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "S3 — Interface Endpoint; DynamoDB — Interface Endpoint",
+          "reason": "Interface Endpoints (powered by AWS PrivateLink) exist for S3 (as an alternative to the Gateway Endpoint) and support private DNS. However, S3 also supports a Gateway Endpoint. DynamoDB ONLY supports a Gateway Endpoint — there is no Interface Endpoint available for DynamoDB."
+        },
+        "B": {
+          "description": "S3 — Gateway Endpoint (free); DynamoDB — Gateway Endpoint (free)",
+          "reason": "Both S3 and DynamoDB support Gateway VPC Endpoints, which are free of charge and route traffic within the AWS network without requiring a NAT Gateway or internet access. Gateway Endpoints work by adding a route entry for the service's prefix list into the subnet's route table."
+        },
+        "C": {
+          "description": "S3 — Gateway Endpoint; DynamoDB — Interface Endpoint",
+          "reason": "DynamoDB does not support Interface Endpoints. This combination is factually incorrect."
+        },
+        "D": {
+          "description": "Both services require a NAT Gateway",
+          "reason": "NAT Gateways are not required when VPC Endpoints are available. Gateway Endpoints for S3 and DynamoDB were specifically created to avoid the cost and internet traversal of NAT Gateways."
+        }
+      },
+      "Tips": "S3 and DynamoDB both use Gateway Endpoints (free, route-table based). S3 also has an Interface Endpoint option but DynamoDB does NOT. This is a frequently tested fact. NAT Gateway is unnecessary and costly when Gateway Endpoints are available for these two services."
+    },
+    {
+      "id": 6,
+      "questionText": "A security engineer must ensure that any new IAM Role created by developers cannot exceed a specific set of permissions, even if developers have iam:CreateRole and iam:AttachRolePolicy. Which mechanism enforces this boundary on newly created roles?",
+      "options": {
+        "A": "Apply an SCP that denies attaching any policy to a role unless it is in an approved list",
+        "B": "Require that all IAM Roles created by developers must have a Permission Boundary set at creation time; enforce this with an IAM policy condition on iam:CreateRole that denies creation unless iam:PermissionsBoundary equals the approved boundary ARN",
+        "C": "Create an IAM Group that prevents developers from attaching any policies to roles",
+        "D": "Enable AWS Config to detect roles without boundaries and delete them automatically"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "SCP that denies attaching any policy unless it is in an approved list",
+          "reason": "SCPs can restrict which policies can be attached, but maintaining an approved policy list in an SCP is operationally rigid and does not prevent developers from creating roles with overly permissive inline policies. SCPs also cannot enforce Permission Boundaries at the role-creation level as precisely as an IAM condition can."
+        },
+        "B": {
+          "description": "IAM condition on iam:CreateRole requiring iam:PermissionsBoundary to equal approved ARN",
+          "reason": "This is the AWS-recommended privilege escalation prevention pattern. The IAM policy on developers can include: `Deny iam:CreateRole unless aws:RequestedRegion... AND iam:PermissionsBoundary = arn:aws:iam::ACCOUNT:policy/ApprovedBoundary`. This makes it impossible for a developer to create a role without attaching the approved boundary, ensuring all developer-created roles are inherently capped. Similarly, `iam:PutRolePermissionsBoundary` can be restricted to prevent boundary removal."
+        },
+        "C": {
+          "description": "Create an IAM Group that prevents developers from attaching policies to roles",
+          "reason": "Groups manage permissions for users, not for the roles users create. A developer outside the group context could still create roles with unrestricted policies. Groups are also not the right mechanism to enforce controls on created resources."
+        },
+        "D": {
+          "description": "Enable AWS Config to detect roles without boundaries and delete them automatically",
+          "reason": "Config is a detective control that identifies non-compliance after the fact. Deleting roles after creation is disruptive and still allows a window where an overly permissive role exists. The requirement calls for preventive enforcement at creation time."
+        }
+      },
+      "Tips": "Privilege escalation prevention pattern: use iam:CreateRole condition requiring iam:PermissionsBoundary = approved boundary ARN. This forces every developer-created role to have the boundary at creation. SCPs can restrict policy attachment but can't enforce boundary presence at creation as precisely. Config is detective, not preventive."
+    },
+    {
+      "id": 7,
+      "questionText": "You have a Cluster Placement Group with 10 c5n.18xlarge instances all running an HPC workload. AWS returns an \"InsufficientCapacityError\" when you try to add 2 more instances. What is the most likely cause and the recommended resolution?",
+      "options": {
+        "A": "The Placement Group has reached its maximum of 10 instances; resize the group",
+        "B": "The c5n.18xlarge instance type has been deprecated; use a different type",
+        "C": "Cluster Placement Groups require all instances to fit on contiguous hardware; there may not be enough capacity for more instances of this size in this group; try stopping all instances and restarting them together, or use a different instance type with available capacity",
+        "D": "You need to request a Service Quota increase for Placement Groups before adding more instances"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "The Placement Group has reached its maximum of 10 instances",
+          "reason": "Cluster Placement Groups do not have a hard limit of 10 instances. They can contain many more instances, limited by instance type capacity and physical hardware constraints, not a 10-instance cap."
+        },
+        "B": {
+          "description": "The c5n.18xlarge has been deprecated; use a different type",
+          "reason": "The c5n.18xlarge is not deprecated. InsufficientCapacityError is an AWS capacity issue (not enough instances of that type/size available in the placement group's physical footprint), not a deprecation error."
+        },
+        "C": {
+          "description": "Cluster Placement Groups require contiguous hardware; insufficient capacity for more large instances in this group",
+          "reason": "Cluster Placement Groups pack instances onto adjacent hardware for low latency. This means the physical space for the group is bounded. Large instances like c5n.18xlarge consume significant physical resources. When the contiguous block is full, adding more instances may fail even if the AZ has capacity elsewhere. The AWS recommendation is to stop all instances in the placement group and restart them together — this allows AWS to find a larger contiguous block that can accommodate all instances at once. Alternatively, use a different instance type or size with available capacity."
+        },
+        "D": {
+          "description": "You need a Service Quota increase for Placement Groups",
+          "reason": "Service Quotas for placement groups limit the number of placement groups per region, not the number of instances within one group. An InsufficientCapacityError is a hardware capacity issue, not a quota issue."
+        }
+      },
+      "Tips": "InsufficientCapacityError in a Cluster PG = no contiguous physical space for more large instances in that group. The fix is to stop ALL instances and restart together — this lets AWS find a larger contiguous block. This is not a quota issue and not a deprecation. The 'stop all and restart' trick is documented AWS guidance."
+    },
+    {
+      "id": 8,
+      "questionText": "A company's compliance requirement mandates that no S3 data can leave a specific AWS Region, and all EC2 API calls must originate from within the company's VPC. They use AWS Organizations. Which combination of controls achieves both requirements?",
+      "options": {
+        "A": "S3 bucket policies with aws:RequestedRegion condition + Security Groups blocking outbound internet",
+        "B": "SCP with aws:RequestedRegion condition for S3 actions + IAM policy with aws:SourceVpc condition for EC2 actions",
+        "C": "VPC Endpoints for S3 and EC2 + SCP denying S3 access outside the region + endpoint policy restricting EC2 API calls to the VPC",
+        "D": "CloudTrail + GuardDuty to detect and alert on violations after the fact"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "S3 bucket policies with aws:RequestedRegion + Security Groups blocking outbound internet",
+          "reason": "S3 bucket policies with `aws:RequestedRegion` prevent requests to S3 in other regions but don't prevent data exfiltration to S3 in the same region via the internet. Security Groups blocking outbound internet would break all internet connectivity, including legitimate uses. This is too blunt."
+        },
+        "B": {
+          "description": "SCP with aws:RequestedRegion for S3 + IAM policy with aws:SourceVpc for EC2",
+          "reason": "SCPs with `aws:RequestedRegion` can restrict S3 operations to a specific region. Using `aws:SourceVpc` as a condition on EC2 API calls ensures the EC2 API is only callable from within the specific VPC. This is a strong combination, though it requires that the EC2 calls actually go through a VPC Endpoint (otherwise the source VPC condition cannot be evaluated)."
+        },
+        "C": {
+          "description": "VPC Endpoints for S3 and EC2 + SCP denying S3 access outside the region + endpoint policy restricting EC2 API calls to the VPC",
+          "reason": "This is the complete solution: (1) A Gateway VPC Endpoint for S3 routes all S3 traffic within the AWS network; a restrictive endpoint policy prevents access to S3 buckets outside the region. (2) An Interface VPC Endpoint for the EC2 API with a VPC endpoint policy ensures EC2 API calls are routed through the VPC and restricted to calls originating from within it. (3) An SCP adds an organization-level guarantee that S3 access outside the designated region is blocked even if someone tries to bypass the endpoint. Together these provide both the data residency and the VPC-origin enforcement."
+        },
+        "D": {
+          "description": "CloudTrail + GuardDuty to detect and alert on violations",
+          "reason": "These are detective controls that identify violations after they occur. The requirement is preventive — actively preventing data from leaving the region or EC2 calls from originating outside the VPC, not detecting it after the fact."
+        }
+      },
+      "Tips": "Defense in depth for data residency + VPC-origin enforcement: VPC Endpoints route traffic within AWS + endpoint policies restrict what can be accessed through them + SCP adds org-level guarantee for S3 region restriction. CloudTrail/GuardDuty are detective only. Security Groups are too blunt."
+    },
+    {
+      "id": 9,
+      "questionText": "An IAM Role has the following policy attached:",
+      "options": {
+        "A": "The launch succeeds because the policy uses Deny, which is weaker than any Allow",
+        "B": "The launch is denied because the region ap-southeast-1 is not in the allowed list, triggering the Deny",
+        "C": "The launch succeeds because the Condition uses StringNotEquals, which evaluates to false in this region",
+        "D": "The launch is denied only if there is no separate Allow policy for ap-southeast-1"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The launch succeeds because the policy uses Deny, which is weaker than any Allow",
+          "reason": "This fundamentally misunderstands IAM policy evaluation. Explicit Deny is the strongest outcome in IAM — it always overrides any Allow. There is no concept of a \"weak Deny.\""
+        },
+        "B": {
+          "description": "The launch is denied because ap-southeast-1 is not in the allowed list, triggering the Deny",
+          "reason": "The condition `StringNotEquals: aws:RequestedRegion: [us-east-1, eu-west-1]` evaluates to TRUE when the region is NOT in the list. For ap-southeast-1, the condition is TRUE (it is not in the allowed list), so the Deny applies. Result: explicit Deny → launch blocked. This is a \"negative allowlist\" pattern commonly used to restrict actions to specific regions."
+        },
+        "C": {
+          "description": "The launch succeeds because StringNotEquals evaluates to false in this region",
+          "reason": "This is backwards. `StringNotEquals` for ap-southeast-1 against `[us-east-1, eu-west-1]` evaluates to TRUE (ap-southeast-1 is indeed not equal to either value in the list), not false. The condition must be TRUE for the effect to apply."
+        },
+        "D": {
+          "description": "The launch is denied only if there is no separate Allow policy for ap-southeast-1",
+          "reason": "An explicit Deny is absolute. Even if another policy explicitly allows `ec2:RunInstances` in ap-southeast-1, the explicit Deny from this policy takes precedence. There is no \"override with an Allow\" mechanism against an explicit Deny."
+        }
+      },
+      "Tips": "StringNotEquals evaluates to TRUE when the value is NOT in the specified list. ap-southeast-1 is not in [us-east-1, eu-west-1] → condition is TRUE → Deny applies. This is a 'negative allowlist' pattern. Explicit Deny cannot be overridden by any Allow policy. The condition logic direction is the key trap here."
+    },
+    {
+      "id": 10,
+      "questionText": "An architect must design an architecture where EC2 instances automatically recover from an underlying hardware failure within the same Availability Zone, preserving the instance's private IP, Elastic IP, and instance metadata. Which mechanism should be used?",
+      "options": {
+        "A": "Auto Scaling Group with a desired capacity of 1 — it will launch a replacement in any AZ",
+        "B": "EC2 Auto Recovery, configured via a CloudWatch alarm on the StatusCheckFailed_System metric, which recovers the instance on new hardware in the same AZ with all network configuration preserved",
+        "C": "Create an AMI of the instance and launch a replacement using a Lambda function triggered by CloudWatch",
+        "D": "Use an Application Load Balancer health check to detect failure and route traffic to a standby instance"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Auto Scaling Group with desired capacity of 1",
+          "reason": "An ASG would launch a replacement instance but it would be a brand-new instance with a new instance ID, new private IP (unless specified otherwise), and no guarantee of the same Elastic IP association. The new instance would not preserve the original instance's identity or network configuration automatically."
+        },
+        "B": {
+          "description": "EC2 Auto Recovery via CloudWatch alarm on StatusCheckFailed_System",
+          "reason": "EC2 Auto Recovery is triggered by a CloudWatch alarm on the `StatusCheckFailed_System` metric (which indicates underlying hardware issues, not OS/application failures). When triggered, AWS recovers the instance on new underlying hardware in the SAME Availability Zone, preserving: instance ID, private IPv4 address, Elastic IP addresses, all instance metadata, and attached EBS volumes. This is exactly what the question requires."
+        },
+        "C": {
+          "description": "Create an AMI and launch a replacement via Lambda",
+          "reason": "Creating an AMI and launching from it creates a new instance with a new instance ID and private IP. The Elastic IP would need to be manually or programmatically re-associated. This is a disaster recovery process, not an automated recovery mechanism that preserves all instance attributes."
+        },
+        "D": {
+          "description": "Application Load Balancer health check routing traffic to a standby instance",
+          "reason": "ALB health checks detect when an instance is unhealthy and stop routing new requests to it, then route to other healthy targets. However, this requires a second \"standby\" instance to already exist, does not recover the original instance, and does not preserve the original instance's IP or identity."
+        }
+      },
+      "Tips": "EC2 Auto Recovery is the only mechanism that recovers on the *same AZ* while preserving instance ID, private IP, Elastic IP, and metadata. ASG replacement creates a new instance with a new identity. AMI-based Lambda recovery creates a new instance too. ALB health checks reroute traffic but don't recover the instance itself."
+    }
+  ]
+}

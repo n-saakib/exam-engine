@@ -1,0 +1,307 @@
+{
+  "setId": "01629d37-347e-4a35-baa7-5f20d8d822e7",
+  "setTitle": "AWS SAA Practice - IAM & EC2 Medium Set 3",
+  "difficulty": "Medium",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company's security policy requires that all EC2 instances must only use approved AMIs from a curated list. Developers should not be able to launch instances using any other AMI. How can this be enforced?",
+      "options": {
+        "A": "Send an email to developers listing the approved AMIs",
+        "B": "Use an IAM policy with a condition that restricts ec2:RunInstances to approved AMI IDs",
+        "C": "Apply a Security Group rule that blocks unapproved AMIs",
+        "D": "Use a VPC NACL to restrict access to unapproved instance types"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Send an email to developers listing approved AMIs",
+          "reason": "Relying on human compliance is not enforcement. Developers may forget, make mistakes, or deliberately ignore the list. There is no technical guardrail."
+        },
+        "B": {
+          "description": "Use an IAM policy condition restricting ec2:RunInstances to approved AMI IDs",
+          "reason": "IAM policies support conditions on `ec2:RunInstances` using the `ec2:ImageID` condition key. A Deny with `StringNotEquals` on `ec2:ImageID` against the approved AMI list prevents launching any non-approved AMI. This is enforced at the API level before any instance starts."
+        },
+        "C": {
+          "description": "Apply a Security Group rule that blocks unapproved AMIs",
+          "reason": "Security Groups control network traffic (IP, port, protocol). They have no awareness of AMI IDs or the launch process."
+        },
+        "D": {
+          "description": "Use a VPC NACL to restrict access to unapproved instance types",
+          "reason": "Network ACLs control network traffic at the subnet level. Like Security Groups, they have no mechanism to inspect or restrict the AMI or instance type used at launch."
+        }
+      },
+      "Tips": "Enforcing approved AMIs = IAM condition on ec2:RunInstances with ec2:ImageID condition key. Security Groups and NACLs are network controls — they can't inspect AMI IDs. Emails are not enforcement. The IAM API-level condition is the only technical guardrail."
+    },
+    {
+      "id": 2,
+      "questionText": "You are designing a high-availability architecture. You have 6 EC2 instances that must be spread across hardware to tolerate a single rack failure. Which placement group strategy should you use, and what is the instance limit per Availability Zone?",
+      "options": {
+        "A": "Cluster Placement Group — no limit per AZ",
+        "B": "Partition Placement Group — up to 7 partitions per AZ",
+        "C": "Spread Placement Group — up to 7 instances per AZ per placement group",
+        "D": "Default tenancy — automatically spreads across racks"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Cluster Placement Group — no limit per AZ",
+          "reason": "Cluster Placement Groups pack all instances onto the same physical rack for ultra-low latency and high bandwidth. This is the opposite of what you want — if that rack fails, all instances fail together."
+        },
+        "B": {
+          "description": "Partition Placement Group — up to 7 partitions per AZ",
+          "reason": "Partition Placement Groups divide instances into logical partitions, each on separate racks. Designed for large-scale distributed systems (Hadoop, Cassandra) with hundreds of instances. The limit is partitions (up to 7), not individual instances. Each partition can hold many instances, so a rack failure still affects all instances in that partition."
+        },
+        "C": {
+          "description": "Spread Placement Group — up to 7 instances per AZ",
+          "reason": "Spread Placement Groups place each individual instance on a separate physical rack with its own network and power. If one rack fails, only one instance is affected. The trade-off is the hard limit of 7 instances per AZ per group — exactly suited for small numbers of critical instances."
+        },
+        "D": {
+          "description": "Default tenancy automatically spreads across racks",
+          "reason": "Default tenancy has no guarantees about hardware placement. AWS may or may not place instances on different racks. There is no fault-isolation guarantee without an explicit Placement Group."
+        }
+      },
+      "Tips": "Spread PG = 7 instances per AZ per group, each on a separate rack. Cluster PG = same rack (opposite of fault isolation). Partition PG = for large distributed systems with many instances per partition. The number 7 per AZ is an exam-critical Spread PG fact."
+    },
+    {
+      "id": 3,
+      "questionText": "An EC2 instance is part of an Auto Scaling Group. A user manually terminates the instance from the console. What happens next?",
+      "options": {
+        "A": "The Auto Scaling Group is deleted along with the instance",
+        "B": "The Auto Scaling Group detects the termination and launches a replacement instance to maintain the desired capacity",
+        "C": "The instance is terminated and no replacement is launched until the next scheduled scaling event",
+        "D": "The Auto Scaling Group pauses all activity until an administrator intervenes"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The ASG is deleted along with the instance",
+          "reason": "Terminating a single instance has no effect on the Auto Scaling Group itself. The group is a management entity, separate from any individual instance."
+        },
+        "B": {
+          "description": "The ASG detects the termination and launches a replacement",
+          "reason": "Auto Scaling Groups continuously monitor the number of healthy instances against the desired capacity. When an instance is terminated (manually or automatically), the ASG detects the discrepancy and launches a new instance to restore the desired count. This is a core feature of ASGs."
+        },
+        "C": {
+          "description": "No replacement is launched until the next scheduled scaling event",
+          "reason": "ASGs do not wait for scheduled events to react to instance failures. Health checks run continuously and replacement is triggered immediately upon detecting a capacity shortfall."
+        },
+        "D": {
+          "description": "The ASG pauses all activity until an administrator intervenes",
+          "reason": "ASGs do not require manual intervention for instance replacement. They are designed to be self-managing. A \"suspended\" process would need to be explicitly configured by an administrator."
+        }
+      },
+      "Tips": "ASG self-healing is its core feature. When desired capacity > running healthy instances, it launches replacements automatically. It doesn't delete itself, wait for scheduled events, or pause — it reacts continuously."
+    },
+    {
+      "id": 4,
+      "questionText": "A team uses IAM Roles for EC2 instances. A developer claims the instance cannot call S3 even though the attached role has an S3 read policy. After investigation, you find s3:GetObject is denied. What is the most likely cause?",
+      "options": {
+        "A": "EC2 instance types do not support S3 API calls",
+        "B": "An explicit Deny somewhere — either in an SCP, Permission Boundary, or another attached policy — is overriding the Allow",
+        "C": "The IAM Role's trust policy is preventing S3 access",
+        "D": "S3 access requires a separate IAM User even when using roles"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "EC2 instance types do not support S3 API calls",
+          "reason": "All EC2 instance types support AWS API calls including S3, provided they have network access to the S3 endpoint and appropriate IAM permissions. There is no instance-type-based API restriction."
+        },
+        "B": {
+          "description": "An explicit Deny somewhere is overriding the Allow",
+          "reason": "In AWS IAM, an explicit Deny always beats an explicit Allow. Common sources of a hidden Deny: an SCP at the organization level, a Permission Boundary on the role, a resource-based policy on the S3 bucket denying the role's ARN, or a second identity policy attached to the role with a Deny statement. Always check all layers when access is unexpectedly blocked."
+        },
+        "C": {
+          "description": "The role's Trust Policy is preventing S3 access",
+          "reason": "The Trust Policy only controls who can assume the role (sts:AssumeRole). It has no role in determining what the assumed role can or cannot do with AWS services."
+        },
+        "D": {
+          "description": "S3 access requires a separate IAM User",
+          "reason": "S3 access through IAM Roles is the recommended and standard approach. IAM Roles on EC2 are specifically designed to avoid needing IAM Users for service access."
+        }
+      },
+      "Tips": "When an Allow exists but access is still denied, always check for an explicit Deny hiding at another layer: SCP, Permission Boundary, bucket policy, or a second attached policy. The Trust Policy only controls assumption, not service access."
+    },
+    {
+      "id": 5,
+      "questionText": "An organization uses AWS Organizations with multiple accounts. They want to prevent any account in the organization from disabling AWS CloudTrail, even if account administrators have full permissions. What is the most effective control?",
+      "options": {
+        "A": "Attach an IAM policy to every IAM User in every account that denies cloudtrail:StopLogging",
+        "B": "Apply a Service Control Policy (SCP) at the Organization or OU root that denies cloudtrail:StopLogging",
+        "C": "Enable CloudTrail in each account and set a CloudWatch alarm for the StopLogging event",
+        "D": "Remove CloudTrail permissions from all IAM Users in all accounts"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Attach an IAM policy denying cloudtrail:StopLogging to every user in every account",
+          "reason": "This requires touching every user in every account and maintaining the policy as new users are created. Account admins could also remove the policy from their own users. Fragile and operationally unsustainable."
+        },
+        "B": {
+          "description": "Apply an SCP at the Organization root that denies cloudtrail:StopLogging",
+          "reason": "SCPs applied at the organization root cascade to all accounts and all principals within those accounts. Even the account's own AdministratorAccess users cannot override an SCP Deny. This is the only mechanism that truly prevents account-level admins from circumventing the control."
+        },
+        "C": {
+          "description": "Enable CloudTrail and set a CloudWatch alarm for the StopLogging event",
+          "reason": "This is a detective control — it tells you after the fact that CloudTrail was disabled. The question asks for preventive enforcement, not detection."
+        },
+        "D": {
+          "description": "Remove CloudTrail permissions from all IAM Users",
+          "reason": "Removing CloudTrail permissions from all users makes it impossible to manage CloudTrail legitimately (e.g., for creating new trails or updating configurations). It also doesn't address service roles or future users."
+        }
+      },
+      "Tips": "Preventing account admins from doing something = SCP. IAM policies can be modified by account admins. CloudWatch alarms detect after the fact. Removing permissions from all users is unmanageable. Only SCPs are above account-level admin control."
+    },
+    {
+      "id": 6,
+      "questionText": "An EC2 instance in us-east-1a becomes unresponsive. The application needs to continue serving traffic with no manual intervention. Which architecture achieves this?",
+      "options": {
+        "A": "Single EC2 instance with CloudWatch alarm to notify the operations team",
+        "B": "Auto Scaling Group spanning multiple Availability Zones with an Application Load Balancer",
+        "C": "Two EC2 instances in the same Availability Zone us-east-1a behind a Load Balancer",
+        "D": "EC2 instance with an EBS snapshot scheduled every 15 minutes"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Single EC2 instance with a CloudWatch alarm to notify ops",
+          "reason": "A single instance is a single point of failure. Notifying the ops team is a manual intervention — the question explicitly requires no manual intervention."
+        },
+        "B": {
+          "description": "Auto Scaling Group spanning multiple AZs with an ALB",
+          "reason": "When an instance in one AZ fails, the ALB's health checks detect the failure and stop routing traffic to it. The ASG automatically replaces the failed instance. Because instances are in multiple AZs, the instances in the healthy AZs continue serving traffic throughout. No human involvement required."
+        },
+        "C": {
+          "description": "Two EC2 instances in the same AZ behind a Load Balancer",
+          "reason": "If the AZ itself experiences an outage (as described), both instances fail simultaneously. Having two instances in the same AZ does not protect against AZ-level failures."
+        },
+        "D": {
+          "description": "EC2 instance with an EBS snapshot every 15 minutes",
+          "reason": "EBS snapshots are disaster recovery tools for data, not for application availability. Even frequent snapshots still leave a gap and require manual intervention to restore a new instance."
+        }
+      },
+      "Tips": "Multi-AZ + Auto Scaling + ALB = the HA trifecta. Single instance = single point of failure. Two instances in the same AZ fail together on AZ outage. EBS snapshots are data backup, not availability. Multi-AZ ASG with ALB is the canonical answer for 'no manual intervention HA'."
+    },
+    {
+      "id": 7,
+      "questionText": "You are comparing two IAM policies for an S3 bucket. Policy A allows s3:GetObject on arn:aws:s3:::my-bucket/*. Policy B denies s3:GetObject on arn:aws:s3:::my-bucket/confidential/*. Both policies are attached to the same IAM User. What happens when the user requests the object s3://my-bucket/confidential/report.pdf?",
+      "options": {
+        "A": "The request succeeds because Policy A's Allow covers all objects",
+        "B": "The request is denied because Policy B's explicit Deny takes precedence",
+        "C": "AWS evaluates both policies and defaults to Allow when there is a conflict",
+        "D": "The request results in an error because conflicting policies are invalid"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The request succeeds because Policy A covers all objects",
+          "reason": "Policy A's Allow covers `bucket/*` which includes `bucket/confidential/report.pdf`. However, AWS evaluates all applicable policies together, not just the most permissive one."
+        },
+        "B": {
+          "description": "The request is denied because explicit Deny takes precedence",
+          "reason": "`bucket/confidential/report.pdf` matches both Policy A's Allow (`bucket/*`) and Policy B's Deny (`bucket/confidential/*`). In AWS IAM, when an explicit Deny applies to a request, it always wins — regardless of how many Allows also apply."
+        },
+        "C": {
+          "description": "AWS defaults to Allow when there is a conflict",
+          "reason": "AWS never defaults to Allow in a conflict. The default is always implicit Deny, and explicit Deny is even stronger."
+        },
+        "D": {
+          "description": "Conflicting policies are invalid",
+          "reason": "Conflicting Allow and Deny policies are perfectly valid in IAM and are a common intentional design pattern (e.g., allow broad access but deny a sensitive subset). AWS handles conflicts deterministically by applying the Deny."
+        }
+      },
+      "Tips": "When both Allow and Deny apply to the same object, Deny wins — always. Policy A allows all objects, Policy B denies confidential/*. The object matches Policy B's Deny. Explicit Deny is absolute regardless of any Allow."
+    },
+    {
+      "id": 8,
+      "questionText": "A company needs to run a high-performance computing (HPC) workload where EC2 instances must communicate with each other at the lowest possible network latency. Which placement group strategy is most suitable?",
+      "options": {
+        "A": "Spread Placement Group",
+        "B": "Partition Placement Group",
+        "C": "Cluster Placement Group",
+        "D": "Default placement with enhanced networking"
+      },
+      "correctAnswer": "C",
+      "explanations": {
+        "A": {
+          "description": "Spread Placement Group",
+          "reason": "Distributes instances across different physical racks for fault isolation. The physical separation inherently introduces more network distance and higher latency. The opposite of what HPC needs."
+        },
+        "B": {
+          "description": "Partition Placement Group",
+          "reason": "Designed for large distributed systems; separates instances into partitions on different racks. Provides some isolation but does not optimize for minimum latency between instances."
+        },
+        "C": {
+          "description": "Cluster Placement Group",
+          "reason": "Places all instances in the same physical rack (or adjacent racks) in a single AZ, using high-speed networking. This minimizes inter-node network latency and maximizes bandwidth between instances — essential for tightly coupled HPC workloads that use MPI or similar frameworks."
+        },
+        "D": {
+          "description": "Default placement with enhanced networking",
+          "reason": "Enhanced Networking (ENA) improves the network performance of individual instances. However, without a Cluster Placement Group, there is no guarantee that instances will be placed near each other physically. You get better throughput but not the minimum latency of a co-located cluster."
+        }
+      },
+      "Tips": "HPC + lowest latency between instances = Cluster Placement Group. Cluster packs instances on the same physical rack. Spread deliberately separates them (wrong). Partition separates groups (wrong). Enhanced networking helps bandwidth but not placement proximity."
+    },
+    {
+      "id": 9,
+      "questionText": "An IAM Permission Boundary is attached to an IAM User. The boundary allows only s3:* and ec2:*. The user also has an identity policy allowing iam:CreateUser. What can the user actually do?",
+      "options": {
+        "A": "The user can perform s3:*, ec2:*, and iam:CreateUser because their identity policy is not restricted",
+        "B": "The user can only perform s3:* and ec2:* — the Permission Boundary limits effective permissions to its intersection with identity policies",
+        "C": "The user cannot do anything because the Permission Boundary overrides all identity policies",
+        "D": "The user can create IAM Users because Permission Boundaries only restrict service-linked roles"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "The user can perform all three because their identity policy is not restricted",
+          "reason": "This misunderstands Permission Boundaries. The identity policy grants iam:CreateUser, but the Permission Boundary does not allow iam:* at all. The effective permissions are the intersection of what the identity policy grants AND what the boundary allows."
+        },
+        "B": {
+          "description": "The user can only perform s3:* and ec2:* — boundary restricts to intersection",
+          "reason": "Permission Boundaries define the maximum permissions an entity can have. Even if the identity policy grants iam:CreateUser, the Permission Boundary does not include iam:*, so iam:CreateUser falls outside the allowed set. The effective permission is: `{identity policy} ∩ {permission boundary}`. Since iam:CreateUser is not in the boundary, it is not in the effective set."
+        },
+        "C": {
+          "description": "The user cannot do anything because the Permission Boundary overrides all identity policies",
+          "reason": "The Permission Boundary does not zero out all permissions — it limits the maximum. Permissions that exist in both the identity policy AND the boundary are still effective. s3:* and ec2:* are in both, so they are fully available."
+        },
+        "D": {
+          "description": "Permission Boundaries only restrict service-linked roles",
+          "reason": "Permission Boundaries apply to IAM Users and IAM Roles (including customer-managed roles). They do not apply to service-linked roles, but they absolutely apply to regular users and roles."
+        }
+      },
+      "Tips": "Permission Boundary = ceiling. Effective permissions = Identity Policy ∩ Boundary. iam:CreateUser is in the identity policy but NOT in the boundary (which only allows s3:* and ec2:*). The intersection excludes iam:CreateUser. The boundary is not a zero-out; it's a filter."
+    },
+    {
+      "id": 10,
+      "questionText": "A developer needs temporary AWS credentials to deploy code from a CI/CD pipeline running outside AWS. The company does not want to create a long-term IAM User for this. What is the recommended approach?",
+      "options": {
+        "A": "Create an IAM User with access keys and store them as CI/CD environment variables",
+        "B": "Use AWS STS AssumeRoleWithWebIdentity or OIDC federation to let the CI/CD system assume an IAM Role and receive temporary credentials",
+        "C": "Use the root account credentials in the CI/CD pipeline",
+        "D": "Hardcode AWS credentials in the deployment scripts and rotate them every 90 days"
+      },
+      "correctAnswer": "B",
+      "explanations": {
+        "A": {
+          "description": "Create an IAM User with access keys and store them as CI/CD environment variables",
+          "reason": "Long-term access keys stored in CI/CD environment variables are a common source of credential leaks. If the CI/CD system is compromised or the repository is exposed, the keys are compromised permanently until manually rotated."
+        },
+        "B": {
+          "description": "Use OIDC federation / AssumeRoleWithWebIdentity",
+          "reason": "Modern CI/CD platforms (GitHub Actions, GitLab CI, CircleCI) support OIDC. AWS can be configured to trust the CI/CD platform as an identity provider. The pipeline receives a short-lived JWT token from the CI/CD platform and exchanges it via STS for temporary AWS credentials. No long-term keys are stored anywhere."
+        },
+        "C": {
+          "description": "Use the root account credentials",
+          "reason": "Using root credentials anywhere outside the console is a critical security violation. Root credentials have unrestricted access and cannot be limited by IAM policies."
+        },
+        "D": {
+          "description": "Hardcode credentials in deployment scripts and rotate every 90 days",
+          "reason": "Hardcoded credentials are dangerous regardless of rotation frequency. The 90-day window still exposes a significant risk period. Manual rotation is also error-prone."
+        }
+      },
+      "Tips": "CI/CD outside AWS + no long-term keys = OIDC federation / AssumeRoleWithWebIdentity. Root credentials are never acceptable. Hardcoded keys are the anti-pattern OIDC replaces. Storing keys in env vars is risky. OIDC gives short-lived credentials with no stored secrets."
+    }
+  ]
+}
