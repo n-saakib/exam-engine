@@ -1,0 +1,31 @@
+{
+	"label": "Choose a domain for exam",
+	"cloud": {
+		"title": "Cloud Certificate Exams",
+		"label": "Choose the cloud provider",
+		"aws": {
+			"title": "Amazon Web Services (AWS)",
+			"label": "Choose a certification",
+			"saa": {
+				"title": "AWS Solutions Architect Associate",
+				"label": "Choose difficulty level",
+				"easy": {
+					"title": "Easy",
+					"quesPath": "Exams/Cloud/AWS/Solutions-Architect-Associate/Easy"
+				},
+				"medium": {
+					"title": "Medium",
+					"quesPath": "Exams/Cloud/AWS/Solutions-Architect-Associate/Medium"
+				},
+				"hard": {
+					"title": "Hard",
+					"quesPath": "Exams/Cloud/AWS/Solutions-Architect-Associate/Hard"
+				},
+				"mock": {
+					"title": "Mock Exam",
+					"quesPath": "Exams/Cloud/AWS/Solutions-Architect-Associate/Mock"
+				}
+			}
+		}
+	}
+}

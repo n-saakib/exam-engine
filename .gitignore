@@ -1,0 +1,121 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.eclipse/
+
+# Node.js
+node_modules/
+package-lock.json
+yarn.lock
+npm-debug.log
+yarn-error.log
+.npm
+.eslintcache
+dist/
+build/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.coverage
+.pytest_cache/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# OS-specific temporary files
+*.log
+*.tmp
+.cache/
+
+# Project-specific ignores
+# (Add any temporary test files or build artifacts here)
+temp/
+tmp/
+cache/
+
+# IntelliJ
+*.iml
+*.iws
+*.ipr
+
+# Gradle
+.gradle/
+build/
+
+# Maven
+target/
+.mvn/wrapper/maven-wrapper.jar
+
+# LLM, AI, and Agent Related
+*.onnx
+*.bin
+*.safetensors
+models/
+model-cache/
+llm-cache/
+.langchain/
+.llamaindex/
+.vector_store/
+embeddings/
+.embeddings/
+*.db
+vector_db/
+chroma/
+pinecone/
+weaviate/
+milvus/
+faiss_index/
+.ai/
+.agent/
+agents/
+ai_logs/
+agent_logs/
+.claude/
+claude_cache/
+huggingface_cache/
+.huggingface/
+openai_cache/
+anthropic_cache/
+ollama/
+.ollama/
+CLAUDE.md
+AGENTS.md
+
+# Misc
+.DS_Store
+*.bak
+*.swp
+*.swo
+*~
+.#*
