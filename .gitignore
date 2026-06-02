@@ -101,7 +101,7 @@ faiss_index/
 agents/
 ai_logs/
 agent_logs/
-.claude/
+.claude
 claude_cache/
 huggingface_cache/
 .huggingface/
@@ -119,3 +119,4 @@ AGENTS.md
 *.swo
 *~
 .#*
+_docs
