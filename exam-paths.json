@@ -1,4 +1,5 @@
 {
+	"version": 1,
 	"label": "Choose a domain for exam",
 	"cloud": {
 		"title": "Cloud Certificate Exams",

@@ -120,3 +120,27 @@ AGENTS.md
 *~
 .#*
 _docs
+
+# ───────────────────────────────────────────────────────────────────────────
+# CertPrep (Next.js app) — added by F0 scaffold
+# ───────────────────────────────────────────────────────────────────────────
+# Track the npm lockfile for reproducible installs across the parallel feature
+# branches (overrides the generic `package-lock.json` ignore higher up).
+!package-lock.json
+
+# Next.js build output / generated types
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+
+# Runtime SQLite database (created on boot) + WAL/SHM sidecars + uploads
+data/
+*.db
+*.db-*
+
+# Test / coverage artifacts
+coverage/
+playwright-report/
+test-results/
+.vitest/

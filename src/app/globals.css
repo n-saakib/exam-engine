@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens (04 §6). Colours are stored as space-separated RGB channels so
+ * Tailwind's `<alpha-value>` works (e.g. `bg-bg/50`). Semantic tokens only —
+ * screens never hardcode raw colours. Outcome/navigator colours
+ * (correct/incorrect/revealed/flagged/current) are first-class because they
+ * carry meaning across the navigator, option list, and results.
+ *
+ * Theme is switched via `data-theme` on <html> (set pre-paint by the no-FOUC
+ * script in layout.tsx). `system` resolves to light/dark via prefers-color-scheme.
+ */
+
+:root {
+  /* surfaces & text */
+  --bg: 255 255 255;
+  --fg: 23 23 23;
+  --surface: 248 250 252;
+  --muted: 100 116 139;
+  --border: 226 232 240;
+
+  /* brand */
+  --brand: 37 99 235;
+  --brand-fg: 255 255 255;
+
+  /* outcome / navigator semantics */
+  --correct: 22 163 74; /* green  */
+  --incorrect: 220 38 38; /* red    */
+  --revealed: 217 119 6; /* amber  */
+  --flagged: 147 51 234; /* purple */
+  --current: 37 99 235; /* blue   */
+
+  /* feedback */
+  --success: 22 163 74;
+  --warning: 217 119 6;
+  --danger: 220 38 38;
+  --info: 37 99 235;
+
+  --radius-card: 0.75rem;
+}
+
+[data-theme="dark"] {
+  --bg: 10 10 10;
+  --fg: 237 237 237;
+  --surface: 23 23 28;
+  --muted: 148 163 184;
+  --border: 39 39 46;
+
+  --brand: 96 165 250;
+  --brand-fg: 10 10 10;
+
+  --correct: 74 222 128;
+  --incorrect: 248 113 113;
+  --revealed: 251 191 36;
+  --flagged: 192 132 252;
+  --current: 96 165 250;
+
+  --success: 74 222 128;
+  --warning: 251 191 36;
+  --danger: 248 113 113;
+  --info: 96 165 250;
+}
+
+/* Follow the OS when no explicit theme is chosen. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: 10 10 10;
+    --fg: 237 237 237;
+    --surface: 23 23 28;
+    --muted: 148 163 184;
+    --border: 39 39 46;
+
+    --brand: 96 165 250;
+    --brand-fg: 10 10 10;
+
+    --correct: 74 222 128;
+    --incorrect: 248 113 113;
+    --revealed: 251 191 36;
+    --flagged: 192 132 252;
+    --current: 96 165 250;
+
+    --success: 74 222 128;
+    --warning: 251 191 36;
+    --danger: 248 113 113;
+    --info: 96 165 250;
+  }
+}
+
+/*
+ * Map tokens to Tailwind utilities (Tailwind v4 CSS-first config). This makes
+ * `bg-bg`, `text-fg`, `text-muted`, `bg-brand`, `text-brand-fg`, `border-border`,
+ * `bg-correct`, `text-incorrect`, `bg-flagged`, … available across the app, and
+ * `rounded-card`.
+ */
+@theme inline {
+  --color-bg: rgb(var(--bg));
+  --color-fg: rgb(var(--fg));
+  --color-surface: rgb(var(--surface));
+  --color-muted: rgb(var(--muted));
+  --color-border: rgb(var(--border));
+
+  --color-brand: rgb(var(--brand));
+  --color-brand-fg: rgb(var(--brand-fg));
+
+  --color-correct: rgb(var(--correct));
+  --color-incorrect: rgb(var(--incorrect));
+  --color-revealed: rgb(var(--revealed));
+  --color-flagged: rgb(var(--flagged));
+  --color-current: rgb(var(--current));
+
+  --color-success: rgb(var(--success));
+  --color-warning: rgb(var(--warning));
+  --color-danger: rgb(var(--danger));
+  --color-info: rgb(var(--info));
+
+  --radius-card: var(--radius-card);
+}
+
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+}

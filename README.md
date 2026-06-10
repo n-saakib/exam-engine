@@ -250,3 +250,69 @@ find Exams -name "*.json" -exec jq '.questions | length' {} + | awk '{s+=$1} END
 # List all question sets
 find Exams -name "*.json" -type f | sort
 ```
+
+---
+
+# CertPrep — Web App (Next.js)
+
+> Added by the F0 foundation scaffold. The `Exams/` question sets and
+> `exam-paths.json` above remain the authored source of truth; this section
+> covers the **local-first practice web app** built around them.
+
+CertPrep is a single **Next.js (App Router, TypeScript)** application: React
+Server/Client Components render the screens, Route Handlers under `src/app/api/**`
+expose the REST API, and **better-sqlite3** persists runtime state in
+`data/certprep.db`. One process, one port — no proxy, no separate API server.
+
+## Prerequisites
+
+- **Node.js 22.x** (see `.nvmrc`; `nvm use` picks it up). `engines` pins `>=22 <23`.
+- npm 11+.
+- A C toolchain for the native `better-sqlite3` build (preinstalled on most
+  systems; WSL2/Linux works out of the box). If the native module fails after a
+  Node upgrade, run `npm run rebuild`.
+
+## Run it
+
+```bash
+npm install          # installs deps + builds the better-sqlite3 native addon
+
+npm run dev          # development: next dev with HMR on http://localhost:3000
+# — or —
+npm run build && npm run start   # production-style build + serve on :3000
+```
+
+On first boot the app creates and migrates `data/certprep.db` automatically (via
+`instrumentation.ts` → integrity-check → migrations). Visit
+`http://localhost:3000` and `GET http://localhost:3000/api/health` to confirm.
+
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | `next dev` (HMR) on :3000 |
+| `npm run build` | `next build` (production build) |
+| `npm run start` | `next start` on :3000 (run `build` first) |
+| `npm test` | Vitest (server `node` project + client `jsdom` project) |
+| `npm run test:e2e` | Playwright (spine test authored in F4) |
+| `npm run lint` | ESLint (Next 16 removed `next lint`; we call ESLint directly) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run validate` | Validate every `Exams/**/*.json` against the question-set schema |
+| `npm run rebuild` | Rebuild the `better-sqlite3` native addon (after a Node upgrade) |
+
+## Layout (high level)
+
+```
+src/app/        Presentation (pages) + API (api/**/route.ts route handlers)
+src/server/     Logic + Data (better-sqlite3, migrations, services) — server-only
+src/domain/     Shared zod schemas + z.infer<> types (client- and server-safe)
+src/lib/        Client-safe: apiClient, queryKeys, providers
+src/components/ Shared UI primitives (Button, Card, Dialog, Toast, …)
+data/           Runtime SQLite DB (gitignored, created on boot)
+```
+
+## Configuration
+
+Copy `.env.example` to `.env` to override defaults (`DB_PATH`, `EXAMS_ROOT`,
+`EXAM_PATHS_FILE`, `LOG_LEVEL`, `PORT`). All have working defaults, so a copy is
+optional for local dev.
