@@ -2,6 +2,11 @@ import "server-only";
 
 import { config, type AppConfig } from "@/server/config";
 import { getDb } from "@/server/data/db";
+import {
+  getAllSettings,
+  patchSettings,
+} from "@/server/data/repos/settingsRepo";
+import type { SettingsPatch } from "@/domain/types";
 
 /**
  * Composition root (the only place that wires concrete dependencies together).
@@ -14,7 +19,13 @@ import { getDb } from "@/server/data/db";
  */
 export interface Container {
   config: AppConfig;
-  // repos:    { … }   ← added as repositories land
+  repos: {
+    settings: {
+      getAll: () => ReturnType<typeof getAllSettings>;
+      patch: (patch: SettingsPatch) => ReturnType<typeof patchSettings>;
+    };
+    // additional repos added as they land (F2–F8)
+  };
   // services: { … }   ← added as services land
 }
 
@@ -28,6 +39,14 @@ function build(): Container {
   getDb();
   return {
     config,
+    repos: {
+      settings: {
+        // Resolve getDb() lazily at call time so HMR / test teardown + re-open
+        // of the connection doesn't leave a stale closed handle in the closure.
+        getAll: () => getAllSettings(getDb()),
+        patch: (p: SettingsPatch) => patchSettings(getDb(), p),
+      },
+    },
   };
 }
 
