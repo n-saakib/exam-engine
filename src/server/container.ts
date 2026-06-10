@@ -23,6 +23,18 @@ import {
   createPathResolver,
   type PathResolver,
 } from "@/server/services/pathResolver";
+import {
+  createSessionRepo,
+  type SessionRepo,
+} from "@/server/data/repos/sessionRepo";
+import {
+  createAnswerRepo,
+  type AnswerRepo,
+} from "@/server/data/repos/answerRepo";
+import {
+  createExamEngine,
+  type ExamEngine,
+} from "@/server/services/examEngine";
 
 /**
  * Composition root (the only place that wires concrete dependencies together).
@@ -42,10 +54,13 @@ export interface Container {
     };
     setCatalog: SetCatalogRepo;
     completion: CompletionRepo;
+    session: SessionRepo;
+    answer: AnswerRepo;
   };
   services: {
     setCatalog: SetCatalogService;
     pathResolver: PathResolver;
+    examEngine: ExamEngine;
   };
 }
 
@@ -59,6 +74,8 @@ function build(): Container {
   // Repos
   const setCatalogRepo = createSetCatalogRepo(db);
   const completionRepo = createCompletionRepo(db);
+  const sessionRepo = createSessionRepo(db);
+  const answerRepo = createAnswerRepo(db);
 
   // Services
   const setCatalogService = createSetCatalogService(setCatalogRepo, completionRepo);
@@ -66,6 +83,16 @@ function build(): Container {
   // PathResolver — stateless (reads the file fresh each call); created here so
   // it participates in the container's lifetime and can be swapped in tests.
   const pathResolver = createPathResolver();
+
+  const examEngine = createExamEngine({
+    sessionRepo,
+    answerRepo,
+    completionRepo,
+    setCatalog: setCatalogService,
+    pathResolver,
+    // Lazily read settings (defaults merged) for create-time options.
+    getSettings: () => getAllSettings(getDb()),
+  });
 
   return {
     config,
@@ -78,10 +105,13 @@ function build(): Container {
       },
       setCatalog: setCatalogRepo,
       completion: completionRepo,
+      session: sessionRepo,
+      answer: answerRepo,
     },
     services: {
       setCatalog: setCatalogService,
       pathResolver,
+      examEngine,
     },
   };
 }

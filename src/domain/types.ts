@@ -19,12 +19,16 @@ export {
   QuestionSchema,
   ExamPathsSchema,
   ExamPathNodeSchema,
+  SnapshotQuestionSchema,
+  SnapshotSchema,
 } from "@/domain/schemas";
 export type {
   QuestionSet,
   Question,
   ExamPaths,
   ExamPathNode,
+  SnapshotQuestion,
+  Snapshot,
 } from "@/domain/schemas";
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -270,3 +274,63 @@ export const ExamPathsResponseSchema = z.object({
   leaves: z.array(LeafSummarySchema),
 });
 export type ExamPathsResponse = z.infer<typeof ExamPathsResponseSchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// Session request bodies — 03 §4 (F4)
+// ───────────────────────────────────────────────────────────────────────────
+
+/** Per-creation overrides; each defaults from `settings` when omitted (03 §4). */
+export const CreateSessionOptionsSchema = z
+  .object({
+    timerEnabled: z.boolean().optional(),
+    /** Explicit limit in minutes; `null`/omitted ⇒ untimed or settings-derived. */
+    timerMinutes: z.number().positive().nullable().optional(),
+    shuffleQuestions: z.boolean().optional(),
+    shuffleOptions: z.boolean().optional(),
+    /** Deterministic shuffle seed (testability); omitted ⇒ engine generates one. */
+    seed: z.string().optional(),
+  })
+  .optional();
+export type CreateSessionOptions = z.infer<typeof CreateSessionOptionsSchema>;
+
+/**
+ * POST /api/sessions body. `mode` is restricted to `full` at this endpoint —
+ * retakes (`retake_*`) are created via POST /api/sessions/:id/retake (F5).
+ */
+export const CreateSessionBodySchema = z.object({
+  quesPath: z.string().min(1),
+  setId: z.string().min(1).optional(),
+  mode: z.literal("full").default("full"),
+  options: CreateSessionOptionsSchema,
+});
+export type CreateSessionBody = z.infer<typeof CreateSessionBodySchema>;
+
+/** The per-question portion of a PATCH /api/sessions/:id autosave (03 §4). */
+export const PatchAnswerSchema = z.object({
+  questionId: z.number().int(),
+  /** Replaces the current selection; `[]` clears it. */
+  selected: z.array(z.string()).optional(),
+  flagged: z.boolean().optional(),
+  /** Monotonic: once `true` it can never be unset (server enforces). */
+  revealed: z.boolean().optional(),
+  confidence: ConfidenceSchema.nullable().optional(),
+  timeSpentMs: z.number().int().min(0).optional(),
+});
+export type PatchAnswer = z.infer<typeof PatchAnswerSchema>;
+
+/**
+ * PATCH /api/sessions/:id body — any subset (autosave). `elapsedMs` is ABSOLUTE
+ * (replace), server-clamped to `[0, timerLimitMs]` when timed (09 §7.1).
+ */
+export const PatchSessionBodySchema = z.object({
+  currentIndex: z.number().int().min(0).optional(),
+  elapsedMs: z.number().int().min(0).optional(),
+  answer: PatchAnswerSchema.optional(),
+});
+export type PatchSessionBody = z.infer<typeof PatchSessionBodySchema>;
+
+/** POST /api/sessions/:id/submit body (optional final timer value). */
+export const SubmitSessionBodySchema = z.object({
+  elapsedMs: z.number().int().min(0).optional(),
+});
+export type SubmitSessionBody = z.infer<typeof SubmitSessionBodySchema>;

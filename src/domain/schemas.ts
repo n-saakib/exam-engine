@@ -134,6 +134,37 @@ export const QuestionSetSchema = z
 export type QuestionSet = z.infer<typeof QuestionSetSchema>;
 
 // ───────────────────────────────────────────────────────────────────────────
+// Snapshot — data model 02 §5 (the questions "as presented", self-contained)
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * One question in `exam_sessions.question_snapshot`. It carries everything needed
+ * to play AND grade — including `correctAnswer`/`explanations`/`Tips`, which the
+ * live DTO mapper strips until the question is revealed (02 §5, 03 §8). The
+ * snapshot is the single source of truth for grading (ADR-4): once written it is
+ * immune to changes to the source JSON file on disk.
+ *
+ * `id` is the original question id (stable key for `session_answers.question_id`);
+ * `order` is the 1-based position in THIS session (post question-shuffle).
+ * `optionOrder` is present iff option shuffling was enabled.
+ */
+export const SnapshotQuestionSchema = z.object({
+  id: z.number().int(),
+  order: z.number().int(),
+  questionType: QuestionTypeSchema,
+  questionText: z.string(),
+  options: z.record(OptionKeySchema, z.string()),
+  optionOrder: z.array(z.string()).optional(),
+  correctAnswer: z.union([z.string(), z.array(z.string())]),
+  explanations: z.record(OptionKeySchema, ExplanationSchema).optional(),
+  Tips: z.string().optional(),
+});
+export type SnapshotQuestion = z.infer<typeof SnapshotQuestionSchema>;
+
+export const SnapshotSchema = z.array(SnapshotQuestionSchema);
+export type Snapshot = z.infer<typeof SnapshotSchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
 // exam-paths.json (navigation tree) — data model 02 §2
 // ───────────────────────────────────────────────────────────────────────────
 

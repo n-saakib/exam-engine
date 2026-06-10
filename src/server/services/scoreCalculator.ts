@@ -1,0 +1,148 @@
+import "server-only";
+
+import type { Outcome } from "@/domain/types";
+import type { SnapshotQuestion } from "@/domain/schemas";
+
+/**
+ * ScoreCalculator — the single source of truth for grading (01 §4, F4-T11).
+ *
+ * PURE: no DB, no fs, no clock, no randomness. Given the question snapshot plus
+ * the per-question answer state it returns a deterministic outcome per question
+ * and the session totals. Grading lives ONLY here and in `submit`; the client
+ * never computes the official score.
+ *
+ * Scoring rules (F4 / 03 §5.1):
+ *   - `revealed` ("gave up") counts as its OWN outcome — NOT incorrect — and is
+ *     excluded from the correct tally. It still counts toward `total`.
+ *   - `unanswered` = not revealed and no option selected.
+ *   - `scorePercent = round(correct / total * 100)` — see ROUNDING below.
+ *
+ * ROUNDING: half-up to the nearest integer percent via `Math.round`. The
+ * denominator is the FULL question count (`total`), so revealed/unanswered/wrong
+ * all pull the percentage down equally (a "gave up" is not free). `total === 0`
+ * yields `0` (no division by zero).
+ *
+ * EXTENSIBILITY (structure-ready for multi): the per-question correctness check
+ * is dispatched on `questionType` through `GRADERS`. `single` is implemented;
+ * `multi` (set-equality), `ordered`, and `freetext` are clean future branches —
+ * nothing in the shape assumes a single selected option.
+ */
+
+/** The minimal answer shape ScoreCalculator needs (decoupled from the DB row). */
+export interface AnswerInput {
+  questionId: number;
+  /** Selected option keys. Empty ⇒ unanswered (unless revealed). */
+  selected: string[];
+  /** "Gave up" — overrides correctness; counts as `revealed`. */
+  revealed: boolean;
+}
+
+/** Per-question grading result. */
+export interface QuestionResult {
+  questionId: number;
+  outcome: Outcome;
+  /**
+   * Whether the selection matched the correct answer, IGNORING reveal. Useful for
+   * retake-incorrect (a revealed-but-correct guess is still "didn't earn it") and
+   * for transparency. `null` when unanswered.
+   */
+  isCorrect: boolean | null;
+}
+
+/** Session totals. `total` is the denominator for `scorePercent`. */
+export interface ScoreTotals {
+  correct: number;
+  incorrect: number;
+  revealed: number;
+  unanswered: number;
+  total: number;
+  /** round(correct / total * 100); 0 when total === 0. */
+  scorePercent: number;
+}
+
+export interface ScoreResult {
+  perQuestion: QuestionResult[];
+  totals: ScoreTotals;
+}
+
+/**
+ * A grader decides ONLY raw correctness for one question type (no notion of
+ * reveal/unanswered — that policy lives in `grade`). Returning a clean boolean
+ * keeps the outcome policy in one place and makes multi/ordered a 1-line add.
+ */
+type Grader = (selected: string[], correctAnswer: string | string[]) => boolean;
+
+const GRADERS: Partial<Record<SnapshotQuestion["questionType"], Grader>> = {
+  single: (selected, correctAnswer) => {
+    if (typeof correctAnswer !== "string") return false;
+    return selected.length === 1 && selected[0] === correctAnswer;
+  },
+  // Future branches (kept here so the dispatch site doesn't grow special-cases):
+  // multi: (selected, correctAnswer) => setEquals(selected, asArray(correctAnswer)),
+  // ordered: (selected, correctAnswer) => sequenceEquals(selected, asArray(correctAnswer)),
+};
+
+/**
+ * Grade a whole session from its snapshot + answers. Answers are matched to
+ * snapshot questions by the stable `question.id`; a question with no answer row
+ * is treated as unanswered (defensive — the engine seeds a blank row per
+ * question, so this should not normally happen).
+ */
+export function gradeSession(
+  snapshot: SnapshotQuestion[],
+  answers: AnswerInput[],
+): ScoreResult {
+  const byId = new Map<number, AnswerInput>();
+  for (const a of answers) byId.set(a.questionId, a);
+
+  const perQuestion: QuestionResult[] = [];
+  let correct = 0;
+  let incorrect = 0;
+  let revealed = 0;
+  let unanswered = 0;
+
+  for (const q of snapshot) {
+    const answer = byId.get(q.id) ?? {
+      questionId: q.id,
+      selected: [],
+      revealed: false,
+    };
+
+    const grader = GRADERS[q.questionType];
+    // An unsupported type at grade time can't be scored correct — treat the raw
+    // correctness as false (the engine refuses to CREATE unsupported sessions, so
+    // this is only a defensive floor).
+    const isCorrect = grader
+      ? grader(answer.selected, q.correctAnswer)
+      : false;
+
+    let outcome: Outcome;
+    if (answer.revealed) {
+      outcome = "revealed";
+      revealed++;
+    } else if (answer.selected.length === 0) {
+      outcome = "unanswered";
+      unanswered++;
+    } else if (isCorrect) {
+      outcome = "correct";
+      correct++;
+    } else {
+      outcome = "incorrect";
+      incorrect++;
+    }
+
+    perQuestion.push({
+      questionId: q.id,
+      outcome,
+      isCorrect: answer.selected.length === 0 && !answer.revealed ? null : isCorrect,
+    });
+  }
+
+  const total = snapshot.length;
+  const scorePercent = total === 0 ? 0 : Math.round((correct / total) * 100);
+
+  return {
+    perQuestion,
+    totals: { correct, incorrect, revealed, unanswered, total, scorePercent },
+  };
+}

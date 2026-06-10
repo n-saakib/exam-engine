@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 import { defineHandler } from "@/server/http/defineHandler";
-import { json } from "@/server/http/respond";
+import { json, created } from "@/server/http/respond";
 import { getDb } from "@/server/data/db";
 import { runMigrations } from "@/server/boot";
+import { getContainer } from "@/server/container";
+import { CreateSessionBodySchema } from "@/domain/types";
 import type { SessionList, SessionListRow } from "@/domain/types";
 
 // DB-backed route → Node.js runtime (never edge); dynamic so reads aren't cached.
@@ -111,5 +113,26 @@ export const GET = defineHandler({
 
     const body: SessionList = { items, total };
     return json(body);
+  },
+});
+
+/**
+ * POST /api/sessions — start a new exam (F4-T7). Creates a session (loads/picks a
+ * set, shuffles, snapshots, persists blank answers) and returns the answers-hidden
+ * live DTO (201).
+ *
+ * `mode` is restricted to `"full"` here (CreateSessionBodySchema); `retake_*`
+ * sessions are created via POST /api/sessions/:id/retake (F5) — a `retake_*`
+ * value is rejected as 400 VALIDATION_ERROR by the schema.
+ *
+ * Errors mapped by the engine/services: 404 PATH_NOT_FOUND / SET_NOT_FOUND,
+ * 409 SETS_EXHAUSTED, 422 UNSUPPORTED_QUESTION_TYPE.
+ */
+export const POST = defineHandler({
+  body: CreateSessionBodySchema,
+  handler: async ({ body }) => {
+    runMigrations();
+    const session = getContainer().services.examEngine.createSession(body);
+    return created(session);
   },
 });
