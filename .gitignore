@@ -135,7 +135,8 @@ next-env.d.ts
 *.tsbuildinfo
 
 # Runtime SQLite database (created on boot) + WAL/SHM sidecars + uploads
-data/
+# NOTE: anchored to repo root so it does NOT match src/server/data/ (the code dir).
+/data/
 *.db
 *.db-*
 
