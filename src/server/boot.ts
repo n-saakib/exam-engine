@@ -2,6 +2,7 @@ import "server-only";
 
 import { getDb } from "@/server/data/db";
 import { migrate, getSchemaVersion } from "@/server/data/migrate";
+import { getContainer } from "@/server/container";
 
 /**
  * Boot routines, run once on server start by `instrumentation.register()`.
@@ -40,13 +41,22 @@ export function runMigrations(): number {
 }
 
 /**
- * Scan the Exams root and refresh the catalogue.
- *
- * STUB until F3: deliberately a no-op so boot is safe before the catalogue
- * service exists. F3 replaces this body with a real filesystem scan.
+ * Scan the Exams root and refresh the catalogue. Runs after migrations so the
+ * `set_catalog` table exists. Idempotent (upserts) and resilient — one bad file
+ * never aborts the scan. Called by `instrumentation.register()` on server start.
  */
 export function bootScan(): void {
-  // no-op (F3 fills this in)
+  try {
+    const container = getContainer();
+    // Fire-and-forget: scan returns a promise but boot doesn't await it.
+    // The catalogue is populated asynchronously on first request if needed.
+    container.services.setCatalog.scan().catch((err: unknown) => {
+      console.error("[bootScan] catalogue scan failed:", err);
+    });
+  } catch (err) {
+    // Never crash the server on a scan failure — diagnostics will surface it.
+    console.error("[bootScan] failed to initiate catalogue scan:", err);
+  }
 }
 
 /** Convenience: the full boot sequence in order (used by instrumentation). */

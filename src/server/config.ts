@@ -21,6 +21,8 @@ export interface AppConfig {
   readonly examsRoot: string;
   /** Absolute path to exam-paths.json (the navigation tree). */
   readonly examPathsFile: string;
+  /** Absolute path to the uploads dir (sibling of the DB file: `<data>/uploads`). */
+  readonly uploadsRoot: string;
   /** Log verbosity. */
   readonly logLevel: LogLevel;
 }
@@ -47,11 +49,15 @@ function resolveFromEnv(value: string | undefined, fallback: string): string {
 }
 
 function loadConfig(): AppConfig {
+  const dbPath = resolveFromEnv(process.env.DB_PATH, "./data/certprep.db");
   return {
     port: intFromEnv(process.env.PORT, 3000),
-    dbPath: resolveFromEnv(process.env.DB_PATH, "./data/certprep.db"),
+    dbPath,
     examsRoot: resolveFromEnv(process.env.EXAMS_ROOT, "./Exams"),
     examPathsFile: resolveFromEnv(process.env.EXAM_PATHS_FILE, "./exam-paths.json"),
+    // Uploads live beside the DB file so they follow DB_PATH (incl. in tests),
+    // never a hardcoded cwd path. Production default → ./data/uploads.
+    uploadsRoot: path.join(path.dirname(dbPath), "uploads"),
     logLevel: logLevelFromEnv(process.env.LOG_LEVEL, "info"),
   };
 }
@@ -64,6 +70,15 @@ let cached: AppConfig | undefined;
 function resolved(): AppConfig {
   if (!cached) cached = loadConfig();
   return cached;
+}
+
+/**
+ * Clear the memoised config so the next access re-reads `process.env`.
+ * Test-only: lets a test point `EXAMS_ROOT`/`DB_PATH` at a temp location and
+ * have the (otherwise read-once) config pick it up. Never call in production.
+ */
+export function resetConfigCache(): void {
+  cached = undefined;
 }
 
 /**
@@ -82,6 +97,9 @@ export const config: AppConfig = {
   },
   get examPathsFile() {
     return resolved().examPathsFile;
+  },
+  get uploadsRoot() {
+    return resolved().uploadsRoot;
   },
   get logLevel() {
     return resolved().logLevel;

@@ -7,15 +7,27 @@ import {
   patchSettings,
 } from "@/server/data/repos/settingsRepo";
 import type { SettingsPatch } from "@/domain/types";
+import {
+  createSetCatalogRepo,
+  type SetCatalogRepo,
+} from "@/server/data/repos/setCatalogRepo";
+import {
+  createCompletionRepo,
+  type CompletionRepo,
+} from "@/server/data/repos/completionRepo";
+import {
+  createSetCatalogService,
+  type SetCatalogService,
+} from "@/server/services/setCatalog";
 
 /**
  * Composition root (the only place that wires concrete dependencies together).
- * F0 stub: it exposes the resolved config and the DB handle. As repositories and
- * services land (F2–F8) they are constructed here and exposed on `Container`, so
- * route handlers depend on this assembled object rather than reaching into
- * `data/` or `services/` directly.
+ * Built lazily and memoised on `globalThis` so HMR reuses one instance. Route
+ * handlers depend on this assembled object rather than reaching into `data/` or
+ * `services/` directly.
  *
- * Built lazily and memoised on `globalThis` so HMR reuses one instance.
+ * Wires: settings repo (F1); setCatalog/completion repos + setCatalog service (F3).
+ * Further repos/services are added here as they land (F4–F8).
  */
 export interface Container {
   config: AppConfig;
@@ -24,9 +36,12 @@ export interface Container {
       getAll: () => ReturnType<typeof getAllSettings>;
       patch: (patch: SettingsPatch) => ReturnType<typeof patchSettings>;
     };
-    // additional repos added as they land (F2–F8)
+    setCatalog: SetCatalogRepo;
+    completion: CompletionRepo;
   };
-  // services: { … }   ← added as services land
+  services: {
+    setCatalog: SetCatalogService;
+  };
 }
 
 const globalForContainer = globalThis as unknown as {
@@ -34,9 +49,15 @@ const globalForContainer = globalThis as unknown as {
 };
 
 function build(): Container {
-  // Touch the DB so the singleton + pragmas are initialised when the container
-  // is first resolved (services constructed here will need it).
-  getDb();
+  const db = getDb();
+
+  // Repos
+  const setCatalogRepo = createSetCatalogRepo(db);
+  const completionRepo = createCompletionRepo(db);
+
+  // Services
+  const setCatalogService = createSetCatalogService(setCatalogRepo, completionRepo);
+
   return {
     config,
     repos: {
@@ -46,6 +67,11 @@ function build(): Container {
         getAll: () => getAllSettings(getDb()),
         patch: (p: SettingsPatch) => patchSettings(getDb(), p),
       },
+      setCatalog: setCatalogRepo,
+      completion: completionRepo,
+    },
+    services: {
+      setCatalog: setCatalogService,
     },
   };
 }
@@ -56,4 +82,13 @@ export function getContainer(): Container {
     globalForContainer.__certprepContainer = build();
   }
   return globalForContainer.__certprepContainer;
+}
+
+/**
+ * Reset the memoised container (for test isolation only). Call this after
+ * closing the DB (`closeDb()`) so the next `getContainer()` rebuilds cleanly
+ * against a fresh DB.
+ */
+export function resetContainer(): void {
+  globalForContainer.__certprepContainer = undefined;
 }
