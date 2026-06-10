@@ -140,6 +140,10 @@ next-env.d.ts
 *.db
 *.db-*
 
+# Re-include the server data directory (src/server/data/) which is source code,
+# not the gitignored runtime data/ folder at the repo root.
+!src/server/data/
+
 # Test / coverage artifacts
 coverage/
 playwright-report/
