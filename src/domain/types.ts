@@ -239,3 +239,34 @@ export type Settings = z.infer<typeof SettingsSchema>;
 /** PATCH /api/settings accepts a partial object (only provided keys updated). */
 export const SettingsPatchSchema = SettingsSchema.partial();
 export type SettingsPatch = z.infer<typeof SettingsPatchSchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// GET /api/exam-paths — 03 §3 (F2)
+// ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * One leaf in the flat `leaves[]` array returned by `GET /api/exam-paths`.
+ * Carries path-counts from the SetCatalog service + a path-safety flag.
+ */
+export const LeafSummarySchema = z.object({
+  quesPath: z.string(),
+  domainLabel: z.string(),
+  icon: z.string().optional(),
+  /** true when quesPath resolves safely under the exams root */
+  safe: z.boolean(),
+  totalSets: z.number().int(),
+  completedSets: z.number().int(),
+  remainingSets: z.number().int(),
+  exhausted: z.boolean(),
+});
+export type LeafSummary = z.infer<typeof LeafSummarySchema>;
+
+/**
+ * Full response shape for `GET /api/exam-paths`.
+ * `tree` is the raw navigation tree; `leaves` is the flat enriched list.
+ */
+export const ExamPathsResponseSchema = z.object({
+  tree: z.record(z.unknown()),
+  leaves: z.array(LeafSummarySchema),
+});
+export type ExamPathsResponse = z.infer<typeof ExamPathsResponseSchema>;

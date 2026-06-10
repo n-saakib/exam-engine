@@ -1,40 +1,42 @@
-import Link from "next/link";
-import { Card } from "@/components/Card";
+"use client";
+
+import { DomainSelector } from "@/features/domain-selector/DomainSelector";
 
 /**
- * Home shell (Server Component). F2 mounts the cascading <DomainSelector> island
- * and F1 the quick-stats widget here. Placeholder until then.
+ * Home screen (F2).
+ *
+ * Composed as a client component island (per 09 §9 — "Home's shell is a Server
+ * Component with a client <DomainSelector> island"). Since DomainSelector owns
+ * React Query + settings hooks, making the page itself "use client" is the
+ * simplest correct approach without adding a separate island wrapper.
+ *
+ * Layout:
+ *   - <DomainSelector>   — cascading dropdowns + leaf summary + start button
+ *   - <QuickStatsWidget> — placeholder slot for the short-term roadmap feature (F7)
  */
 export default function HomePage() {
-  const links: Array<{ href: string; label: string }> = [
-    { href: "/resume", label: "Resume" },
-    { href: "/history", label: "History" },
-    { href: "/settings", label: "Settings" },
-  ];
-
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10">
-      <h1 className="text-2xl font-bold text-fg">CertPrep</h1>
-      <p className="mt-1 text-muted">Local-first exam practice.</p>
-
-      <Card className="mt-6">
-        <h2 className="text-lg font-semibold">Choose an exam</h2>
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-fg">CertPrep</h1>
         <p className="mt-1 text-sm text-muted">
-          The domain selector lands in F2. The foundation scaffold is up and the
-          API is live.
+          Select an exam domain below to get started.
         </p>
-        <nav className="mt-4 flex flex-wrap gap-3">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              className="text-sm font-medium text-brand underline-offset-4 hover:underline"
-            >
-              {l.label}
-            </Link>
-          ))}
-        </nav>
-      </Card>
+      </div>
+
+      {/* Domain selector — reads exam-paths.json via /api/exam-paths */}
+      <section aria-label="Exam domain selection">
+        <DomainSelector />
+      </section>
+
+      {/* Quick stats widget slot — placeholder until F7 lands */}
+      <section
+        aria-label="Quick statistics"
+        className="mt-10"
+        data-testid="quick-stats-slot"
+      >
+        {/* QuickStatsWidget rendered here in F7 */}
+      </section>
     </main>
   );
 }

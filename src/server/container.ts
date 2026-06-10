@@ -19,6 +19,10 @@ import {
   createSetCatalogService,
   type SetCatalogService,
 } from "@/server/services/setCatalog";
+import {
+  createPathResolver,
+  type PathResolver,
+} from "@/server/services/pathResolver";
 
 /**
  * Composition root (the only place that wires concrete dependencies together).
@@ -41,6 +45,7 @@ export interface Container {
   };
   services: {
     setCatalog: SetCatalogService;
+    pathResolver: PathResolver;
   };
 }
 
@@ -58,6 +63,10 @@ function build(): Container {
   // Services
   const setCatalogService = createSetCatalogService(setCatalogRepo, completionRepo);
 
+  // PathResolver — stateless (reads the file fresh each call); created here so
+  // it participates in the container's lifetime and can be swapped in tests.
+  const pathResolver = createPathResolver();
+
   return {
     config,
     repos: {
@@ -72,6 +81,7 @@ function build(): Container {
     },
     services: {
       setCatalog: setCatalogService,
+      pathResolver,
     },
   };
 }
