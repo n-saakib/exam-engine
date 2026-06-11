@@ -274,6 +274,26 @@ expose the REST API, and **better-sqlite3** persists runtime state in
 
 ## Run it
 
+### Quick start (one command)
+
+Two helper scripts spin the app up either way. Both are **interactive**, or pass
+**`-y`** to accept all defaults and just run:
+
+```bash
+# Without Docker — installs deps (if needed), builds, and serves on :3000
+./scripts/run-local.sh -y           # interactive: ./scripts/run-local.sh   (or --dev)
+
+# With Docker — builds the image and runs a container (localhost-only, persisted DB)
+./scripts/run-docker.sh -y          # interactive: ./scripts/run-docker.sh
+```
+
+`run-local.sh` flags: `--dev|--prod`, `--port N`, `--host H`, `--no-install`.
+`run-docker.sh` flags: `--port N`, `--data-dir DIR` (vs named volume), `--mount-exams`
+(edit question sets without rebuilding), `--rebuild|--no-build`, `--name`, `--tag`.
+Run either with `-h` for full help.
+
+### Manual
+
 ```bash
 npm install          # installs deps + builds the better-sqlite3 native addon
 
@@ -285,6 +305,11 @@ npm run build && npm run start   # production-style build + serve on :3000
 On first boot the app creates and migrates `data/certprep.db` automatically (via
 `instrumentation.ts` → integrity-check → migrations). Visit
 `http://localhost:3000` and `GET http://localhost:3000/api/health` to confirm.
+
+> **Docker notes:** the image runs the Next.js *standalone* server as a non-root
+> user; the SQLite DB lives in a volume at `/app/data`; the host port is bound to
+> `127.0.0.1` only (local-first). Question sets are baked in — bind-mount `./Exams`
+> (`--mount-exams`) to use your own without rebuilding.
 
 ## Scripts
 

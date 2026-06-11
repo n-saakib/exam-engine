@@ -1,0 +1,36 @@
+# Keep the build context small + reproducible. node_modules is reinstalled in the
+# `deps` stage; .next is rebuilt in the `build` stage.
+node_modules
+.next
+out
+data
+*.db
+*.db-*
+
+# VCS / worktrees / CI artifacts
+.git
+.gitignore
+../Features
+coverage
+playwright-report
+test-results
+.vitest
+
+# Tests + planning docs are not needed to build or run the app
+e2e
+docs
+**/*.test.ts
+**/*.test.tsx
+playwright.config.ts
+vitest.config.ts
+
+# Editor / OS / logs
+.vscode
+.idea
+*.log
+npm-debug.log*
+
+# The container artifacts themselves
+Dockerfile
+.dockerignore
+scripts/run-docker.sh
