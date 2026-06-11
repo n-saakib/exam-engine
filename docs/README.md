@@ -2,7 +2,7 @@
 
 This folder is the complete plan for **CertPrep**, a local-first, domain-agnostic exam practice platform. It turns the product brief in [`../_docs/CertPrep_Product_Plan.docx`](../_docs/CertPrep_Product_Plan.docx) into an implementable architecture, a feature-by-feature build plan, and per-feature task breakdowns.
 
-> **Status:** Implementation in progress on **Next.js** (App Router) + SQLite. The original Express + Vite runtime was refined to a single Next.js app — **read [`09-nextjs-refinement.md`](09-nextjs-refinement.md) first**, then `00`–`02`. The repo also contains the question-set data (`Exams/`, `exam-paths.json`) the app reads.
+> **Status:** ✅ **MVP implemented** on **Next.js** (App Router) + SQLite. All eight features (F0–F8) are built and on `main`, with 310 unit/integration/component tests + one Playwright E2E spine, all green. The original Express + Vite runtime was refined to a single Next.js app — **read [`09-nextjs-refinement.md`](09-nextjs-refinement.md) first**, then `00`–`02`. Run with `npm install && npm start` → `localhost:3000`. The repo also contains the question-set data (`Exams/`, `exam-paths.json`) the app reads.
 
 ---
 
