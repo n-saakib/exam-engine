@@ -2,6 +2,43 @@ import "server-only";
 
 import type { Database } from "better-sqlite3";
 
+/** Filter parameters for listCompleted / countCompleted (mirrors HistoryFilters). */
+export interface CompletedFilters {
+  domain?: string;
+  quesPath?: string;
+  difficulty?: string;
+  scoreMin?: number;
+  scoreMax?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  bookmarked?: boolean;
+  sort?: "date" | "score" | "difficulty";
+  order?: "asc" | "desc";
+  limit?: number;
+  offset?: number;
+}
+
+/** A completed-session row shaped for the history list. */
+export interface CompletedRow {
+  id: string;
+  domain_label: string;
+  difficulty: string;
+  set_title: string;
+  score_percent: number;
+  time_elapsed_ms: number;
+  completed_at: string;
+  is_bookmarked: number;
+  note: string | null;
+}
+
+/** A completed-session row shaped for stats aggregation. */
+export interface StatsRow {
+  id: string;
+  score_percent: number;
+  completed_at: string;
+  difficulty: string;
+}
+
 /** A row in `exam_sessions` exactly as stored (snapshot stays JSON TEXT). */
 export interface SessionRow {
   id: string;
@@ -64,6 +101,68 @@ export interface SessionPatch {
   isBookmarked?: boolean;
   note?: string | null;
   completedAt?: string | null;
+}
+
+/** Map `sort` filter value to the actual SQL column. */
+function sortToColumn(sort: string): string {
+  switch (sort) {
+    case "score":
+      return "score_percent";
+    case "difficulty":
+      return "difficulty";
+    case "date":
+    default:
+      return "completed_at";
+  }
+}
+
+/**
+ * Build the WHERE clause and positional params array for completed-session queries.
+ * Always includes `status = 'completed'` and `completed_at IS NOT NULL`.
+ */
+function buildCompletedWhere(filters: CompletedFilters): {
+  whereParts: string[];
+  params: (string | number)[];
+} {
+  const whereParts: string[] = ["status = 'completed'", "completed_at IS NOT NULL"];
+  const params: (string | number)[] = [];
+
+  if (filters.domain) {
+    whereParts.push("domain_label LIKE ?");
+    params.push(`%${filters.domain}%`);
+  }
+  if (filters.quesPath) {
+    whereParts.push("ques_path = ?");
+    params.push(filters.quesPath);
+  }
+  if (filters.difficulty) {
+    whereParts.push("difficulty = ?");
+    params.push(filters.difficulty);
+  }
+  if (filters.scoreMin !== undefined) {
+    whereParts.push("score_percent >= ?");
+    params.push(filters.scoreMin);
+  }
+  if (filters.scoreMax !== undefined) {
+    whereParts.push("score_percent <= ?");
+    params.push(filters.scoreMax);
+  }
+  if (filters.dateFrom) {
+    whereParts.push("completed_at >= ?");
+    params.push(filters.dateFrom);
+  }
+  if (filters.dateTo) {
+    // dateTo is inclusive — add one day so "2026-06-11" includes that whole day.
+    whereParts.push("completed_at < ?");
+    const d = new Date(filters.dateTo);
+    d.setUTCDate(d.getUTCDate() + 1);
+    params.push(d.toISOString().slice(0, 10));
+  }
+  if (filters.bookmarked === true) {
+    whereParts.push("is_bookmarked = 1");
+  }
+
+  return { whereParts, params };
 }
 
 /**
@@ -167,6 +266,59 @@ export function createSessionRepo(db: Database) {
 
     /** Expose the raw connection for transactional composition in the engine. */
     db,
+
+    /**
+     * List completed sessions for the history endpoint. Applies all filters,
+     * sorting, and pagination. All SQL for this query lives here.
+     */
+    listCompleted(filters: CompletedFilters): CompletedRow[] {
+      const { whereParts, params } = buildCompletedWhere(filters);
+      const sortColumn = sortToColumn(filters.sort ?? "date");
+      const order = filters.order ?? "desc";
+      const limit = filters.limit ?? 50;
+      const offset = filters.offset ?? 0;
+
+      const where = whereParts.length > 0 ? `WHERE ${whereParts.join(" AND ")}` : "";
+      const sql = `
+        SELECT
+          id, domain_label, difficulty, set_title,
+          score_percent, time_elapsed_ms, completed_at,
+          is_bookmarked, note
+        FROM exam_sessions
+        ${where}
+        ORDER BY ${sortColumn} ${order.toUpperCase()}, completed_at DESC
+        LIMIT ? OFFSET ?
+      `;
+      return db.prepare(sql).all(...params, limit, offset) as CompletedRow[];
+    },
+
+    /**
+     * Count completed sessions matching the given filters (for pagination total).
+     * Uses the same WHERE as listCompleted.
+     */
+    countCompleted(filters: CompletedFilters): number {
+      const { whereParts, params } = buildCompletedWhere(filters);
+      const where = whereParts.length > 0 ? `WHERE ${whereParts.join(" AND ")}` : "";
+      const sql = `SELECT COUNT(*) AS total FROM exam_sessions ${where}`;
+      const row = db.prepare(sql).get(...params) as { total: number };
+      return row.total;
+    },
+
+    /**
+     * Fetch all completed sessions (ids, scores, dates, difficulty) for stats
+     * aggregation. Applies the same filters but no pagination.
+     */
+    listCompletedForStats(filters: CompletedFilters): StatsRow[] {
+      const { whereParts, params } = buildCompletedWhere(filters);
+      const where = whereParts.length > 0 ? `WHERE ${whereParts.join(" AND ")}` : "";
+      const sql = `
+        SELECT id, score_percent, completed_at, difficulty
+        FROM exam_sessions
+        ${where}
+        ORDER BY completed_at ASC
+      `;
+      return db.prepare(sql).all(...params) as StatsRow[];
+    },
   };
 }
 

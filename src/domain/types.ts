@@ -334,3 +334,63 @@ export const SubmitSessionBodySchema = z.object({
   elapsedMs: z.number().int().min(0).optional(),
 });
 export type SubmitSessionBody = z.infer<typeof SubmitSessionBodySchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// History filters — shared between GET /api/history and GET /api/stats (03 §6)
+// ───────────────────────────────────────────────────────────────────────────
+
+export const HistoryFiltersSchema = z
+  .object({
+    domain: z.string().optional(),
+    quesPath: z.string().optional(),
+    difficulty: z.string().optional(),
+    scoreMin: z.string().optional(),
+    scoreMax: z.string().optional(),
+    dateFrom: z.string().optional(),
+    dateTo: z.string().optional(),
+    bookmarked: z.string().optional(),
+    sort: z.string().optional(),
+    order: z.string().optional(),
+    limit: z.string().optional(),
+    offset: z.string().optional(),
+  })
+  .transform((raw) => ({
+    domain: raw.domain || undefined,
+    quesPath: raw.quesPath || undefined,
+    difficulty: raw.difficulty || undefined,
+    scoreMin: raw.scoreMin !== undefined ? parseFloat(raw.scoreMin) : undefined,
+    scoreMax: raw.scoreMax !== undefined ? parseFloat(raw.scoreMax) : undefined,
+    dateFrom: raw.dateFrom || undefined,
+    dateTo: raw.dateTo || undefined,
+    bookmarked:
+      raw.bookmarked === "true" ? true : raw.bookmarked === "false" ? false : undefined,
+    sort: (raw.sort || "date") as "date" | "score" | "difficulty",
+    order: (raw.order || "desc") as "asc" | "desc",
+    limit: raw.limit !== undefined ? parseInt(raw.limit, 10) : 50,
+    offset: raw.offset !== undefined ? parseInt(raw.offset, 10) : 0,
+  }));
+export type HistoryFilters = z.infer<typeof HistoryFiltersSchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// Stats response — GET /api/stats (03 §6)
+// ───────────────────────────────────────────────────────────────────────────
+
+export const StatsResponseSchema = z.object({
+  totalExams: z.number().int(),
+  averageScore: z.number(),
+  bestScore: z.number(),
+  currentStreakDays: z.number().int(),
+  longestStreakDays: z.number().int(),
+  lastExam: z
+    .object({
+      id: z.string(),
+      scorePercent: z.number(),
+      completedAt: z.string(),
+    })
+    .nullable(),
+  byDifficulty: z.record(
+    z.string(),
+    z.object({ count: z.number().int(), avg: z.number() }),
+  ),
+});
+export type StatsResponse = z.infer<typeof StatsResponseSchema>;

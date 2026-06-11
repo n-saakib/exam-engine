@@ -35,6 +35,10 @@ import {
   createExamEngine,
   type ExamEngine,
 } from "@/server/services/examEngine";
+import {
+  createStatsService,
+  type StatsService,
+} from "@/server/services/statsService";
 
 /**
  * Composition root (the only place that wires concrete dependencies together).
@@ -61,6 +65,7 @@ export interface Container {
     setCatalog: SetCatalogService;
     pathResolver: PathResolver;
     examEngine: ExamEngine;
+    stats: StatsService;
   };
 }
 
@@ -94,6 +99,8 @@ function build(): Container {
     getSettings: () => getAllSettings(getDb()),
   });
 
+  const statsService = createStatsService(sessionRepo);
+
   return {
     config,
     repos: {
@@ -112,6 +119,7 @@ function build(): Container {
       setCatalog: setCatalogService,
       pathResolver,
       examEngine,
+      stats: statsService,
     },
   };
 }
