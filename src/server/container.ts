@@ -5,6 +5,7 @@ import { getDb } from "@/server/data/db";
 import {
   getAllSettings,
   patchSettings,
+  resetSettings,
 } from "@/server/data/repos/settingsRepo";
 import type { SettingsPatch } from "@/domain/types";
 import {
@@ -39,6 +40,10 @@ import {
   createStatsService,
   type StatsService,
 } from "@/server/services/statsService";
+import {
+  createExportService,
+  type ExportService,
+} from "@/server/services/exportService";
 
 /**
  * Composition root (the only place that wires concrete dependencies together).
@@ -55,6 +60,7 @@ export interface Container {
     settings: {
       getAll: () => ReturnType<typeof getAllSettings>;
       patch: (patch: SettingsPatch) => ReturnType<typeof patchSettings>;
+      reset: () => void;
     };
     setCatalog: SetCatalogRepo;
     completion: CompletionRepo;
@@ -66,6 +72,7 @@ export interface Container {
     pathResolver: PathResolver;
     examEngine: ExamEngine;
     stats: StatsService;
+    export: ExportService;
   };
 }
 
@@ -100,6 +107,7 @@ function build(): Container {
   });
 
   const statsService = createStatsService(sessionRepo);
+  const exportService = createExportService(db);
 
   return {
     config,
@@ -109,6 +117,7 @@ function build(): Container {
         // of the connection doesn't leave a stale closed handle in the closure.
         getAll: () => getAllSettings(getDb()),
         patch: (p: SettingsPatch) => patchSettings(getDb(), p),
+        reset: () => resetSettings(getDb()),
       },
       setCatalog: setCatalogRepo,
       completion: completionRepo,
@@ -120,6 +129,7 @@ function build(): Container {
       pathResolver,
       examEngine,
       stats: statsService,
+      export: exportService,
     },
   };
 }

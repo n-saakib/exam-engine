@@ -264,6 +264,26 @@ export function createSessionRepo(db: Database) {
       return deleteById.run(id).changes;
     },
 
+    /**
+     * Delete ALL sessions (and their answers via CASCADE). Used by full/factory
+     * reset. Returns the number of sessions deleted.
+     */
+    deleteAll(): number {
+      return db.prepare("DELETE FROM exam_sessions").run().changes;
+    },
+
+    /**
+     * Fetch all completed sessions for export. Returns the full session row
+     * including the question snapshot and answers for detailed JSON export.
+     */
+    listAllCompleted(): SessionRow[] {
+      return db
+        .prepare(
+          "SELECT * FROM exam_sessions WHERE status = 'completed' ORDER BY completed_at ASC",
+        )
+        .all() as SessionRow[];
+    },
+
     /** Expose the raw connection for transactional composition in the engine. */
     db,
 

@@ -49,6 +49,14 @@ export function getAllSettings(db: Database): Settings {
 }
 
 /**
+ * Delete all settings rows, restoring factory defaults on next read.
+ * Used by the "factory reset" scope.
+ */
+export function resetSettings(db: Database): void {
+  db.prepare("DELETE FROM settings").run();
+}
+
+/**
  * Upsert only the provided keys. Values are JSON-encoded.
  * Returns the full settings object after the update.
  */

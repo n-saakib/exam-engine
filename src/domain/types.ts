@@ -372,6 +372,66 @@ export const HistoryFiltersSchema = z
 export type HistoryFilters = z.infer<typeof HistoryFiltersSchema>;
 
 // ───────────────────────────────────────────────────────────────────────────
+// Progress reset — POST /api/progress/reset (03 §7)
+// ───────────────────────────────────────────────────────────────────────────
+
+export const ResetScopeSchema = z.discriminatedUnion("scope", [
+  z.object({ scope: z.literal("path"), quesPath: z.string().min(1) }),
+  z.object({ scope: z.literal("all") }),
+  z.object({ scope: z.literal("factory") }),
+]);
+export type ResetScope = z.infer<typeof ResetScopeSchema>;
+
+export const ResetResponseSchema = z.object({
+  cleared: z.object({
+    sessions: z.number().int(),
+    completion: z.number().int(),
+  }),
+});
+export type ResetResponse = z.infer<typeof ResetResponseSchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// Export query params — GET /api/export (03 §7)
+// ───────────────────────────────────────────────────────────────────────────
+
+export const ExportQuerySchema = z.object({
+  format: z.enum(["json", "csv"]).default("json"),
+  scope: z.enum(["history", "all"]).default("history"),
+});
+export type ExportQuery = z.infer<typeof ExportQuerySchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
+// Settings PATCH with rescan — extended response shape (F8)
+// ───────────────────────────────────────────────────────────────────────────
+
+export const ScanSummarySchema = z.object({
+  scanned: z.number().int(),
+  added: z.number().int(),
+  updated: z.number().int(),
+  removed: z.number().int(),
+  errors: z.number().int(),
+  diagnostics: z.array(
+    z.object({
+      filePath: z.string(),
+      status: z.enum(["ok", "warning", "error"]),
+      messages: z.array(z.string()),
+    }),
+  ),
+});
+export type ScanSummaryDto = z.infer<typeof ScanSummarySchema>;
+
+export const SettingsPatchResponseSchema = z.union([
+  // No path/mode change → plain Settings object
+  SettingsSchema,
+  // exams_root/source_mode change → { settings, scan }
+  z.object({
+    settings: SettingsSchema,
+    scan: ScanSummarySchema,
+  }),
+]);
+export type SettingsPatchResponse = z.infer<typeof SettingsPatchResponseSchema>;
+
+// ───────────────────────────────────────────────────────────────────────────
 // Stats response — GET /api/stats (03 §6)
 // ───────────────────────────────────────────────────────────────────────────
 
