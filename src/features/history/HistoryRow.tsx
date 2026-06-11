@@ -237,20 +237,21 @@ export function HistoryRow({ row }: HistoryRowProps) {
 
   return (
     <li className="border-b border-muted/10 last:border-0">
-      {/* Main row */}
-      <button
-        type="button"
-        onClick={() => setExpanded((prev) => !prev)}
-        aria-expanded={expanded}
-        className="w-full text-left"
-      >
-        <div className="flex items-center gap-2 px-4 py-3 hover:bg-muted/5 transition-colors">
+      {/* Main row — a flex container; the expand toggle and the bookmark are
+          SIBLING buttons (never nested) so the markup stays valid + accessible. */}
+      <div className="flex items-center gap-2 px-4 py-3 hover:bg-muted/5 transition-colors">
+        <button
+          type="button"
+          onClick={() => setExpanded((prev) => !prev)}
+          aria-expanded={expanded}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
           {/* Date */}
           <span className="w-24 shrink-0 text-xs text-muted">
             {formatDate(row.completedAt)}
           </span>
           {/* Domain */}
-          <span className="flex-1 truncate text-sm text-fg" title={row.domainLabel}>
+          <span className="min-w-0 flex-1 truncate text-sm text-fg" title={row.domainLabel}>
             {row.domainLabel}
           </span>
           {/* Difficulty */}
@@ -267,10 +268,6 @@ export function HistoryRow({ row }: HistoryRowProps) {
           <span className="w-20 shrink-0 text-right text-xs text-muted">
             {formatTime(row.timeTakenMs)}
           </span>
-          {/* Bookmark inline */}
-          <span className="shrink-0" onClick={(e) => e.stopPropagation()}>
-            <InlineBookmarkToggle sessionId={row.id} isBookmarked={row.isBookmarked} />
-          </span>
           {/* Expand indicator */}
           <svg
             aria-hidden="true"
@@ -282,8 +279,12 @@ export function HistoryRow({ row }: HistoryRowProps) {
           >
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
           </svg>
-        </div>
-      </button>
+        </button>
+        {/* Bookmark inline — sibling of the toggle button (valid HTML) */}
+        <span className="shrink-0">
+          <InlineBookmarkToggle sessionId={row.id} isBookmarked={row.isBookmarked} />
+        </span>
+      </div>
 
       {/* Expanded summary */}
       {expanded && (

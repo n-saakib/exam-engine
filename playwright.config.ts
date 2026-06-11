@@ -1,26 +1,52 @@
 import { defineConfig, devices } from "@playwright/test";
+import os from "os";
+import path from "path";
 
 /**
- * Playwright config stub (F0). The spine E2E test (select → start → answer/flag/
- * give-up → pause → resume → submit → results → retake-incorrect) is authored in
- * F4/integration. `webServer` boots `next start` on :3000 so a future spec can
- * run against the real app; for now `e2e/` holds only a smoke placeholder.
+ * Playwright configuration for the CertPrep E2E spine test.
+ *
+ * The webServer boots `next start` on a dedicated test port (3001) with:
+ *   - DB_PATH: a fresh temp SQLite file (so every run starts clean)
+ *   - EXAMS_ROOT: the repo's real Exams/ directory (real AWS SAA sets)
+ *   - PORT: 3001 (avoids colliding with a running dev server on :3000)
+ *
+ * `next build` must have been run before `next start`. The build artefact is
+ * the same across runs, so we skip rebuilding if .next/ already exists (the
+ * command is `next start`, not `next build && next start`). Run
+ * `npm run build` separately before the first E2E run or in CI.
+ *
+ * In CI, `reuseExistingServer: false` forces a fresh server on every job.
+ * Locally, `reuseExistingServer: true` reuses the running server so developers
+ * get fast iteration on already-built apps.
  */
+
+const tempDb = path.join(os.tmpdir(), `certprep-e2e-${Date.now()}.db`);
+const examsRoot = path.join(__dirname, "Exams");
+
 export default defineConfig({
   testDir: "./e2e",
-  fullyParallel: true,
+  fullyParallel: false, // spine test is sequential end-to-end; no parallelism needed
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: "list",
+  timeout: 60_000, // 60 s per test step; the spine is one long test
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3001",
     trace: "on-first-retry",
+    // Prefer auto-waiting; no arbitrary sleeps in the spec.
+    actionTimeout: 15_000,
+    navigationTimeout: 30_000,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run start",
-    url: "http://localhost:3000/api/health",
+    command: `DB_PATH=${tempDb} EXAMS_ROOT=${examsRoot} PORT=3001 node_modules/.bin/next start -p 3001`,
+    url: "http://localhost:3001/api/health",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    env: {
+      DB_PATH: tempDb,
+      EXAMS_ROOT: examsRoot,
+      PORT: "3001",
+    },
   },
 });
