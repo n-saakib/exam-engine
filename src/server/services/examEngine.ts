@@ -32,6 +32,17 @@ type CreateSessionInput = Omit<CreateSessionBody, "mode"> & {
   mode?: "full";
 };
 
+/** Options for retake — mirrors the POST /sessions/:id/retake body. */
+export interface RetakeInput {
+  scope: "all" | "incorrect";
+  options?: {
+    shuffleQuestions?: boolean;
+    shuffleOptions?: boolean;
+    timerEnabled?: boolean;
+    timerMinutes?: number | null;
+  };
+}
+
 export interface ExamEngineDeps {
   sessionRepo: SessionRepo;
   answerRepo: AnswerRepo;
@@ -357,6 +368,126 @@ export function createExamEngine(deps: ExamEngineDeps) {
     getResults(id: string): Results {
       const row = requireSession(id);
       return toResults(row, answerRepo.getBySession(id));
+    },
+
+    /**
+     * Create a retake session (F5-T3, F5-T4).
+     *
+     * - `scope: "all"` → re-uses the origin snapshot unchanged (all questions fresh).
+     * - `scope: "incorrect"` → filters the origin snapshot to keep only questions
+     *   whose session_answers.is_correct = 0 OR is_revealed = 1 (incorrect+revealed).
+     *   Throws 409 when no qualifying questions exist.
+     *
+     * The new session records `origin_session_id = originId` and the appropriate
+     * `mode` ("retake_all" | "retake_incorrect"). Works from the stored snapshot
+     * so it is immune to file changes (ADR-4).
+     */
+    retake(originId: string, input: RetakeInput): LiveSession {
+      const origin = requireSession(originId);
+      const originAnswers = answerRepo.getBySession(originId);
+
+      // Index origin answers by question id for O(1) lookup.
+      const answerById = new Map<number, typeof originAnswers[number]>();
+      for (const a of originAnswers) answerById.set(a.question_id, a);
+
+      const originSnapshot = JSON.parse(origin.question_snapshot) as SnapshotQuestion[];
+
+      let snapshot: SnapshotQuestion[];
+      const mode: "retake_all" | "retake_incorrect" = input.scope === "all"
+        ? "retake_all"
+        : "retake_incorrect";
+
+      if (input.scope === "all") {
+        // Re-use all questions from the origin snapshot, reset `order` in case the
+        // origin was already a filtered retake.
+        snapshot = originSnapshot.map((q, idx) => ({ ...q, order: idx + 1 }));
+      } else {
+        // Keep only questions that are incorrect (is_correct = 0, not revealed, had a
+        // selection) or revealed (is_revealed = 1). Unanswered questions (is_correct = 0
+        // but selected_options = '[]') are excluded — the learner skipped them. A
+        // question with no answer row is excluded.
+        const qualifying = originSnapshot.filter((q) => {
+          const ans = answerById.get(q.id);
+          if (!ans) return false;
+          const isRevealed = ans.is_revealed === 1;
+          if (isRevealed) return true;
+          // Incorrect: graded wrong (is_correct = 0) AND the learner actually answered
+          // (selected_options is not empty). Unanswered get is_correct=0 but should not
+          // appear in a "retake incorrect" set.
+          const selected = safeParseArray(ans.selected_options);
+          const isIncorrect = ans.is_correct === 0 && selected.length > 0;
+          return isIncorrect;
+        });
+
+        if (qualifying.length === 0) {
+          throw new AppError(
+            "SETS_EXHAUSTED",
+            "No incorrect or revealed questions to retake in this session",
+            409,
+          );
+        }
+
+        snapshot = qualifying.map((q, idx) => ({ ...q, order: idx + 1 }));
+      }
+
+      // Apply optional option shuffle (question shuffle is skipped since the
+      // snapshot is already in the origin's order or the qualifying subset order;
+      // callers may add shuffleQuestions support here in a future iteration).
+      const settings = getSettings();
+      const seed = generateSeed();
+      const shuffleOptions =
+        input.options?.shuffleOptions ?? settings.shuffle_options;
+
+      if (shuffleOptions) {
+        snapshot = snapshot.map((q) => {
+          const optRng = createSeededRng(`${seed}:q${q.id}`);
+          return { ...q, optionOrder: optRng.shuffle(Object.keys(q.options)) };
+        });
+      }
+
+      const timerEnabled =
+        input.options?.timerEnabled ?? origin.timer_enabled === 1;
+      let timerLimitMs: number | null = null;
+      if (timerEnabled) {
+        if (input.options?.timerMinutes !== undefined && input.options.timerMinutes !== null) {
+          timerLimitMs = Math.round(input.options.timerMinutes * 60_000);
+        } else if (origin.timer_limit_ms != null) {
+          // Scale the limit proportionally to the subset size.
+          const ratio = snapshot.length / origin.total_questions;
+          timerLimitMs = Math.round(origin.timer_limit_ms * ratio);
+        } else {
+          timerLimitMs = Math.round(DEFAULT_TIMER_MINUTES * 60_000);
+        }
+      }
+
+      const id = randomUUID();
+      const now = new Date().toISOString();
+
+      const create = sessionRepo.db.transaction(() => {
+        sessionRepo.insert({
+          id,
+          quesPath: origin.ques_path,
+          domainLabel: origin.domain_label,
+          setId: origin.set_id,
+          setTitle: origin.set_title,
+          difficulty: origin.difficulty,
+          questionSnapshot: JSON.stringify(snapshot),
+          totalQuestions: snapshot.length,
+          timerEnabled,
+          timerLimitMs,
+          shuffleSeed: seed,
+          mode,
+          originSessionId: originId,
+          createdAt: now,
+        });
+        answerRepo.insertBlanks(
+          id,
+          snapshot.map((q) => q.id),
+        );
+      });
+      create();
+
+      return this.getSession(id);
     },
 
     /**
