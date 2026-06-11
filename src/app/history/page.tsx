@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from "@/components/PlaceholderScreen";
+import { HistoryScreen } from "@/features/history/HistoryScreen";
 
 export default function HistoryPage() {
-  return <PlaceholderScreen title="History" feature="F7 (history)" />;
+  return <HistoryScreen />;
 }
