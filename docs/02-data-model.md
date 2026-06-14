@@ -214,7 +214,6 @@ erDiagram
         INTEGER is_flagged
         INTEGER is_revealed
         INTEGER is_correct
-        TEXT confidence "easy|medium|hard"
         INTEGER time_spent_ms
         TEXT answered_at
     }
@@ -317,7 +316,6 @@ CREATE TABLE session_answers (
   is_flagged       INTEGER NOT NULL DEFAULT 0,
   is_revealed      INTEGER NOT NULL DEFAULT 0,    -- "gave up"
   is_correct       INTEGER,                       -- null until graded
-  confidence       TEXT,                          -- easy | medium | hard (short-term)
   time_spent_ms    INTEGER NOT NULL DEFAULT 0,
   answered_at      TEXT,
   UNIQUE(session_id, question_id)
@@ -336,7 +334,6 @@ Apply these *in* `0001_init.sql` — they are cheap and close the highest-risk c
 --   exam_sessions.status   CHECK (status IN ('in_progress','completed','discarded'))
 --   exam_sessions.mode     CHECK (mode IN ('full','retake_all','retake_incorrect'))
 --   exam_sessions.difficulty CHECK (difficulty IN ('Easy','Medium','Hard','Mock'))
---   session_answers.confidence CHECK (confidence IS NULL OR confidence IN ('easy','medium','hard'))
 -- Contradictory-state guard:
 --   exam_sessions CHECK (timer_enabled = 0 OR timer_limit_ms IS NOT NULL)
 -- Repeat-avoidance composite index (in addition to the single-column one):
@@ -379,8 +376,6 @@ CREATE TABLE question_performance (
 CREATE TABLE tags          ( id INTEGER PRIMARY KEY, name TEXT UNIQUE NOT NULL );
 CREATE TABLE set_tags      ( set_id TEXT, tag_id INTEGER, PRIMARY KEY(set_id, tag_id) );
 ```
-
-> The MVP `confidence` column already exists on `session_answers` (short-term feature, cheap to include now).
 
 ---
 

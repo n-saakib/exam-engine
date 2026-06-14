@@ -108,7 +108,7 @@ flowchart LR
  │   ├─ <OptionList>             // single → radio; multi → checkbox (future)
  │   │   └─ <OptionItem/>×n      // selectable; post-reveal shows correctness
  │   ├─ <RevealedDetail/>        // shown after give-up/submit: per-option explanations + Tips
- │   └─ <ConfidenceRating/>      // short-term: easy/med/hard
+ │   // (per ADR-13, single and multi render identically as a checkbox group)
  ├─ <NavigatorBar>
  │   ├─ <PrevButton/> <FlagButton/> <SubmitOrNextButton/>
  │   └─ <QuestionNavigator/>     // numbered buttons, colour-coded by state
@@ -240,8 +240,7 @@ interface ExamStore {
   // actions
   select(qid: number, option: string): void;     // toggles for multi
   toggleFlag(qid: number): void;
-  reveal(qid: number): void;                      // give up (irreversible)
-  setConfidence(qid: number, c: Confidence): void;
+  reveal(qid: number): void;                      // give up (no selection) or submit (with selection) — irreversible
   goTo(index: number): void;
   tick(deltaMs: number): void;                    // timer
   pause(): Promise<void>;                         // flush autosave

@@ -85,7 +85,6 @@ function answer(over: Partial<AnswerRow> & { question_id: number }): AnswerRow {
     is_flagged: 0,
     is_revealed: 0,
     is_correct: null,
-    confidence: null,
     time_spent_ms: 0,
     answered_at: null,
     ...over,
@@ -122,13 +121,12 @@ describe("toLiveSession — answers hidden", () => {
     expect(q9.Tips).toBeUndefined();
   });
 
-  it("carries per-question answer state (selected/flagged/revealed/confidence/time)", () => {
+  it("carries per-question answer state (selected/flagged/revealed/time)", () => {
     const dto = toLiveSession(row(), [
       answer({
         question_id: 7,
         selected_options: JSON.stringify(["A"]),
         is_flagged: 1,
-        confidence: "medium",
         time_spent_ms: 4200,
       }),
       answer({ question_id: 9 }),
@@ -138,7 +136,6 @@ describe("toLiveSession — answers hidden", () => {
       selected: ["A"],
       flagged: true,
       revealed: false,
-      confidence: "medium",
       timeSpentMs: 4200,
     });
   });

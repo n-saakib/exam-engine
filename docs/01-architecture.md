@@ -130,7 +130,7 @@ See the full schema in [`02-data-model.md`](02-data-model.md).
 - **One bad file never breaks the scan**: parse/validation errors are collected and returned as a per-file diagnostics list (surfaced in Settings).
 
 ### 5.3 Migration runner
-- Plain numbered SQL files in `server/db/migrations/` (`0001_init.sql`, `0002_add_confidence.sql`, …).
+- Plain numbered SQL files in `server/db/migrations/` (`0001_init.sql`, `0002_*.sql`, …).
 - A `schema_migrations(version, applied_at)` table records applied versions.
 - On boot, apply any unapplied migrations in order inside a transaction. Forward-only (no down-migrations needed for a local single-user app; document a manual restore-from-backup path instead).
 

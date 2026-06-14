@@ -4,7 +4,6 @@ import { create, type StoreApi, type UseBoundStore } from "zustand";
 
 import { apiClient } from "@/lib/apiClient";
 import type {
-  Confidence,
   LiveAnswer,
   LiveQuestion,
   LiveSession,
@@ -42,7 +41,6 @@ export interface AnswerState {
   selected: string[];
   flagged: boolean;
   revealed: boolean;
-  confidence: Confidence | null;
   timeSpentMs: number;
 }
 
@@ -78,7 +76,6 @@ export interface ExamStoreState {
   select(qid: number, option: string): void;
   toggleFlag(qid: number): void;
   reveal(qid: number): Promise<void>;
-  setConfidence(qid: number, c: Confidence): void;
   goTo(index: number): void;
   tick(deltaMs: number): void;
   pause(): Promise<void>;
@@ -104,7 +101,6 @@ function liveAnswerToState(a: LiveAnswer): AnswerState {
     selected: [...a.selected],
     flagged: a.flagged,
     revealed: a.revealed,
-    confidence: a.confidence,
     timeSpentMs: a.timeSpentMs,
   };
 }
@@ -346,14 +342,6 @@ export function createExamStore(): ExamStore {
             if (get().sessionId) set({ saving: false });
           });
         await flushChain;
-      },
-
-      setConfidence(qid, c) {
-        const cur = get().answers[qid];
-        if (!cur) return;
-        set((s) => ({ answers: { ...s.answers, [qid]: { ...cur, confidence: c } } }));
-        queueAnswer(qid, { confidence: c });
-        scheduleFlush();
       },
 
       goTo(index) {

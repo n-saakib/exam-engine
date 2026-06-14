@@ -11,7 +11,7 @@ import { useEffect } from "react";
  *   Enter     : next / submit (onAdvance)
  *   N / P     : next / previous question
  *   F         : flag current question
- *   G         : give up (reveal)
+ *   G         : give up (no selection) / submit (with selection)
  *
  * Keystrokes are ignored while focus is in an editable field so they never
  * hijack typing.

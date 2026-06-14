@@ -18,9 +18,9 @@ import { QuestionNavigator } from "./QuestionNavigator";
 import { SubmitExamDialog } from "./SubmitExamDialog";
 import {
   FlagButton,
-  GiveUpButton,
   PauseButton,
   PrevButton,
+  SubmitOrGiveUpButton,
   SubmitOrNextButton,
 } from "./ExamControls";
 
@@ -153,7 +153,16 @@ export function ExamScreen({
       onGiveUp: () => {
         const s = store.getState();
         const q = s.questions[s.currentIndex];
-        if (q && !s.answers[q.id]?.revealed) void s.reveal(q.id);
+        if (!q || s.answers[q.id]?.revealed) return;
+        // Mirror the button: with ≥1 selected, opening the exam-submit dialog
+        // (when on the last question) is the parent screen's responsibility,
+        // so route through the same path the button uses. The reveal path is
+        // shared; the dialog open is delegated.
+        const hasSelection = (s.answers[q.id]?.selected.length ?? 0) > 0;
+        const isLast = s.currentIndex >= s.questions.length - 1;
+        void s.reveal(q.id).then(() => {
+          if (hasSelection && isLast) setSubmitOpen(true);
+        });
       },
       onSelectIndex: (index) => {
         const s = store.getState();
@@ -218,7 +227,10 @@ export function ExamScreen({
           <ExamTimer store={store} onExpire={onExpire} />
           <div className="flex items-center gap-2">
             <PauseButton store={store} onPaused={() => router.push("/resume")} />
-            <GiveUpButton store={store} />
+            <SubmitOrGiveUpButton
+              store={store}
+              onLastSubmit={() => setSubmitOpen(true)}
+            />
           </div>
         </div>
       </header>

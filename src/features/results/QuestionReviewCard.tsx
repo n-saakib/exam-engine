@@ -136,11 +136,6 @@ export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
           Correct answer:{" "}
           <strong className="text-correct">{correctAnswerStr}</strong>
         </span>
-        {question.confidence && (
-          <span>
-            Confidence: <strong className="text-fg capitalize">{question.confidence}</strong>
-          </span>
-        )}
       </div>
 
       {/* Explanations + Tips (collapsed by default) */}

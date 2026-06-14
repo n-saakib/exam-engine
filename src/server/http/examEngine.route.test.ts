@@ -358,7 +358,7 @@ describe("submit + 409 + resume", () => {
     engine.applyUpdate(s.id, {
       currentIndex: 2,
       elapsedMs: 12345,
-      answer: { questionId: 1, selected: ["A"], flagged: true, confidence: "hard", timeSpentMs: 999 },
+      answer: { questionId: 1, selected: ["A"], flagged: true, timeSpentMs: 999 },
     });
     engine.applyUpdate(s.id, { answer: { questionId: 2, revealed: true } });
 
@@ -369,12 +369,12 @@ describe("submit + 409 + resume", () => {
     const dto = (await res.json()) as {
       currentIndex: number;
       timer: { elapsedMs: number };
-      questions: Array<{ id: number; answer: { selected: string[]; flagged: boolean; revealed: boolean; confidence: string | null; timeSpentMs: number } }>;
+      questions: Array<{ id: number; answer: { selected: string[]; flagged: boolean; revealed: boolean; timeSpentMs: number } }>;
     };
     expect(dto.currentIndex).toBe(2);
     expect(dto.timer.elapsedMs).toBe(12345);
     const q1 = dto.questions.find((q) => q.id === 1)!;
-    expect(q1.answer).toMatchObject({ selected: ["A"], flagged: true, confidence: "hard", timeSpentMs: 999 });
+    expect(q1.answer).toMatchObject({ selected: ["A"], flagged: true, timeSpentMs: 999 });
     expect(dto.questions.find((q) => q.id === 2)!.answer.revealed).toBe(true);
   });
 });

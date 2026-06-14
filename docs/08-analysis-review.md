@@ -91,7 +91,7 @@ Client component tests mock `apiClient` entirely; nothing proves a server respon
 *Source: `02-data-model.md`.*
 
 - [ ] **`PRAGMA foreign_keys = ON` is connection-scoped** in better-sqlite3 — must be re-applied on every connection open, or all `ON DELETE CASCADE` silently stops working. Highest-risk correctness issue (manifests only on discard/delete). (§3.1)
-- [ ] **No CHECK constraints on enum columns** (`status`, `mode`, `confidence`, `difficulty`) — a `'in-progress'` vs `'in_progress'` typo is silently accepted and breaks filtering. One-line fix in `0001_init.sql`. (§3.1)
+- [ ] **No CHECK constraints on enum columns** (`status`, `mode`, `difficulty`) — a `'in-progress'` vs `'in_progress'` typo is silently accepted and breaks filtering. One-line fix in `0001_init.sql`. (§3.1)
 - [ ] **`question_notes`/`question_performance` bind on author-mutable `(set_id, question_id)`** — renumbering a set silently mis-maps notes. Consider a stable app-assigned question identity. (§3.2, §7)
 - [ ] **`set_completion.completed_session_id` is labeled FK in the ER diagram but has no `REFERENCES`** (intentional soft ref) — fix the diagram label; document the null-case semantics. (§3.1, §6.1)
 - [ ] **Add composite index `(ques_path, set_id)`** for the repeat-avoidance query (current single-column index is weaker). (§6.1)
@@ -112,7 +112,7 @@ Client component tests mock `apiClient` entirely; nothing proves a server respon
 - [ ] **Missing response shapes:** `GET /api/sets/:setId`, `GET /api/catalog/diagnostics`, `PATCH /api/sessions/:id/review` return bodies are unspecified. (§4)
 - [ ] **State-machine gaps:** `discarded → *` transitions undocumented; submitting a discarded session falls into a wrong/empty error code. Prefer a unified `SESSION_NOT_IN_PROGRESS`. (§4.1)
 - [ ] **RPC-ish endpoints:** consider `POST /api/catalog/scan` (vs `/api/scan`) and `DELETE /api/progress` (vs `/api/progress/reset`) for consistency. (§endpoints)
-- [ ] **`mode` on `POST /api/sessions`** should reject `retake_*` values (those go via `/retake`). Enumerate `confidence` values in the spec, not just the data model. (§sessions)
+- [ ] **`mode` on `POST /api/sessions`** should reject `retake_*` values (those go via `/retake`). Enumerate enum values in the spec, not just the data model. (§sessions)
 - [ ] **Streaming `GET /api/export`** must detect errors before headers are sent (can't return a JSON error envelope mid-stream). (§export)
 - [ ] **Concurrency (multi-tab):** no version/ETag on the session DTO — document the reliance on SQLite write serialization + last-write-wins. (§autosave)
 

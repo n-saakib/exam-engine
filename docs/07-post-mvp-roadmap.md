@@ -10,8 +10,8 @@
 
 | Feature | What | Hook already in place |
 |---|---|---|
-| **Keyboard shortcuts** | `1–4`/`A–D` select, `Enter` submit/next, `N`/`P` navigate, `F` flag, `G` give up; "?" cheat-sheet. | Exam store actions already map 1:1 to keys; `useKeyboardShortcuts` stub in F4. |
-| **Per-question confidence rating** | Easy/Medium/Hard as *felt*, captured per question. | `session_answers.confidence` column ships in MVP; UI is `<ConfidenceRating>`. |
+| **Keyboard shortcuts** | `1–4`/`A–D` select, `Enter` submit/next, `N`/`P` navigate, `F` flag, `G` give up (no selection) / submit (with selection); "?" cheat-sheet. | Exam store actions already map 1:1 to keys; `useKeyboardShortcuts` stub in F4. |
+| ~~**Per-question confidence rating**~~ | ~~Easy/Medium/Hard as *felt*, captured per question.~~ | **REMOVED.** The `confidence` field and `<ConfidenceRating>` UI were speculative roadmap items; the data layer dropped both, leaving the schema and store cleaner. Re-introduce in a later feature cycle if needed. |
 | **Single-result PDF export** | Export one exam's results as PDF. | Results DTO is complete; add a print stylesheet + `window.print()` or a PDF lib. |
 | **Home quick-stats widget** | Last score, next set to take, current streak. | `/api/stats` + `/api/exam-paths` `remainingSets`; `<QuickStatsWidget>` placeholder in F2. |
 
@@ -23,10 +23,10 @@
 |---|---|---|
 | **Spaced repetition engine** | Track per-question performance; surface weak questions more often. | `question_performance` table designed (§3.2 data model); StatsService extends. |
 | ~~**Multi-select question type**~~ | ~~"Select all that apply" (common in AWS SAA).~~ | **DONE — in-MVP as of ADR-13.** `questionType: "multi"` is fully supported; the grader uses set equality (strict, no partial credit) on a normalised `string[]`. Every question renders as a checkbox group, regardless of `questionType` — the user is never told whether a question is single or multi (pedagogical: trains choice elimination). |
-| **Interview / freetext mode** | Open-ended, no auto-grade, self-rated after revealing a model answer. | `questionType: "freetext"`; reveal flow + self-rating reuse the give-up + confidence machinery. |
+| **Interview / freetext mode** | Open-ended, no auto-grade, self-rated after revealing a model answer. | `questionType: "freetext"`; reveal flow + self-rating reuse the give-up machinery. |
 | **Question-linked notes** | Per-question notes that resurface on future appearances. | `question_notes` table designed; notes UI generalises from result-level notes. |
 | **Tag system** | Filter exams by topic tag across sets. | `tags`/`set_tags` tables designed; history filters extend. |
-| **Progress dashboard** | Score-over-time, weak-topic heatmap, time-per-question charts. | All inputs already captured: `score_percent`, `completed_at`, `time_spent_ms`, confidence, (later) tags. |
+| **Progress dashboard** | Score-over-time, weak-topic heatmap, time-per-question charts. | All inputs already captured: `score_percent`, `completed_at`, `time_spent_ms`, (later) tags. |
 
 ---
 

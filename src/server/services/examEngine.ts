@@ -294,7 +294,6 @@ export function createExamEngine(deps: ExamEngineDeps) {
             ...(a.revealed === true || alreadyRevealed
               ? { revealed: true }
               : {}),
-            ...(a.confidence !== undefined ? { confidence: a.confidence } : {}),
             ...(a.timeSpentMs !== undefined
               ? { timeSpentMs: a.timeSpentMs }
               : {}),

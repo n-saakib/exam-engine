@@ -7,7 +7,6 @@ import type {
   Results,
   ResultsQuestion,
   Difficulty,
-  Confidence,
   Outcome,
 } from "@/domain/types";
 import type { SnapshotQuestion } from "@/domain/schemas";
@@ -69,7 +68,6 @@ export function toLiveSession(row: SessionRow, answers: AnswerRow[]): LiveSessio
       selected: ans ? parseSelected(ans.selected_options) : [],
       flagged: ans?.is_flagged === 1,
       revealed,
-      confidence: (ans?.confidence as Confidence | null) ?? null,
       timeSpentMs: ans?.time_spent_ms ?? 0,
     };
 
@@ -151,7 +149,6 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       yourAnswer: ans ? parseSelected(ans.selected_options) : [],
       outcome: outcomeById.get(q.id) ?? "unanswered",
       flagged: ans?.is_flagged === 1,
-      confidence: (ans?.confidence as Confidence | null) ?? null,
       explanations: q.explanations ?? {},
       ...(q.Tips !== undefined ? { Tips: q.Tips } : {}),
     };

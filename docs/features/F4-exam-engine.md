@@ -13,8 +13,7 @@ Run a full exam session: create it (load set, shuffle, snapshot), present one qu
 - Progress bar: question index, flagged count, elapsed timer.
 - Question navigator: numbered buttons, colour-coded by state.
 - Flag button per question — mark for review, jump back freely.
-- Give up button: reveals answer, all option explanations, and tips immediately.
-- Submit locks selection and reveals per-option detail inline.
+- Give up / Submit button: on no selection, label "Give up" — reveals answer, all option explanations, and Tips immediately. On ≥1 selection, label "Submit" — commits the current selection and reveals per-option detail inline (does not auto-advance). On the last question, also opens the existing exam-submit dialog.
 - Pause saves full state to SQLite (answers, flags, time, position).
 - **(§5)** Timed mode toggle (pause pauses the timer); progressive explanation reveal; shuffle questions (and options).
 
@@ -23,8 +22,8 @@ Run a full exam session: create it (load set, shuffle, snapshot), present one qu
 - Exactly one question shows at a time; the navigator lets the user jump to any question; colours reflect answered/flagged/revealed/current/unanswered.
 - The progress bar shows index, % answered, and flagged count; the timer counts (down if timed, up if not) and **stops when paused**.
 - Flagging toggles per question and updates the navigator + flagged count.
-- Give up reveals the correct answer, every option's explanation, and Tips for that question, and marks it "revealed" (excluded from the correct/incorrect tally).
-- Submitting a question (per-question model) locks the selection and reveals inline per-option detail (progressive: correctness first, explanations behind an expander).
+- Give up (no selection) reveals the correct answer, every option's explanation, and Tips for that question, and marks it "revealed" (excluded from the correct/incorrect tally).
+- Submitting a question (≥1 selected) commits the current selection, reveals inline per-option detail (progressive: correctness first, explanations behind an expander), and — on the last question — also opens the exam-submit dialog so the user can finalize.
 - Pausing flushes state; on refresh/resume the exact position, answers, flags, reveals, and elapsed time are restored.
 - Submitting the exam grades it and routes to results.
 
@@ -43,7 +42,7 @@ Run a full exam session: create it (load set, shuffle, snapshot), present one qu
 - [ ] **F4-T6** (M) Live-DTO mapper: strip `correctAnswer`/`explanations`/`Tips` for unrevealed questions; include them only for revealed ones (and when completed). **Enforced server-side.**
 - [ ] **F4-T7** (M) `POST /api/sessions` route → `201` live DTO; handles `SETS_EXHAUSTED`.
 - [ ] **F4-T8** (M) `GET /api/sessions/:id` → live DTO; redirect hint if not in progress.
-- [ ] **F4-T9** (L) `PATCH /api/sessions/:id` (autosave): partial update of `currentIndex`, `elapsedMs` (clamp to limit if timed), and per-question `selected`/`flagged`/`revealed`/`confidence`/`timeSpentMs`/`locked`. Idempotent. `reveal:true` attaches+returns correct data for that question; monotonic.
+- [ ] **F4-T9** (L) `PATCH /api/sessions/:id` (autosave): partial update of `currentIndex`, `elapsedMs` (clamp to limit if timed), and per-question `selected`/`flagged`/`revealed`/`timeSpentMs`/`locked`. Idempotent. `reveal:true` attaches+returns correct data for that question; monotonic.
 - [ ] **F4-T10** (S) `SessionManager`: persistence helpers, `listInProgress`, autosave write path, crash-safe reconstruction.
 
 ### Backend — grading & submit
@@ -52,7 +51,7 @@ Run a full exam session: create it (load set, shuffle, snapshot), present one qu
 - [ ] **F4-T13** (S) `DELETE /api/sessions/:id` (discard) — answers cascade; `409` if completed.
 
 ### Frontend — exam store & screen
-- [ ] **F4-T14** (L) Zustand `ExamStore` per [`04-frontend-architecture.md` §8](../04-frontend-architecture.md): load DTO → state; actions (`select`, `toggleFlag`, `reveal`, `setConfidence`, `goTo`, `tick`, `pause`); **debounced autosave** with forced flush on reveal/pause/submit/route-leave.
+- [ ] **F4-T14** (L) Zustand `ExamStore` per [`04-frontend-architecture.md` §8](../04-frontend-architecture.md): load DTO → state; actions (`select`, `toggleFlag`, `reveal`, `goTo`, `tick`, `pause`); **debounced autosave** with forced flush on reveal/pause/submit/route-leave.
 - [ ] **F4-T15** (M) `<ExamScreen>` shell: loads session, guards non-in-progress → `/results/:id`, route-leave warning.
 - [ ] **F4-T16** (M) `<QuestionPanel>` + `<OptionList>`/`<OptionItem>`: single-choice radios; respects `optionOrder`; post-reveal/lock shows per-option correctness styling.
 - [ ] **F4-T17** (M) `<QuestionNavigator>`: numbered buttons colour-coded (answered/flagged/revealed/current/unanswered); jump to any question.
@@ -62,10 +61,10 @@ Run a full exam session: create it (load set, shuffle, snapshot), present one qu
 
 ### §5 enhancements
 - [ ] **F4-T21** (M) `<ExamTimer>`: counts down (timed) / up (untimed); `pause()` stops the tick; resume continues; visible countdown; auto-submit (or prompt) at zero (configurable).
-- [ ] **F4-T22** (M) `<GiveUpButton>` + `<RevealedDetail>`: reveal correct answer + all explanations + Tips; mark revealed.
+- [ ] **F4-T22** (M) `<SubmitOrGiveUpButton>` + `<RevealedDetail>`: label "Give up" when no options are selected (reveal only), label "Submit" when ≥1 option is selected (commit + reveal; on the last question also opens the exam-submit dialog). Mark revealed.
 - [ ] **F4-T23** (M) **Progressive reveal**: after reveal/lock, show correct/incorrect first; explanations behind a "Show explanations" expander when `progressive_reveal` is on.
 - [ ] **F4-T24** (S) Shuffle wiring: `shuffleQuestions`/`shuffleOptions` from settings/overrides flow into `createSession`.
-- [ ] **F4-T25** (S) `<ConfidenceRating>` (easy/med/hard) writing `confidence` (column exists; short-term-roadmap UI, cheap to include).
+- [ ] ~~**F4-T25**~~ — removed. The per-question confidence rating (column + UI + store action) was speculative and was dropped in the post-MVP cleanup; the schema, types, and store are now confidence-free.
 - [ ] **F4-T26** (S) `useKeyboardShortcuts` stub mapping store actions to keys (full shortcuts ship short-term; wire the seam now).
 
 ### Pause/resume

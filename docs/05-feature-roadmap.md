@@ -134,6 +134,6 @@ Every feature file ends with a DoD using this checklist shape:
 ## 7. Out of MVP (tracked separately)
 
 Short/medium/long-term items live in [`07-post-mvp-roadmap.md`](07-post-mvp-roadmap.md). The schema and architecture are forward-designed (see the "forward-designed tables" in [`02-data-model.md` §3.2](02-data-model.md)) so these land without painful migrations:
-- Short: keyboard shortcuts, confidence rating (column already present), single-result PDF export, home quick-stats.
+- Short: keyboard shortcuts, single-result PDF export, home quick-stats.
 - Medium: spaced repetition, multi-select questions, interview/freetext mode, question-linked notes, tags, progress dashboard.
 - Long: question editor UI, AI "explain differently", sync/backup, multi-profile, community sets, ordered-steps questions.

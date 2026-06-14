@@ -164,7 +164,7 @@ Used by `GET /api/sessions/:id` and the create response. The exam screen never r
       "optionOrder": ["A","B","C","D"],
       // NO correctAnswer / explanations / Tips here unless revealed:
       "answer": { "selected": ["A"], "flagged": true, "revealed": false,
-                  "confidence": null, "timeSpentMs": 18000 }
+                  "timeSpentMs": 18000 }
     }
   ],
   "createdAt": "...", "startedAt": "...", "updatedAt": "..."
@@ -187,8 +187,7 @@ The exam screen's workhorse. Accepts a **partial** update for a question and/or 
     "questionId": 7,
     "selected": ["B"],               // replaces selection; [] clears
     "flagged": true,
-    "revealed": true,                // "give up" — irreversible; server attaches correct data
-    "confidence": "medium",
+    "revealed": true,                // "give up" or "submit" — irreversible; server attaches correct data
     "timeSpentMs": 23000
   }
 }
@@ -244,7 +243,6 @@ Full graded detail — **answers and explanations included** — for the results
       "yourAnswer": ["A"],
       "outcome": "incorrect",          // correct | incorrect | revealed | unanswered
       "flagged": true,
-      "confidence": "medium",
       "explanations": { "A": { "description": "...", "reason": "..." }, "...": {} },
       "Tips": "..."
     }

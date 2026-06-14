@@ -71,7 +71,6 @@ const MOCK_RESULTS: Results = {
       yourAnswer: ["B"],
       outcome: "correct",
       flagged: false,
-      confidence: null,
       explanations: {
         A: { description: "Wrong", reason: "Not the right expansion" },
         B: { description: "Right", reason: "IAM stands for Identity and Access Management" },
@@ -90,7 +89,6 @@ const MOCK_RESULTS: Results = {
       yourAnswer: ["A"],
       outcome: "incorrect",
       flagged: true,
-      confidence: "medium",
       explanations: {
         A: { description: "On-Demand", reason: "More expensive than Spot" },
         B: { description: "Reserved", reason: "Cheaper than On-Demand but not cheapest" },
@@ -108,7 +106,6 @@ const MOCK_RESULTS: Results = {
       yourAnswer: [],
       outcome: "revealed",
       flagged: false,
-      confidence: null,
       explanations: {
         A: { description: "Compute", reason: "That is EC2" },
         B: { description: "Database", reason: "That is RDS" },
@@ -126,7 +123,6 @@ const MOCK_RESULTS: Results = {
       yourAnswer: ["A"],
       outcome: "correct",
       flagged: false,
-      confidence: "easy",
       explanations: {
         A: { description: "Right", reason: "VPC = Virtual Private Cloud" },
         B: { description: "Wrong", reason: "Public doesn't apply here" },

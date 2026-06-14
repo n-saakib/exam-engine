@@ -6,7 +6,6 @@ import { Card } from "@/components/Card";
 import type { ExamStore } from "@/store/examStore";
 import { OptionList } from "./OptionList";
 import { RevealedDetail } from "./RevealedDetail";
-import { ConfidenceRating } from "./ConfidenceRating";
 
 /**
  * The current question (F4-T16). Subscribes to the current question + its
@@ -24,7 +23,6 @@ export const QuestionPanel = forwardRef<
     return q ? s.answers[q.id] : undefined;
   });
   const select = store((s) => s.select);
-  const setConfidence = store((s) => s.setConfidence);
 
   if (!question || !answer) return null;
 
@@ -52,13 +50,6 @@ export const QuestionPanel = forwardRef<
       {answer.revealed ? (
         <RevealedDetail question={question} progressive={progressiveReveal} />
       ) : null}
-
-      <div className="border-t border-border pt-3">
-        <ConfidenceRating
-          value={answer.confidence}
-          onChange={(c) => setConfidence(question.id, c)}
-        />
-      </div>
     </Card>
   );
 });

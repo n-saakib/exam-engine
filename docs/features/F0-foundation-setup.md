@@ -34,7 +34,7 @@ Stand up a single **Next.js (App Router, TypeScript)** project so that `npm inst
 ### Data layer (server)
 - [ ] **F0-T8** (M) `src/server/data/db.ts` — `import 'server-only'`; `better-sqlite3` opened via a **`globalThis` singleton** (HMR-safe); set `PRAGMA journal_mode=WAL` and **`PRAGMA foreign_keys=ON` on every open** ([`09` §5, §7.2](../09-nextjs-refinement.md)).
 - [ ] **F0-T9** (M) `src/server/data/migrate.ts` — runner: create `schema_migrations`, apply unapplied numbered SQL files **in a transaction**, write the version row only on commit; idempotent.
-- [ ] **F0-T10** (M) `src/server/data/migrations/0001_init.sql` — all MVP tables from [`02-data-model.md` §3.1](../02-data-model.md) **plus the §3.1.1 refinements**: enum CHECKs (`status`/`mode`/`difficulty`/`confidence`/catalog `status`/`source`), the `timer_enabled ⇒ timer_limit_ms` CHECK, and `CREATE INDEX idx_completion_path_set ON set_completion(ques_path, set_id)`.
+- [ ] **F0-T10** (M) `src/server/data/migrations/0001_init.sql` — all MVP tables from [`02-data-model.md` §3.1](../02-data-model.md) **plus the §3.1.1 refinements**: enum CHECKs (`status`/`mode`/`difficulty`/catalog `status`/`source`), the `timer_enabled ⇒ timer_limit_ms` CHECK, and `CREATE INDEX idx_completion_path_set ON set_completion(ques_path, set_id)`.
 - [ ] **F0-T8b** (S) `src/server/boot.ts` — `integrityCheck()`, `runMigrations()`, `bootScan()` (bootScan is a no-op stub until F3); all idempotent.
 - [ ] **F0-T7** (S) `instrumentation.ts` (repo root) — `register()` guarded to `process.env.NEXT_RUNTIME==='nodejs'`, dynamically imports and runs `boot.ts`. Enable `instrumentationHook` if the Next version requires it.
 

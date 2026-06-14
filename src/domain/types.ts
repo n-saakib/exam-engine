@@ -41,9 +41,6 @@ export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export const SessionModeSchema = z.enum(["full", "retake_all", "retake_incorrect"]);
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
-export const ConfidenceSchema = z.enum(["easy", "medium", "hard"]);
-export type Confidence = z.infer<typeof ConfidenceSchema>;
-
 export const OutcomeSchema = z.enum(["correct", "incorrect", "revealed", "unanswered"]);
 export type Outcome = z.infer<typeof OutcomeSchema>;
 
@@ -81,7 +78,6 @@ export const LiveAnswerSchema = z.object({
   selected: z.array(z.string()),
   flagged: z.boolean(),
   revealed: z.boolean(),
-  confidence: ConfidenceSchema.nullable(),
   timeSpentMs: z.number().int(),
 });
 export type LiveAnswer = z.infer<typeof LiveAnswerSchema>;
@@ -149,7 +145,6 @@ export const ResultsQuestionSchema = z.object({
   yourAnswer: z.array(z.string()),
   outcome: OutcomeSchema,
   flagged: z.boolean(),
-  confidence: ConfidenceSchema.nullable(),
   explanations: z.record(z.string(), ExplanationSchema),
   Tips: z.string().optional(),
 });
@@ -313,7 +308,6 @@ export const PatchAnswerSchema = z.object({
   flagged: z.boolean().optional(),
   /** Monotonic: once `true` it can never be unset (server enforces). */
   revealed: z.boolean().optional(),
-  confidence: ConfidenceSchema.nullable().optional(),
   timeSpentMs: z.number().int().min(0).optional(),
 });
 export type PatchAnswer = z.infer<typeof PatchAnswerSchema>;

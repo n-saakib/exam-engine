@@ -63,7 +63,6 @@ function fixture(): LiveSession {
         selected: [],
         flagged: false,
         revealed: false,
-        confidence: null,
         timeSpentMs: 0,
       },
     })),

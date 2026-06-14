@@ -29,8 +29,8 @@ export const GET = defineHandler({
 /**
  * PATCH /api/sessions/:id — autosave (F4-T9). Partial currentIndex / absolute
  * clamped elapsedMs / single-question answer (selected/flagged/revealed
- * (monotonic)/confidence/timeSpentMs). Idempotent. Returns the updated live DTO
- * with a just-revealed question now carrying its correct data.
+ * (monotonic)/timeSpentMs). Idempotent. Returns the updated live DTO with a
+ * just-revealed question now carrying its correct data.
  * 404 SESSION_NOT_FOUND; 409 SESSION_NOT_IN_PROGRESS.
  */
 export const PATCH = defineHandler({

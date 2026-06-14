@@ -11,7 +11,6 @@ export interface AnswerRow {
   is_flagged: number;
   is_revealed: number;
   is_correct: number | null;
-  confidence: string | null;
   time_spent_ms: number;
   answered_at: string | null;
 }
@@ -23,7 +22,6 @@ export interface AnswerPatch {
   flagged?: boolean;
   /** Monotonic: callers must not pass `false` to un-reveal (engine enforces). */
   revealed?: boolean;
-  confidence?: "easy" | "medium" | "hard" | null;
   timeSpentMs?: number;
 }
 
@@ -97,10 +95,6 @@ export function createAnswerRepo(db: Database) {
       if (patch.revealed !== undefined) {
         sets.push("is_revealed = @revealed");
         values.revealed = patch.revealed ? 1 : 0;
-      }
-      if (patch.confidence !== undefined) {
-        sets.push("confidence = @confidence");
-        values.confidence = patch.confidence;
       }
       if (patch.timeSpentMs !== undefined) {
         sets.push("time_spent_ms = @timeSpentMs");

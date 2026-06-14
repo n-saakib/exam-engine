@@ -76,34 +76,86 @@ export function SubmitOrNextButton({
   );
 }
 
-/** Give up / reveal answer for the current question (F4-T22). */
-export function GiveUpButton({ store }: { store: ExamStore }) {
+/**
+ * Submit-or-give-up button (F4-T22). The label and post-confirm action depend
+ * on whether the user has selected at least one option for the current
+ * question:
+ *
+ *   - 0 selected, any question  → label "Give up"; on confirm, just reveal.
+ *   - ≥1 selected, not last     → label "Submit"; on confirm, reveal the result
+ *     inline (committed answer is graded; no advance — Next/Submit-exam buttons
+ *     handle navigation/exam finalization).
+ *   - ≥1 selected, last         → label "Submit"; on confirm, reveal and then
+ *     open the exam-submit dialog so the user can finalize.
+ *
+ * The reveal itself is the existing `store.reveal(qid)` — it forces a flush,
+ * the server returns the snapshot-attached correct data, and the local
+ * question merges the correct data. Both branches share that path.
+ */
+export function SubmitOrGiveUpButton({
+  store,
+  onLastSubmit,
+}: {
+  store: ExamStore;
+  onLastSubmit?: () => void;
+}) {
   const reveal = store((s) => s.reveal);
   const qid = store((s) => s.questions[s.currentIndex]?.id);
   const revealed = store((s) => {
     const q = s.questions[s.currentIndex];
     return q ? !!s.answers[q.id]?.revealed : false;
   });
+  const selectedCount = store((s) => {
+    const q = s.questions[s.currentIndex];
+    return q ? s.answers[q.id]?.selected.length ?? 0 : 0;
+  });
+  const isLast = store((s) => {
+    const total = s.questions.length;
+    return s.currentIndex >= total - 1;
+  });
   const { confirm } = useGlobalDialogs();
   const [busy, setBusy] = useState(false);
 
+  const hasSelection = selectedCount > 0;
+  const canSubmitLast = hasSelection && isLast;
+
   const handle = async () => {
     if (qid === undefined || revealed) return;
-    const ok = await confirm({
-      title: "Reveal the answer?",
-      description:
-        "This shows the correct answer and explanations, and marks the question as revealed (excluded from your score).",
-      confirmLabel: "Reveal",
-      variant: "primary",
-    });
+    const dialog = hasSelection
+      ? {
+          title: "Submit and reveal the answer?",
+          description:
+            "This commits your current selection, reveals the correct answer and explanations, and marks the question as revealed.",
+          confirmLabel: "Submit",
+          variant: "primary" as const,
+        }
+      : {
+          title: "Reveal the answer?",
+          description:
+            "This shows the correct answer and explanations, and marks the question as revealed (excluded from your score).",
+          confirmLabel: "Reveal",
+          variant: "primary" as const,
+        };
+    const ok = await confirm(dialog);
     if (!ok) return;
     setBusy(true);
     try {
       await reveal(qid);
+      if (canSubmitLast) onLastSubmit?.();
     } finally {
       setBusy(false);
     }
   };
+
+  const label = revealed
+    ? "Revealed"
+    : busy
+      ? hasSelection
+        ? "Submitting…"
+        : "Revealing…"
+      : hasSelection
+        ? "Submit"
+        : "Give up";
 
   return (
     <Button
@@ -112,7 +164,7 @@ export function GiveUpButton({ store }: { store: ExamStore }) {
       disabled={revealed || busy}
       onClick={() => void handle()}
     >
-      {revealed ? "Revealed" : busy ? "Revealing…" : "Give up"}
+      {label}
     </Button>
   );
 }
