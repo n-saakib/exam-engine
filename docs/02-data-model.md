@@ -23,7 +23,7 @@ The existing format (unchanged, kept fully compatible):
       "id": 1,                                       // integer, unique within the set
       "questionText": "What does IAM stand for in AWS?",
       "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-      "correctAnswer": "B",                          // single-choice: one key
+      "correctAnswer": ["B"],                       // ALWAYS a string[] — length 1 for single, ≥ 1 for multi (ADR-13)
       "explanations": {
         "A": { "description": "short label", "reason": "why right/wrong" },
         "B": { "description": "...",         "reason": "..." },
@@ -42,21 +42,26 @@ Backward-compatible. **Absent ⇒ `"single"`.** No existing file changes.
 
 ```jsonc
 {
-  "questionType": "single",   // default — current MCQ, one correct option
-  // "questionType": "multi",     // select all that apply — correctAnswer becomes an array
-  // "questionType": "ordered",   // arrange steps (future)
-  // "questionType": "freetext"   // open-ended, self-graded (future)
+  "questionType": "single",   // default — one correct option (still rendered as a checkbox group, length-1 answer)
+  // "questionType": "multi",     // select all that apply — length ≥ 1 answer
+  // "questionType": "ordered",   // arrange steps (still catalogue-only)
+  // "questionType": "freetext"   // open-ended, self-graded (still catalogue-only)
 }
 ```
 
 | `questionType` | `correctAnswer` shape | Grading | Horizon |
 |---|---|---|---|
-| `single` (default) | `"B"` | exact match | **MVP** |
-| `multi` | `["A","C"]` | set equality (+ optional partial credit) | Medium-term |
-| `ordered` | `["B","A","C"]` (correct order) | sequence match | Long-term |
-| `freetext` | `null` / model answer string | self-graded after reveal | Medium-term |
+| `single` (default) | `["B"]` (length 1) | set equality | **MVP** |
+| `multi` | `["A","C"]` (length ≥ 1) | set equality (strict, no partial credit) | **MVP (post ADR-13)** |
+| `ordered` | `["B","A","C"]` (correct order) | sequence match | Long-term (still catalogue-only) |
+| `freetext` | `null` / model answer string | self-graded after reveal | Long-term (still catalogue-only) |
 
-> **MVP validation accepts only `single` (or absent).** Sets declaring other types are catalogued but flagged "unsupported type — engine pending" until the corresponding roadmap feature lands. This lets authors write forward-looking sets without breaking the app.
+> **MVP validation accepts `single` and `multi`.** `ordered` and `freetext` are
+> catalogued but flagged "unsupported type — engine pending". The UI renders
+> BOTH `single` and `multi` questions as checkbox groups — the user is never
+> told which is which (pedagogical: trains choice elimination; see ADR-13).
+> Selecting extra options on a `single` question scores `incorrect` (set
+> equality fails on length mismatch).
 
 ### 1.2 Question set — validation rules (zod)
 
@@ -67,9 +72,13 @@ A file is **valid** iff:
   - `id` integer, **unique within the set**.
   - `questionText` non-empty string.
   - `options` object with **≥2** keys; keys are single uppercase letters (A, B, C, D, …) — not hardcoded to exactly four, to allow 2–6 options.
-  - `correctAnswer`:
-    - `single`: a string that is one of the `options` keys.
-    - `multi`: a non-empty array of distinct `options` keys.
+  - `correctAnswer` (ADR-13 — unified array shape):
+    - **Always a `string[]`** of option keys (length 1 for `single`, length ≥ 1 for `multi`).
+    - The schema still accepts a legacy `string` shape (length 1 only) as a
+      backward-compat shim for historical `Exams/*.json` files and
+      `exam_sessions.question_snapshot` rows written before the migration.
+      The grader normalises both shapes at grade time.
+    - All elements must be distinct and present in the `options` keys.
   - `explanations`: object keyed by the **same keys as `options`**; each `{ description, reason }` (both strings). Missing explanation keys are a **warning**, not a hard failure (engine shows a fallback).
   - `Tips`: optional string.
 
@@ -408,7 +417,7 @@ Stored one row per key, value JSON-encoded. The API exposes them as a single obj
     "questionText": "...",
     "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
     "optionOrder": ["C","A","D","B"],   // present iff shuffle_options; else natural order
-    "correctAnswer": "B",          // stored, but stripped from client DTO until revealed
+    "correctAnswer": ["B"],        // stored as array (ADR-13); pre-migration snapshots may hold a string — the grader normalises both
     "explanations": { "A": {...}, "B": {...}, ... },
     "Tips": "..."
   }

@@ -68,6 +68,32 @@ function writeMultiSet(dir: string, name: string): string {
   return filePath;
 }
 
+/** Like writeMultiSet but with the still-unsupported `ordered` type. */
+function writeOrderedSet(dir: string, name: string): string {
+  const set = {
+    setId: `set-${name}`,
+    setTitle: `Ordered Set ${name}`,
+    difficulty: "Easy",
+    questions: [
+      {
+        id: 1,
+        questionType: "ordered",
+        questionText: "Order these steps.",
+        options: { A: "First", B: "Second", C: "Third" },
+        correctAnswer: ["A", "B", "C"],
+        explanations: {
+          A: { description: "A", reason: "r" },
+          B: { description: "B", reason: "r" },
+          C: { description: "C", reason: "r" },
+        },
+      },
+    ],
+  };
+  const filePath = path.join(dir, `${name}.json`);
+  fs.writeFileSync(filePath, JSON.stringify(set, null, 2));
+  return filePath;
+}
+
 // ─── Setup / Teardown ───────────────────────────────────────────────────────
 
 const REAL_EXAMS_ROOT = path.resolve(process.cwd(), "Exams");
@@ -208,7 +234,21 @@ describe("SetCatalogService — validation", () => {
     expect(entry?.messages.some((m) => m.includes("missing explanations"))).toBe(true);
   });
 
-  it("unsupported questionType is a warning, set is still catalogued", async () => {
+  it("`ordered` questionType is a warning, set is still catalogued", async () => {
+    // Post-ADR-13: `multi` is fully supported. `ordered` is the only remaining
+    // type that should still emit the "unsupported" warning.
+    const subDir = path.join(tmpDir, "Easy");
+    fs.mkdirSync(subDir);
+    writeOrderedSet(subDir, "ordered");
+
+    const summary = await setCatalogService.scan();
+    expect(summary.errors).toBe(0);
+    expect(summary.added).toBe(1);
+    const entry = summary.diagnostics.find((d) => d.status === "warning");
+    expect(entry?.messages.some((m) => m.includes("unsupported question type"))).toBe(true);
+  });
+
+  it("`multi` questionType is NOT a warning (engine + grader support it)", async () => {
     const subDir = path.join(tmpDir, "Easy");
     fs.mkdirSync(subDir);
     writeMultiSet(subDir, "multi");
@@ -216,8 +256,9 @@ describe("SetCatalogService — validation", () => {
     const summary = await setCatalogService.scan();
     expect(summary.errors).toBe(0);
     expect(summary.added).toBe(1);
-    const entry = summary.diagnostics.find((d) => d.status === "warning");
-    expect(entry?.messages.some((m) => m.includes("unsupported question type"))).toBe(true);
+    expect(
+      summary.diagnostics.some((d) => d.status === "warning"),
+    ).toBe(false);
   });
 
   it("one bad file does NOT abort a multi-file scan", async () => {
@@ -298,9 +339,9 @@ describe("SetCatalogService — integration with real aws_saa_* sets", () => {
     expect(summary.scanned).toBeGreaterThan(0);
     // At least the 3 Easy sets should be indexed.
     expect(summary.added).toBeGreaterThanOrEqual(3);
-    // The 3 intentional multi-answer errors should appear.
-    // (Plus any warning sets that get catalogued).
-    expect(summary.errors).toBeGreaterThanOrEqual(1);
+    // Post-ADR-13: no errors. Every `correctAnswer` in the corpus is now a
+    // `string[]`, so all sets parse cleanly.
+    expect(summary.errors).toBe(0);
   }, 15000);
 
   it("GET /api/sets?quesPath= reflects completion after seeded set_completion", async () => {

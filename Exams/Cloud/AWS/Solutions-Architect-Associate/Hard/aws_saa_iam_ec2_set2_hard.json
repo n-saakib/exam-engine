@@ -12,7 +12,9 @@
         "C": "No — EC2 instance roles can never have IAM permissions",
         "D": "Yes — Permission Boundaries only restrict what users can grant to others, not what roles can do directly"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "No — the role's original policy didn't include iam:CreateUser",
@@ -42,7 +44,10 @@
         "C": "Attach an Elastic IP to each Spot Instance so traffic is re-routed automatically",
         "D": "Switch the Spot Instances to Reserved Instances when an interruption notice arrives"
       },
-      "correctAnswer": "A and B",
+      "correctAnswer": [
+        "A",
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "ALB Connection Draining (Deregistration Delay) keeps in-flight requests alive during the 2-minute Spot interruption window before removing the instance from the target group.",
@@ -61,7 +66,8 @@
           "reason": "Incorrect — there is no mechanism to convert a running Spot Instance to a Reserved Instance at runtime; this capability does not exist."
         }
       },
-      "Tips": "Two mechanisms: (1) Connection Draining handles the 2-minute window for in-flight requests gracefully. (2) Diversified ASG pool replaces interrupted instances from other Spot pools or falls back to On-Demand. Elastic IPs don't reroute automatically. You cannot convert running Spot to Reserved at runtime."
+      "Tips": "Two mechanisms: (1) Connection Draining handles the 2-minute window for in-flight requests gracefully. (2) Diversified ASG pool replaces interrupted instances from other Spot pools or falls back to On-Demand. Elastic IPs don't reroute automatically. You cannot convert running Spot to Reserved at runtime.",
+      "questionType": "multi"
     },
     {
       "id": 3,
@@ -72,7 +78,9 @@
         "C": "errorCode \"AccessDenied\" with errorMessage containing the policy evaluation details, and the additionalEventData field",
         "D": "The \"policyDetails\" field in the CloudTrail event"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "requestParameters",
@@ -102,7 +110,9 @@
         "C": "Create an AMI from the instance → Copy the AMI to us-east-1b → Launch a new instance from the AMI in us-east-1b",
         "D": "Detach the EBS volume from the failed AZ → Reattach it directly to an instance in us-east-1b"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Wait for AZ recovery — EBS volumes auto-migrate",
@@ -132,7 +142,9 @@
         "C": "Use an IAM policy with a condition that denies ec2:RunInstances if the required tag keys are not present in the request",
         "D": "Create a Lambda function that checks for tags daily and terminates non-compliant instances"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Train developers and conduct monthly audits",
@@ -162,7 +174,9 @@
         "C": "Enhanced Networking (ENA) with higher bandwidth, and support for Elastic Fabric Adapter (EFA) for HPC-grade latency",
         "D": "Support for IPv6 and VPC Flow Logs, which reduce latency by optimizing packet routing"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Security Groups and NACLs only supported on newer instances",
@@ -192,7 +206,9 @@
         "C": "Scheduled Scaling Actions set to check every 5 minutes",
         "D": "CloudWatch alarms on CPUUtilization to trigger scale-in/out"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "EC2 Auto Recovery",
@@ -222,7 +238,9 @@
         "C": "Allowed — Permission Boundaries take precedence over SCPs",
         "D": "Denied — the user needs an explicit Allow from all three policy types simultaneously"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Allowed — IAM policy and Permission Boundary both allow rds:*",
@@ -252,7 +270,9 @@
         "C": "Implement encryption at the application or OS level (e.g., dm-crypt/LUKS on Linux) because AWS does not natively encrypt instance store volumes through the console or KMS",
         "D": "Enable instance store encryption in the EC2 Launch Template settings"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Enable EBS encryption — it automatically encrypts instance store volumes",
@@ -282,7 +302,9 @@
         "C": "EC2 instances cannot assume external IAM Roles from instance profiles",
         "D": "The sts:AssumeRole permission must be listed in the role's permission policy, not the trust policy"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The instance profile does not have the correct permission policy",

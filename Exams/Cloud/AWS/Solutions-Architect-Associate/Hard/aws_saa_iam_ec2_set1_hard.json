@@ -12,7 +12,9 @@
         "C": "The termination is denied because the SCP overrides all other policies",
         "D": "The termination succeeds because the Allow policies outnumber the Deny"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Resource-based policy grants explicit access, so it succeeds",
@@ -42,7 +44,9 @@
         "C": "2 — both new instances are Spot",
         "D": "4 — all instances are replaced with an equal Spot/On-Demand split"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "0 — all new instances are On-Demand",
@@ -72,7 +76,9 @@
         "C": "Place Lambda in the VPC with a NAT Gateway for internet access; use a Security Group allowing outbound 443; attach an execution role with VPC ENI permissions and rds-db:connect",
         "D": "Place Lambda in the VPC; use an Internet Gateway for both RDS and external API access"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Lambda in VPC with NAT Gateway; execution role with rds-db:connect only",
@@ -102,7 +108,9 @@
         "C": "The action is denied if the request comes from any region other than eu-west-1",
         "D": "MFA is required only for users whose home region is eu-west-1"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The action is allowed if the request is from eu-west-1 OR MFA is present",
@@ -132,7 +140,9 @@
         "C": "Spot Instances with Capacity Reservations in the same AZ",
         "D": "Scheduled Reserved Instances running 24/7"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Spot Instances with checkpointing",
@@ -162,7 +172,9 @@
         "C": "The action succeeds because Permission Boundaries only apply to IAM Users, not roles",
         "D": "The action fails because two policies cannot reference different buckets simultaneously"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The action succeeds because Policy 2 explicitly allows it",
@@ -192,7 +204,9 @@
         "C": "Use AWS Config in each account and aggregate findings to a central account",
         "D": "Deploy a CloudWatch agent on all EC2 instances and stream logs to a central log group"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Enable CloudTrail in each account separately with separate S3 buckets",
@@ -222,7 +236,9 @@
         "C": "Apply an AWS Config rule to detect non-compliant instances combined with a Lambda remediation that calls ModifyInstanceMetadataOptions to require tokens on existing instances; enforce IMDSv2 in the Launch Template for new ones",
         "D": "Update the Security Group to block HTTP on port 80, which disables IMDSv1"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Terminate all instances and relaunch — IMDSv2 is only configurable at launch time",
@@ -252,7 +268,9 @@
         "C": "Web SG allows all inbound; App SG allows inbound from Web SG CIDR; DB SG allows inbound from App SG CIDR",
         "D": "All three tiers share a single Security Group to reduce management overhead"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Allow all traffic (0.0.0.0/0) on all tiers",
@@ -282,7 +300,9 @@
         "C": "The launch succeeds because SCPs only apply to IAM Users, not account administrators",
         "D": "The launch succeeds because the SCP only restricts child OUs, not the root OU"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The launch succeeds because AdministratorAccess overrides SCPs",

@@ -12,7 +12,9 @@
         "C": "Allowed — bucket policies override Permission Boundaries for the specific resource",
         "D": "Denied — Alice's identity policy does not include s3:DeleteObject so it is implicitly denied"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Allowed — the bucket policy allows s3:* for Alice",
@@ -42,7 +44,10 @@
         "C": "Migrate the running instance to a Reserved Instance using the instance conversion tool",
         "D": "Pause the batch job and wait 30 minutes for the Spot capacity to become available again"
       },
-      "correctAnswer": "A and B",
+      "correctAnswer": [
+        "A",
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "When a Spot interruption notice arrives, there is a 2-minute window before termination; writing checkpoint data to an EBS volume (durable, survives instance termination) during this window preserves job progress.",
@@ -61,7 +66,8 @@
           "reason": "Incorrect — passive waiting is not a resilience strategy; Spot capacity availability is unpredictable and could remain unavailable far longer than 30 minutes."
         }
       },
-      "Tips": "Two-part strategy: (1) Use the 2-minute window to checkpoint to durable storage (EBS survives termination). (2) Auto-replace from another Spot pool or On-Demand fallback via ASG. You cannot convert running Spot to Reserved. Waiting passively has no guaranteed timeline."
+      "Tips": "Two-part strategy: (1) Use the 2-minute window to checkpoint to durable storage (EBS survives termination). (2) Auto-replace from another Spot pool or On-Demand fallback via ASG. You cannot convert running Spot to Reserved. Waiting passively has no guaranteed timeline.",
+      "questionType": "multi"
     },
     {
       "id": 3,
@@ -72,7 +78,9 @@
         "C": "The trust policy is correct; Bob has the right permission; but no explicit Allow exists in Account B's SCP for sts:AssumeRole",
         "D": "Bob's permission policy in Account A allows the AssumeRole action, but Bob's account also needs an explicit Allow on the role's resource-based policy in addition to the trust policy"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "IAM Users cannot assume cross-account roles",
@@ -102,7 +110,9 @@
         "C": "Savings Plans (Compute Savings Plans), which apply to any EC2 instance type, region, OS, and tenancy",
         "D": "Scheduled Reserved Instances for 24/7 usage"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Standard Reserved Instances for t3.large, All Upfront",
@@ -132,7 +142,9 @@
         "C": "S3 — Gateway Endpoint; DynamoDB — Interface Endpoint",
         "D": "Both services require a NAT Gateway as VPC Endpoints are not available for DynamoDB"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "S3 — Interface Endpoint; DynamoDB — Interface Endpoint",
@@ -162,7 +174,9 @@
         "C": "Create an IAM Group that prevents developers from attaching any policies to roles",
         "D": "Enable AWS Config to detect roles without boundaries and delete them automatically"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "SCP that denies attaching any policy unless it is in an approved list",
@@ -192,7 +206,9 @@
         "C": "Cluster Placement Groups require all instances to fit on contiguous hardware; there may not be enough capacity for more instances of this size in this group; try stopping all instances and restarting them together, or use a different instance type with available capacity",
         "D": "You need to request a Service Quota increase for Placement Groups before adding more instances"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "The Placement Group has reached its maximum of 10 instances",
@@ -222,7 +238,9 @@
         "C": "VPC Endpoints for S3 and EC2 + SCP denying S3 access outside the region + endpoint policy restricting EC2 API calls to the VPC",
         "D": "CloudTrail + GuardDuty to detect and alert on violations after the fact"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "S3 bucket policies with aws:RequestedRegion + Security Groups blocking outbound internet",
@@ -252,7 +270,9 @@
         "C": "The launch succeeds because the Condition uses StringNotEquals, which evaluates to false in this region",
         "D": "The launch is denied only if there is no separate Allow policy for ap-southeast-1"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The launch succeeds because the policy uses Deny, which is weaker than any Allow",
@@ -282,7 +302,9 @@
         "C": "Create an AMI of the instance and launch a replacement using a Lambda function triggered by CloudWatch",
         "D": "Use an Application Load Balancer health check to detect failure and route traffic to a standby instance"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Auto Scaling Group with desired capacity of 1",

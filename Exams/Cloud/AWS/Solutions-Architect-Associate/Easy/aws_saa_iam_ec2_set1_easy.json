@@ -12,7 +12,9 @@
         "C": "Integrated Application Model",
         "D": "Internal Authorization Module"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Internet Access Management",
@@ -42,7 +44,9 @@
         "C": "IAM Role",
         "D": "IAM Policy"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "IAM User",
@@ -72,7 +76,9 @@
         "C": "Enable MFA on the root account and avoid using it for everyday tasks",
         "D": "Share the root credentials with the security team"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Use the root account for all daily administrative tasks",
@@ -102,7 +108,9 @@
         "C": "Reserved Instances (1-year, No Upfront)",
         "D": "On-Demand Instances"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Scheduled Instances",
@@ -132,7 +140,9 @@
         "C": "Create an IAM User and store its access key on the EC2 instance",
         "D": "Make the S3 bucket publicly accessible"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Hardcode AWS credentials in the application code",
@@ -162,7 +172,9 @@
         "C": "C-series (e.g., c6i.large)",
         "D": "I-series (e.g., i3.large)"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "T-series (e.g., t3.micro)",
@@ -192,7 +204,9 @@
         "C": "A billing rule that controls AWS spending limits",
         "D": "A network firewall configuration"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "A physical data center security rule",
@@ -222,7 +236,9 @@
         "C": "EC2 Metadata",
         "D": "EC2 Snapshot"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "EC2 Launch Template",
@@ -252,7 +268,9 @@
         "C": "The user has no permissions (implicit deny)",
         "D": "The user inherits the root account's permissions"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "The user has full administrator access",
@@ -282,7 +300,9 @@
         "C": "Hibernating",
         "D": "Stopped"
       },
-      "correctAnswer": "D",
+      "correctAnswer": [
+        "D"
+      ],
       "explanations": {
         "A": {
           "description": "Archived",

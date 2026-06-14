@@ -270,9 +270,17 @@ export function createExamStore(): ExamStore {
       select(qid, option) {
         const cur = get().answers[qid];
         if (!cur || cur.revealed) return; // locked once revealed
-        // Single-choice: replace. (Toggle-ready for multi: clicking the
-        // selected option clears it.)
-        const selected = cur.selected.includes(option) ? [] : [option];
+        // Multi-select (checkbox) semantics: clicking a selected option removes
+        // it; clicking an unselected option appends it. The UI is a checkbox
+        // group for BOTH `single` and `multi` question types, and the user is
+        // never told which is which (see ADR-13). For a `single`-typed question,
+        // picking more than one option will cause the grader to mark it
+        // `incorrect` (the set-equality test requires the user's set to equal
+        // the singleton correct set) — this is the intended pedagogical
+        // behaviour: trains choice elimination.
+        const selected = cur.selected.includes(option)
+          ? cur.selected.filter((k) => k !== option)
+          : [...cur.selected, option];
         set((s) => ({
           answers: { ...s.answers, [qid]: { ...cur, selected } },
         }));

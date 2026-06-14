@@ -42,6 +42,14 @@ export const ExplanationSchema = z.object({
  * A question. Hard-error rules (02 §1.2) are enforced here; the missing-explanation
  * rule is a WARNING and is handled by `validateQuestionSet`, not this schema.
  * `correctAnswer` is validated against the option keys with `superRefine`.
+ *
+ * ADR-13 (unified array shape): `correctAnswer` is ALWAYS a `string[]` of option
+ * keys, for BOTH `single` and `multi` question types. The `string` branch of the
+ * union is a backward-compat shim for historical `Exams/*.json` files and
+ * `exam_sessions.question_snapshot` rows written before the migration. The
+ * `superRefine` normalises both shapes to an array before checking. Post-
+ * migration, all new JSON files must use the array form; the post-migration
+ * `validate` script (with `--strict-correct-answer`) enforces this.
  */
 export const QuestionSchema = z
   .object({
@@ -52,54 +60,51 @@ export const QuestionSchema = z
       .record(OptionKeySchema, z.string())
       .refine((o) => Object.keys(o).length >= 2, "options must have at least 2 keys")
       .refine((o) => Object.keys(o).length <= 6, "options must have at most 6 keys"),
-    // single → string; multi → non-empty array of distinct keys. Cross-checked below.
-    correctAnswer: z.union([z.string(), z.array(z.string()).nonempty()]),
+    // Unified array shape. `string` is a legacy shim (see ADR-13).
+    correctAnswer: z.union([z.string(), z.array(z.string()).min(1)]),
     explanations: z.record(OptionKeySchema, ExplanationSchema).optional(),
     // Existing files use capital "Tips" — preserve exactly (02 §1.2 note).
     Tips: z.string().optional(),
   })
   .superRefine((q, ctx) => {
     const keys = new Set(Object.keys(q.options));
-    if (q.questionType === "single") {
-      if (typeof q.correctAnswer !== "string") {
+    // 1. Normalise: collapse string → [string]; pass through array as-is.
+    const normalised: string[] = Array.isArray(q.correctAnswer)
+      ? q.correctAnswer
+      : [q.correctAnswer];
+    // 2. Distinct-keys check (applies to both single and multi).
+    const distinct = new Set(normalised);
+    if (distinct.size !== normalised.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["correctAnswer"],
+        message: "correctAnswer must have distinct keys",
+      });
+    }
+    // 3. All keys must exist in the option map.
+    for (const k of normalised) {
+      if (!keys.has(k)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ["correctAnswer"],
-          message: "single-type correctAnswer must be a string option key",
-        });
-      } else if (!keys.has(q.correctAnswer)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["correctAnswer"],
-          message: `correctAnswer "${q.correctAnswer}" is not one of the option keys`,
+          message: `correctAnswer "${k}" is not one of the option keys`,
         });
       }
-    } else if (q.questionType === "multi") {
-      if (!Array.isArray(q.correctAnswer)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["correctAnswer"],
-          message: "multi-type correctAnswer must be an array of option keys",
-        });
-      } else {
-        const distinct = new Set(q.correctAnswer);
-        if (distinct.size !== q.correctAnswer.length) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["correctAnswer"],
-            message: "multi-type correctAnswer must have distinct keys",
-          });
-        }
-        for (const k of q.correctAnswer) {
-          if (!keys.has(k)) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              path: ["correctAnswer"],
-              message: `correctAnswer "${k}" is not one of the option keys`,
-            });
-          }
-        }
-      }
+    }
+    // 4. Per-type length sanity (single → exactly 1, multi → ≥ 1).
+    if (q.questionType === "single" && normalised.length !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["correctAnswer"],
+        message: `single-type correctAnswer must have exactly 1 key (got ${normalised.length})`,
+      });
+    }
+    if (q.questionType === "multi" && normalised.length < 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["correctAnswer"],
+        message: "multi-type correctAnswer must have at least 1 key",
+      });
     }
   });
 
@@ -282,8 +287,10 @@ export function validateQuestionSet(raw: unknown): QuestionSetValidation {
         message: `missing explanations for option(s): ${missing.join(", ")}`,
       });
     }
-    // Warning: a non-`single` question type is catalogued but "engine pending" (02 §1.1).
-    if (q.questionType !== "single") {
+    // Warning: a `ordered` or `freetext` question type is catalogued but
+    // "engine pending" (02 §1.1). `single` and `multi` are both fully
+    // supported as of the ADR-13 unified-array-shape migration.
+    if (q.questionType === "ordered" || q.questionType === "freetext") {
       diagnostics.push({
         severity: "warning",
         path: `questions.${idx}.questionType`,

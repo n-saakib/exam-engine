@@ -12,7 +12,9 @@
         "C": "Create a single IAM User and share the credentials among all developers",
         "D": "Create an IAM Role and have each developer assume it every time they need access"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Attach policies directly to each user",
@@ -42,7 +44,9 @@
         "C": "Create a VPC Endpoint (Gateway type) for DynamoDB",
         "D": "Open port 443 on the Security Group"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Attach an Elastic IP to the EC2 instance",
@@ -72,7 +76,9 @@
         "C": "IAM Credential Report",
         "D": "AWS Trusted Advisor"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "AWS CloudTrail",
@@ -102,7 +108,9 @@
         "C": "Terminate all instances and manually re-launch them with the new AMI",
         "D": "Use EC2 User Data to install the new software on running instances"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Stop each instance, change its AMI, and restart one by one",
@@ -132,7 +140,9 @@
         "C": "Attach a resource-based policy to the S3 bucket that explicitly denies s3:DeleteBucket for all principals",
         "D": "Remove S3 full access from all IAM Users and replace with a custom policy"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Apply an SCP to deny S3 DeleteBucket",
@@ -162,7 +172,9 @@
         "C": "The EC2 instance's EBS volume is full",
         "D": "The VPC does not have DNS resolution enabled"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The EC2 instance does not have an IAM Role attached",
@@ -192,7 +204,9 @@
         "C": "Share the AWS root account credentials with the AD administrator",
         "D": "Create a VPN connection between on-premises and AWS and use shared IAM credentials"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Create IAM Users and synchronize passwords manually",
@@ -222,7 +236,9 @@
         "C": "T4g (burstable, Graviton)",
         "D": "T3a (burstable, AMD)"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "T3 (burstable)",
@@ -252,7 +268,9 @@
         "C": "AWS evaluates both and randomly picks one",
         "D": "An error is thrown indicating a policy conflict"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The Allow takes precedence",
@@ -282,7 +300,9 @@
         "C": "Scheduled Reserved Instances for weekday business hours",
         "D": "Dedicated Hosts billed monthly"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "On-Demand Instances running 24/7",

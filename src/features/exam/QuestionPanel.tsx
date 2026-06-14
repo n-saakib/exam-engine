@@ -33,6 +33,7 @@ export const QuestionPanel = forwardRef<
       <div className="flex items-start justify-between gap-4">
         <h2
           ref={headingRef}
+          id={`question-${question.id}`}
           tabIndex={-1}
           className="text-lg font-semibold leading-snug focus:outline-none"
           data-testid="question-text"

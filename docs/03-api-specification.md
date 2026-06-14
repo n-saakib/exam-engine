@@ -240,7 +240,7 @@ Full graded detail — **answers and explanations included** — for the results
       "id": 7, "order": 1, "questionType": "single",
       "questionText": "...",
       "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-      "correctAnswer": "B",
+      "correctAnswer": ["B"],     // ADR-13: unified array shape (length 1 for single, ≥ 1 for multi)
       "yourAnswer": ["A"],
       "outcome": "incorrect",          // correct | incorrect | revealed | unanswered
       "flagged": true,

@@ -12,7 +12,9 @@
         "C": "Move the instance to a public subnet",
         "D": "Create a VPC peering connection to another VPC with internet access"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Attach an Elastic IP to the instance",
@@ -42,7 +44,9 @@
         "C": "Deactivate and delete the exposed Access Key immediately, then audit CloudTrail for unauthorized activity",
         "D": "Change the IAM User's console password"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Rotate the Access Key through the IAM console",
@@ -72,7 +76,9 @@
         "C": "Dedicated Host",
         "D": "Spot Instance"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Reserved Instance",
@@ -102,7 +108,9 @@
         "C": "The delete succeeds because the role has explicit s3:* Allow",
         "D": "The delete is denied because AWS always denies cross-policy conflicts"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "The role's Allow overrides the user's Deny — same answer as C",
@@ -132,7 +140,9 @@
         "C": "Create a custom AMI that includes IAM credentials",
         "D": "Attach the settings to the VPC so they apply to all new instances"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Save settings in a runbook and train operators",
@@ -162,7 +172,9 @@
         "C": "Both policies define what the role can do on different resource types",
         "D": "The Trust Policy is only used for cross-account roles; Permission Policies are used for all other roles"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Trust Policy defines what it can do; Permission Policy defines who can assume it",
@@ -192,7 +204,9 @@
         "C": "Create separate IAM Roles for Lambda and EC2, each with a policy allowing read access to the DynamoDB table",
         "D": "Make the DynamoDB table publicly accessible"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Create one IAM User and share credentials with both services",
@@ -222,7 +236,9 @@
         "C": "EBS volumes attached to the instance",
         "D": "Elastic Network Interface (ENI)"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "EC2 compute (vCPU and RAM)",
@@ -252,7 +268,9 @@
         "C": "IAM Resource-Based Policies",
         "D": "IAM Session Policies"
       },
-      "correctAnswer": "A",
+      "correctAnswer": [
+        "A"
+      ],
       "explanations": {
         "A": {
           "description": "Service Control Policies (SCPs) via AWS Organizations",
@@ -282,7 +300,9 @@
         "C": "https://iam.amazonaws.com/credentials — permanent access keys",
         "D": "http://169.254.169.254/latest/user-data/ — temporary credentials"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "https://169.254.169.254/... — permanent access keys",

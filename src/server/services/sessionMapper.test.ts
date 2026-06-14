@@ -19,7 +19,8 @@ const SNAPSHOT: SnapshotQuestion[] = [
     questionText: "Q7?",
     options: { A: "a", B: "b", C: "c" },
     optionOrder: ["A", "B", "C"],
-    correctAnswer: "B",
+    // ADR-13: unified array shape.
+    correctAnswer: ["B"],
     explanations: {
       A: { description: "A", reason: "no" },
       B: { description: "B", reason: "yes" },
@@ -34,7 +35,7 @@ const SNAPSHOT: SnapshotQuestion[] = [
     questionText: "Q9?",
     options: { A: "a", B: "b" },
     optionOrder: ["A", "B"],
-    correctAnswer: "A",
+    correctAnswer: ["A"],
     explanations: {
       A: { description: "A", reason: "yes" },
       B: { description: "B", reason: "no" },
@@ -112,7 +113,7 @@ describe("toLiveSession — answers hidden", () => {
     const q7 = dto.questions.find((q) => q.id === 7)!;
     const q9 = dto.questions.find((q) => q.id === 9)!;
 
-    expect(q7.correctAnswer).toBe("B");
+    expect(q7.correctAnswer).toEqual(["B"]);
     expect(q7.explanations).toBeDefined();
     expect(q7.Tips).toBe("tip-7");
 
@@ -186,7 +187,7 @@ describe("toResults — answers shown", () => {
     expect(results.summary.scorePercent).toBe(50);
     const q7 = results.questions.find((q) => q.id === 7)!;
     const q9 = results.questions.find((q) => q.id === 9)!;
-    expect(q7.correctAnswer).toBe("B");
+    expect(q7.correctAnswer).toEqual(["B"]);
     expect(q7.outcome).toBe("correct");
     expect(q7.yourAnswer).toEqual(["B"]);
     expect(q9.outcome).toBe("incorrect");

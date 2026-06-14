@@ -12,7 +12,9 @@
         "C": "Apply a Security Group rule that blocks unapproved AMIs",
         "D": "Use a VPC NACL to restrict access to unapproved instance types"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Send an email to developers listing approved AMIs",
@@ -42,7 +44,9 @@
         "C": "Spread Placement Group — up to 7 instances per AZ per placement group",
         "D": "Default tenancy — automatically spreads across racks"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Cluster Placement Group — no limit per AZ",
@@ -72,7 +76,9 @@
         "C": "The instance is terminated and no replacement is launched until the next scheduled scaling event",
         "D": "The Auto Scaling Group pauses all activity until an administrator intervenes"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The ASG is deleted along with the instance",
@@ -102,7 +108,9 @@
         "C": "The IAM Role's trust policy is preventing S3 access",
         "D": "S3 access requires a separate IAM User even when using roles"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "EC2 instance types do not support S3 API calls",
@@ -132,7 +140,9 @@
         "C": "Enable CloudTrail in each account and set a CloudWatch alarm for the StopLogging event",
         "D": "Remove CloudTrail permissions from all IAM Users in all accounts"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Attach an IAM policy denying cloudtrail:StopLogging to every user in every account",
@@ -162,7 +172,9 @@
         "C": "Two EC2 instances in the same Availability Zone us-east-1a behind a Load Balancer",
         "D": "EC2 instance with an EBS snapshot scheduled every 15 minutes"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Single EC2 instance with a CloudWatch alarm to notify ops",
@@ -192,7 +204,9 @@
         "C": "AWS evaluates both policies and defaults to Allow when there is a conflict",
         "D": "The request results in an error because conflicting policies are invalid"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The request succeeds because Policy A covers all objects",
@@ -222,7 +236,9 @@
         "C": "Cluster Placement Group",
         "D": "Default placement with enhanced networking"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Spread Placement Group",
@@ -252,7 +268,9 @@
         "C": "The user cannot do anything because the Permission Boundary overrides all identity policies",
         "D": "The user can create IAM Users because Permission Boundaries only restrict service-linked roles"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The user can perform all three because their identity policy is not restricted",
@@ -282,7 +300,9 @@
         "C": "Use the root account credentials in the CI/CD pipeline",
         "D": "Hardcode AWS credentials in the deployment scripts and rotate them every 90 days"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Create an IAM User with access keys and store them as CI/CD environment variables",

@@ -12,7 +12,9 @@
         "C": "Configure a bucket policy on both S3 buckets denying s3:DeleteObject for all principals",
         "D": "Enable S3 Object Lock in Compliance mode on all buckets to prevent deletion"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Not including s3:DeleteObject means the role has no explicit allow for deletion, resulting in an implicit deny. However, if another policy is added in the future that grants s3:* or s3:DeleteObject, the deletion would become possible.",
@@ -42,7 +44,9 @@
         "C": "The IAM User is created because IAM is a global service not subject to regional SCPs",
         "D": "The IAM User creation fails only if the developer is not the root user"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "AdministratorAccess is an account-level IAM policy; SCPs are applied above the account level by AWS Organizations. SCPs define the maximum permissions available in the account; AdministratorAccess cannot grant more than what the SCP allows.",
@@ -72,7 +76,9 @@
         "C": "Enable detailed monitoring (1-minute intervals) on EC2 instances so CloudWatch alarms trigger faster",
         "D": "Reduce the health check grace period to 10 seconds so new instances enter service faster"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Increasing maximum capacity allows more instances to run but doesn't solve the scaling lag; the ASG still needs time to launch and warm up new instances when the spike hits.",
@@ -102,7 +108,9 @@
         "C": "Access is allowed because the Allow in Policy 2 and the Deny in Policy 3 cancel each other out, defaulting to Allow",
         "D": "Access is denied because conflicting policies result in an error that blocks all access"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Policy 2 does allow s3:GetObject on bucket-b/*, which includes bucket-b/confidential/salary.csv. However, Policy 3 explicitly denies s3:GetObject on bucket-b/confidential/*, which also matches this object.",
@@ -132,7 +140,9 @@
         "C": "Tag all EC2 instances with their instance ID and use resource tagging in CloudTrail filters",
         "D": "Configure the application to include the instance ID as a custom HTTP header in all outbound API requests"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "VPC Flow Logs record network traffic metadata (IP, port, bytes) but do not capture AWS API call details or instance IDs in the context of CloudTrail events.",
@@ -162,7 +172,9 @@
         "C": "Two separate Auto Scaling Groups with DNS-based round-robin; update DNS TTL to control traffic distribution",
         "D": "Use EC2 instance stop/start operations to gradually shift capacity between blue and green fleets"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Two separate ALBs with Route 53 weighted routing can distribute traffic by percentage; however, DNS TTL causes propagation delays that prevent truly instant rollback.",
@@ -192,7 +204,9 @@
         "C": "No — the AWS SDK caches credentials to disk in the ~/.aws/cache directory automatically",
         "D": "Yes — but only when using IMDSv2; IMDSv1 stores credentials on disk"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "IAM instance profiles do NOT store credentials in /root/.aws/credentials or any file on disk. Credentials are retrieved from the IMDS endpoint in memory by the AWS SDK.",
@@ -222,7 +236,9 @@
         "C": "Daily EBS snapshots copied to us-west-2; a runbook for manually restoring the application on failover",
         "D": "Warm Standby in us-west-2: RDS Read Replica (promotable), Route 53 health check failover, and a scaled-down ASG (minimum 1) in us-west-2 that can scale to full capacity within 30 minutes"
       },
-      "correctAnswer": "D",
+      "correctAnswer": [
+        "D"
+      ],
       "explanations": {
         "A": {
           "description": "Active-active in both regions provides the best RTO (near-zero) and RPO but is the most expensive option — full capacity runs continuously in both regions with bi-directional data synchronization.",
@@ -252,7 +268,9 @@
         "C": "Create one shared IAM User per team (frontend, backend, data) with appropriate group policies",
         "D": "Create individual IAM Users for each developer and configure all 20 users in IAM Groups with appropriate permission policies"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Individual IAM Users with AdministratorAccess grants every developer full account access, violating least privilege, and creates 20 sets of long-term credentials to manage.",
@@ -282,7 +300,9 @@
         "C": "Yes — the NAT Gateway provides a dedicated connection to DynamoDB with higher bandwidth than the Gateway Endpoint",
         "D": "No — NAT Gateways cannot be used to access DynamoDB; only VPC Endpoints can route to DynamoDB"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Network throughput to DynamoDB is not the bottleneck; DynamoDB throttling occurs when Read Capacity Units (RCUs) or Write Capacity Units (WCUs) are exhausted. Adding another network path doesn't add capacity units.",
@@ -312,7 +332,9 @@
         "C": "Amazon ECS on EC2 launch type — managed container orchestration running on EC2 instances that the company controls",
         "D": "Amazon EKS on Fargate — Kubernetes with fully managed serverless compute"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Lambda functions have a 15-minute execution limit, limited memory/CPU, and no persistent networking; they are not suitable for long-running containerized applications and are architecturally very different from EC2-based Docker workloads.",
@@ -342,7 +364,9 @@
         "C": "Increase EBS volume sizes on all instances to store 1 year of logs locally, then use EC2 serial console to query logs",
         "D": "Configure S3 server access logging to capture all log data from EC2 instances"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Manual SSH-based log collection from hundreds of instances monthly is operationally untenable — it doesn't scale, is error-prone, and logs generated between collections are missed.",
@@ -372,7 +396,9 @@
         "C": "Enable EC2 Termination Protection on all ASG instances to prevent scale-in",
         "D": "Increase the ASG minimum capacity so scale-in events never occur"
       },
-      "correctAnswer": "A",
+      "correctAnswer": [
+        "A"
+      ],
       "explanations": {
         "A": {
           "description": "ALB Deregistration Delay (Connection Draining) instructs the ALB to stop sending new requests to a target being deregistered and waits for in-flight requests to complete before fully removing the target, up to the configured timeout.",
@@ -402,7 +428,9 @@
         "C": "Use VPC sharing (Resource Access Manager) to share subnets across accounts in a single VPC",
         "D": "Configure Site-to-Site VPN connections between all VPC pairs for private communication"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Hub-and-spoke with VPC peering uses one central VPC to connect to all others, but VPC peering is non-transitive: spokes cannot communicate with each other through the hub. All-spoke-to-spoke communication still requires additional peering connections.",
@@ -432,7 +460,9 @@
         "C": "Reserved Instances (1-year, All Upfront) — the guaranteed capacity ensures jobs always complete",
         "D": "Spot Instances with Spot interruption notices — the 2-minute warning is sufficient to save state and restart"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Spot Instances can be interrupted at any time with 2 minutes' notice; for jobs that cannot be paused or checkpointed and run 2-4 hours, a Spot interruption would waste 2-4 hours of compute and the job would need to restart from the beginning.",
@@ -462,7 +492,9 @@
         "C": "Use a Network Load Balancer with TLS passthrough (TLS listener) instead of an ALB so the encrypted connection passes through to the EC2 instances unchanged",
         "D": "Enable EBS encryption on all EC2 instances to protect data at rest during transit"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "An ALB with an HTTPS listener terminates TLS at the load balancer level. By default, ALB communicates with backend targets over HTTP (unencrypted) unless the target group is configured to use HTTPS.",
@@ -492,7 +524,9 @@
         "C": "Enable Amazon GuardDuty on the account to detect and block malicious outbound traffic automatically",
         "D": "Deploy a NAT Gateway and configure VPC Flow Logs to monitor all outbound traffic for suspicious patterns"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Security Groups are stateful IP/port filters that cannot inspect packet contents, cannot log individual connection details at the application layer, and cannot block specific URLs or domains — only IP addresses and ports.",
@@ -522,7 +556,9 @@
         "C": "One SCP with aws:SecureTransport and a separate VPC Endpoint policy with aws:SourceVpc",
         "D": "Use aws:SecureTransport in the permission policy and add aws:SourceVpc to the bucket policy separately"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Two separate policy statements (one per condition) would be evaluated independently; a request matching either statement would succeed — creating OR logic rather than the required AND logic.",
@@ -552,7 +588,9 @@
         "C": "Use an Elastic IP address — Elastic IPs are private IPs that persist across instance replacements",
         "D": "Assign a secondary private IP to the ENI, detach the ENI from the failed instance, and attach it to the replacement instance"
       },
-      "correctAnswer": "D",
+      "correctAnswer": [
+        "D"
+      ],
       "explanations": {
         "A": {
           "description": "EC2 Auto Recovery is correct for preserving private IPs through hardware recovery — it moves the instance to new hardware in the same AZ with the same network configuration. However, Auto Recovery only works for system status check failures (hardware issues), not for software-level failures or intentional termination.",
@@ -582,7 +620,9 @@
         "C": "Use S3 bucket policies to deny access to all principals except the specific customer; manage 500 bucket policies manually",
         "D": "Create one S3 bucket for all customers with prefixes per customer, and use a single IAM Role with S3 access to the entire bucket"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Creating 500 separate IAM Roles (one per customer) scales linearly with customer count — 500 now, 50+ per month. At 1000 customers, this is 1000 role management operations per new customer plus policy updates for existing ones.",
@@ -612,7 +652,9 @@
         "C": "Increase the number of Spot instance types in the diversified pool to 12 types to further reduce interruption probability",
         "D": "Pre-purchase Reserved Instances for all required capacity to eliminate Spot dependency"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Spot Blocks (defined duration instances) provided capacity for 1-6 hours without interruption but have been retired and are no longer available for new customers. Even when available, they only deferred interruption rather than providing a fallback.",
@@ -642,7 +684,9 @@
         "C": "Immediately deactivate all Access Keys for the compromised IAM User AND disable the console login profile to prevent any further use; then audit CloudTrail logs to determine if the credentials were already used for unauthorized actions",
         "D": "Rotate the Access Keys by creating new keys and deleting the old ones, then continue monitoring"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Changing the console password is a partial mitigation — it only affects console login. If Access Keys were also compromised (common with credential leaks), those remain active and can continue to be exploited.",
@@ -672,7 +716,9 @@
         "C": "r6i.4xlarge (16 vCPU, 128 GB RAM) — Standard Reserved Instance (1-year, All Upfront)",
         "D": "c6i.8xlarge (32 vCPU, 64 GB RAM) — Standard Reserved Instance (1-year, All Upfront)"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "r6i.4xlarge is correctly sized (memory-optimized for 128 GB RAM requirement), but Spot Instances can be interrupted. For a 24/7 workload, interruptions cause unacceptable downtime — On-Demand or Reserved is required for continuous availability.",
@@ -702,7 +748,9 @@
         "C": "Assign a secondary Elastic IP to the NAT instance for outbound SNAT (Source Network Address Translation)",
         "D": "Enable instance store volumes on the NAT instance for packet buffering"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Enhanced Networking improves network performance (throughput, PPS, latency) but has no bearing on whether the instance can forward packets from other sources.",
@@ -732,7 +780,9 @@
         "C": "iam:PassRole is needed for basic EC2 operations and is not dangerous by itself",
         "D": "iam:PassRole allows the EC2 instance to assume any IAM Role in the account directly"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "iam:PassRole is not the same as iam:CreateRole. PassRole allows associating an existing role with an AWS service/resource; it does not create new roles.",
@@ -762,7 +812,9 @@
         "C": "CloudFormation deletes the entire stack and all resources, then recreates everything from scratch",
         "D": "CloudFormation sends an SNS notification and pauses all future updates until the error is acknowledged"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "CloudFormation does not leave stacks in a permanently inconsistent partial state by default; it has a built-in rollback mechanism to restore the previous state.",
@@ -792,7 +844,9 @@
         "C": "If the EBS root volume is in a separate AZ (note: EBS volumes are AZ-local), take a snapshot of the EBS data volume from us-east-1a, launch a new instance in us-east-1b from a snapshot-based AMI with the data volume",
         "D": "Use EC2 Auto Recovery to automatically move the instance to us-east-1b with the same EBS volume"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Restoring from the most recent EBS snapshot in us-east-1b is correct IF a recent snapshot exists. The RPO depends on snapshot frequency — if snapshots are taken hourly, up to 1 hour of data could be lost.",
@@ -822,7 +876,9 @@
         "C": "Create a separate IAM Role with ec2:StopInstances and have developers assume it when needed",
         "D": "Add ec2:StopInstances and ec2:DescribeInstanceAttribute to the policy without conditions"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Adding ec2:StopInstances with Resource:* allows stopping ANY instance in the account, violating least privilege and the specific requirement that developers can only stop their own instances.",
@@ -852,7 +908,9 @@
         "C": "Terminate old instances and immediately launch new instances — the ALB health checks will route traffic only to healthy new instances",
         "D": "Deploy new instances in a separate region and use Route 53 failover to redirect traffic"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Stopping all instances simultaneously causes complete downtime — all in-flight requests are dropped and new requests cannot be served until the new instances are healthy.",
@@ -882,7 +940,9 @@
         "C": "Recreate the IAM Role with the same name; update each instance profile to reference the new role (if the instance profile was also deleted); then associate the instance profile with each EC2 instance",
         "D": "SSH into each instance and manually configure AWS credentials files with temporary Access Keys"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Terminating and relaunching 50 instances causes significant disruption — application state is lost, IPs change, and downtime occurs. This is the nuclear option when a non-disruptive fix exists.",
@@ -912,7 +972,9 @@
         "C": "Assign private IP addresses only to data tier instances (no Elastic or public IPs)",
         "D": "Configure the data tier Security Groups to deny all inbound traffic from 0.0.0.0/0"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "GuardDuty is a threat detection service that identifies suspicious activity from logs; it does not actively block network traffic in real time.",
@@ -942,7 +1004,9 @@
         "C": "The Permission Boundary overrides identity policies for read-only actions only",
         "D": "The Resource: * in the identity policy is too broad and needs to specify a region"
       },
-      "correctAnswer": "A",
+      "correctAnswer": [
+        "A"
+      ],
       "explanations": {
         "A": {
           "description": "Effective permissions = identity policy ∩ Permission Boundary. Identity policy: allows ec2:DescribeInstances. Permission Boundary: allows only s3:GetObject and s3:PutObject. Intersection: only s3:GetObject and s3:PutObject. ec2:DescribeInstances is in the identity policy but NOT in the boundary — it is excluded from effective permissions.",
@@ -972,7 +1036,9 @@
         "C": "Configure Network ACLs on each subnet to block traffic from the other AZ's subnet CIDR",
         "D": "Use VPC routing tables to prevent traffic between the AZ subnets by removing inter-subnet routes"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Creating separate VPCs per AZ would enforce strong isolation, but it is architecturally extreme for this requirement and prevents many standard multi-AZ HA patterns from working.",
@@ -1002,7 +1068,9 @@
         "C": "Enable VPC Flow Logs and filter for traffic from the admin role's IP address",
         "D": "Configure AWS Config to detect when the admin role is assumed and send a notification"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "IAM Access Advisor shows which services were accessed and when for a role, but it is a manual report — not a real-time notification system. Weekly review doesn't meet the 5-minute requirement.",
@@ -1032,7 +1100,9 @@
         "C": "The termination succeeds — the Permission Boundary allows ec2:*, which includes ec2:TerminateInstances, and this overrides the SCP",
         "D": "The termination is denied — the user's own IAM policy allowing ec2:TerminateInstances does not apply during a role session"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The root SCP FullAWSAccess allows all actions as a baseline, but an explicit Deny SCP at the OU level takes precedence. SCP Deny > SCP Allow in the evaluation hierarchy.",

@@ -34,14 +34,16 @@ async function waitForExamScreen(page: Page): Promise<void> {
 }
 
 /**
- * Select the first visible (non-disabled) option in the answer radio group and
- * return the option key (letter) that was selected.
+ * Select the first visible (non-disabled) option in the answer checkbox group
+ * and return the option key (letter) that was selected. (ADR-13: every question
+ * is now rendered as checkboxes, even single-type ones, to train choice
+ * elimination — the user is not told whether the question is single or multi.)
  */
 async function selectFirstOption(page: Page): Promise<string> {
   const optionList = page.getByTestId("option-list");
   await expect(optionList).toBeVisible();
-  // Options are buttons with role=radio; pick the first one
-  const firstOption = optionList.getByRole("radio").first();
+  // Options are buttons with role=checkbox; pick the first one
+  const firstOption = optionList.getByRole("checkbox").first();
   await expect(firstOption).toBeVisible();
   // Grab the data-option attribute to know which letter was picked
   const key = await firstOption.getAttribute("data-option");

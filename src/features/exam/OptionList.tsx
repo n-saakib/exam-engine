@@ -1,16 +1,19 @@
 "use client";
 
-import { useRef } from "react";
-
 import { cn } from "@/lib/cn";
 import type { LiveQuestion } from "@/domain/types";
 import type { AnswerState } from "@/store/examStore";
 
 /**
- * Single-choice options as a real radio group (F4-T16, 04 §9). Respects
- * `optionOrder`, is arrow-key navigable, and after reveal/lock shows per-option
- * correctness styling via the `correct`/`incorrect` tokens. Colour is paired
- * with text ("Correct"/"Your answer") so it isn't the only signal.
+ * Multi-select options as a real checkbox group (ADR-13). Every question is
+ * rendered as checkboxes regardless of `questionType` — the user is never told
+ * whether a question is single or multi, which trains choice elimination
+ * (pedagogical: ticking all candidates, then de-selecting the wrong ones).
+ * Respects `optionOrder`. Every option is a tab stop (WAI-ARIA APG pattern
+ * for `group > checkbox[]`); Space/Enter toggles the focused option; arrow
+ * keys do not move focus inside the group. After reveal/lock shows per-option
+ * correctness styling. Colour is paired with text ("Correct"/"Your answer")
+ * so it isn't the only signal.
  */
 
 function orderedKeys(question: LiveQuestion): string[] {
@@ -40,30 +43,23 @@ export function OptionList({
   const locked = answer.revealed;
   const revealed = answer.revealed && question.correctAnswer !== undefined;
   const correct = correctSet(question);
-  const refs = useRef<Record<string, HTMLButtonElement | null>>({});
 
-  const onKeyDown = (e: React.KeyboardEvent, idx: number) => {
-    if (locked) return;
-    let next = -1;
-    if (e.key === "ArrowDown" || e.key === "ArrowRight") next = (idx + 1) % keys.length;
-    else if (e.key === "ArrowUp" || e.key === "ArrowLeft")
-      next = (idx - 1 + keys.length) % keys.length;
-    if (next >= 0) {
-      e.preventDefault();
-      const key = keys[next];
-      refs.current[key]?.focus();
-      onSelect(key);
-    }
+  // Native button + role="checkbox" handles Space/Enter toggle and Tab focus.
+  // Arrow keys intentionally do not move focus inside the group (WAI-ARIA APG
+  // pattern for `group > checkbox[]`: each checkbox is a tab stop, Tab moves
+  // between groups).
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (locked && (e.key === " " || e.key === "Enter")) e.preventDefault();
   };
 
   return (
     <div
-      role="radiogroup"
-      aria-label="Answer options"
+      role="group"
+      aria-labelledby={`question-${question.id}`}
       className="flex flex-col gap-2"
       data-testid="option-list"
     >
-      {keys.map((key, idx) => {
+      {keys.map((key) => {
         const selected = answer.selected.includes(key);
         const isCorrect = revealed && correct.has(key);
         const isWrongPick = revealed && selected && !correct.has(key);
@@ -71,16 +67,13 @@ export function OptionList({
         return (
           <button
             key={key}
-            ref={(el) => {
-              refs.current[key] = el;
-            }}
             type="button"
-            role="radio"
+            role="checkbox"
             aria-checked={selected}
             disabled={locked}
-            tabIndex={selected || (idx === 0 && answer.selected.length === 0) ? 0 : -1}
+            tabIndex={0}
             onClick={() => onSelect(key)}
-            onKeyDown={(e) => onKeyDown(e, idx)}
+            onKeyDown={onKeyDown}
             data-option={key}
             data-selected={selected ? "true" : undefined}
             data-correct={isCorrect ? "true" : undefined}
@@ -99,13 +92,13 @@ export function OptionList({
             <span
               aria-hidden="true"
               className={cn(
-                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-semibold",
                 selected ? "border-brand bg-brand text-brand-fg" : "border-muted text-muted",
                 isCorrect && "border-correct bg-correct text-white",
                 isWrongPick && "border-incorrect bg-incorrect text-white",
               )}
             >
-              {key}
+              {selected ? "✓" : key}
             </span>
             <span className="flex-1 text-sm">
               <span>{question.options[key]}</span>

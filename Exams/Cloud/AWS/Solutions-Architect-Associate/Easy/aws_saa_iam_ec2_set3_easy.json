@@ -12,7 +12,9 @@
         "C": "X.509 certificate",
         "D": "MFA token"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Username and password",
@@ -42,7 +44,9 @@
         "C": "A new public IP is assigned upon restart",
         "D": "The public IP is converted to a private IP"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "The public IP remains the same",
@@ -72,7 +76,9 @@
         "C": "A storage volume attached to an EC2 instance",
         "D": "A monitoring tool for tracking EC2 performance"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "A virtual firewall that protects EC2 instances",
@@ -102,7 +108,9 @@
         "C": "A policy that only applies to the root account",
         "D": "A policy that automatically expires after 90 days"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "A policy written inline directly on a single IAM user",
@@ -132,7 +140,9 @@
         "C": "Elastic Load Balancing",
         "D": "EC2 Hibernation"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Auto Scaling Groups",
@@ -162,7 +172,9 @@
         "C": "To grant the user temporary credentials for cross-account access",
         "D": "To automatically rotate the user's access keys every 30 days"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "To allow the user to access multiple AWS accounts simultaneously",
@@ -192,7 +204,9 @@
         "C": "A Direct Connect connection",
         "D": "A VPN Gateway"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "A NAT Gateway",
@@ -222,7 +236,9 @@
         "C": "IAM Roles can only be used by human users",
         "D": "IAM Roles must always be attached to an IAM Group"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "IAM Roles are assigned permanent long-term credentials",
@@ -252,7 +268,9 @@
         "C": "Shared Tenancy",
         "D": "Isolated Tenancy"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Dedicated Host",
@@ -282,7 +300,9 @@
         "C": "IAM Policy Simulator",
         "D": "AWS Inspector"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "AWS Trusted Advisor",

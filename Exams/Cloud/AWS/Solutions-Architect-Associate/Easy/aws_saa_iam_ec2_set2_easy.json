@@ -12,7 +12,9 @@
         "C": "AWS IAM",
         "D": "AWS Organizations"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "AWS Config",
@@ -42,7 +44,9 @@
         "C": "A network ACL applied at the subnet level",
         "D": "An encryption key used to secure EC2 storage"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "An IAM policy that controls access to EC2 instances",
@@ -72,7 +76,9 @@
         "C": "They both refer to the same concept in IAM",
         "D": "Authentication is for users; authorization is only for services"
       },
-      "correctAnswer": "A",
+      "correctAnswer": [
+        "A"
+      ],
       "explanations": {
         "A": {
           "description": "Authentication verifies identity; authorization determines what actions are permitted",
@@ -102,7 +108,9 @@
         "C": "Reserved Instances (3-year term)",
         "D": "Dedicated Hosts (On-Demand)"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "On-Demand Instances",
@@ -132,7 +140,9 @@
         "C": "Monitor the instance's CPU utilization in CloudWatch",
         "D": "Automatically scale the instance based on load"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Encrypt EBS volumes attached to the instance",
@@ -162,7 +172,9 @@
         "C": "Manage permissions for a collection of IAM Users",
         "D": "Control network traffic between VPCs"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Assign permissions to AWS services",
@@ -192,7 +204,9 @@
         "C": "Instance Store",
         "D": "Amazon EFS"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "EBS General Purpose SSD (gp3)",
@@ -222,7 +236,9 @@
         "C": "Share credentials among multiple team members to improve collaboration",
         "D": "Allow all actions by default and restrict only sensitive operations"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Always grant administrator access to reduce the number of permission errors",
@@ -252,7 +268,9 @@
         "C": "Attach additional EBS volumes after the instance starts",
         "D": "Enable Multi-AZ replication for the instance"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Change the instance type after launch",
@@ -282,7 +300,9 @@
         "C": "IAM Role with a Trust Policy",
         "D": "IAM User Access Key"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "IAM Group",

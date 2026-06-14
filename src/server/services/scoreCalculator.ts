@@ -22,10 +22,12 @@ import type { SnapshotQuestion } from "@/domain/schemas";
  * all pull the percentage down equally (a "gave up" is not free). `total === 0`
  * yields `0` (no division by zero).
  *
- * EXTENSIBILITY (structure-ready for multi): the per-question correctness check
- * is dispatched on `questionType` through `GRADERS`. `single` is implemented;
- * `multi` (set-equality), `ordered`, and `freetext` are clean future branches —
- * nothing in the shape assumes a single selected option.
+ * EXTENSIBILITY: the per-question correctness check is dispatched on
+ * `questionType` through `GRADERS`. Both `single` and `multi` use set equality
+ * on a normalised `string[]` (see ADR-13); `ordered` and `freetext` are clean
+ * future branches. Picking 2+ options on a `single` question scores `incorrect`
+ * (set equality fails on length mismatch) — this is the intended pedagogical
+ * behaviour: the user is not prevented from over-selecting.
  */
 
 /** The minimal answer shape ScoreCalculator needs (decoupled from the DB row). */
@@ -72,13 +74,30 @@ export interface ScoreResult {
  */
 type Grader = (selected: string[], correctAnswer: string | string[]) => boolean;
 
+/**
+ * Set-equality helper. Used for both `single` and `multi` question types
+ * (post ADR-13 unified-array-shape migration). For `single`, a length-1
+ * `correctAnswer` (normalised from the legacy string) compared against
+ * `selected` reduces to "the user's set equals the singleton correct key" —
+ * which is equivalent to the old `selected.length === 1 && selected[0] === ca`
+ * check. For `multi`, it's strict set equality (no partial credit).
+ */
+function setEquals(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = new Set(a);
+  for (const x of b) if (!sa.has(x)) return false;
+  return true;
+}
+
+/** Normalise a possibly-legacy string `correctAnswer` to an array. */
+function asArray(ca: string | string[]): string[] {
+  return Array.isArray(ca) ? ca : [ca];
+}
+
 const GRADERS: Partial<Record<SnapshotQuestion["questionType"], Grader>> = {
-  single: (selected, correctAnswer) => {
-    if (typeof correctAnswer !== "string") return false;
-    return selected.length === 1 && selected[0] === correctAnswer;
-  },
+  single: (selected, correctAnswer) => setEquals(selected, asArray(correctAnswer)),
+  multi: (selected, correctAnswer) => setEquals(selected, asArray(correctAnswer)),
   // Future branches (kept here so the dispatch site doesn't grow special-cases):
-  // multi: (selected, correctAnswer) => setEquals(selected, asArray(correctAnswer)),
   // ordered: (selected, correctAnswer) => sequenceEquals(selected, asArray(correctAnswer)),
 };
 

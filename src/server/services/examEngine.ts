@@ -23,6 +23,15 @@ import type { PathResolver } from "@/server/services/pathResolver";
 /** Default per-set time budget when timed but no explicit/derived limit is set. */
 const DEFAULT_TIMER_MINUTES = 20;
 
+/** Question types the engine can play (ADR-13). `ordered` and `freetext`
+ *  remain catalogue-only and are 422-rejected at create time. The per-type
+ *  length sanity (single → 1 key, multi → ≥1 key) is enforced by
+ *  `QuestionSchema.superRefine` at JSON-load time. */
+const SUPPORTED_QUESTION_TYPES = ["single", "multi"] as const;
+type SupportedQuestionType = (typeof SUPPORTED_QUESTION_TYPES)[number];
+const isSupportedQuestionType = (t: string): t is SupportedQuestionType =>
+  (SUPPORTED_QUESTION_TYPES as readonly string[]).includes(t);
+
 /**
  * Engine input for create — `mode` may be omitted (defaults to "full"). Accepts
  * the schema INPUT type so it works whether the caller passes a parsed body
@@ -171,12 +180,14 @@ export function createExamEngine(deps: ExamEngineDeps) {
         setId = set.setId;
       }
 
-      // Unsupported question type → 422. The set-level `questionType` (if present)
-      // OR any per-question type other than `single` is rejected for the MVP.
+      // Unsupported question type → 422. `single` and `multi` are both supported
+      // (see ADR-13 unified-array-shape migration); `ordered` and `freetext` are
+      // still catalogue-only. The per-type length sanity (single → 1 key, multi
+      // → ≥1 key) is enforced by `QuestionSchema.superRefine` at JSON-load time.
       const setType = set.questionType ?? "single";
       const hasUnsupported =
-        setType !== "single" ||
-        set.questions.some((q) => q.questionType !== "single");
+        !isSupportedQuestionType(setType) ||
+        set.questions.some((q) => !isSupportedQuestionType(q.questionType));
       if (hasUnsupported) {
         throw new AppError(
           "UNSUPPORTED_QUESTION_TYPE",

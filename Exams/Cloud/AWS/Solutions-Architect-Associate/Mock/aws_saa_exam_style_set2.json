@@ -12,7 +12,9 @@
         "C": "Store the parameters in an EC2 User Data script so they are available at launch without needing to call Parameter Store",
         "D": "Move the EC2 instances to a public subnet so they can access Parameter Store directly"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Elastic IPs are public IPs; private subnet instances still lack a route to the internet via an Internet Gateway, so an EIP alone does not enable outbound internet connectivity.",
@@ -42,7 +44,9 @@
         "C": "Enable VPC Flow Logs to detect and alert on HTTP traffic, then manually remediate each instance",
         "D": "Configure a Network ACL to block outbound TCP port 80 from the subnets containing the EC2 instances"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Blocking outbound HTTP at the Security Group level prevents instances from making HTTP connections to any destination, but does not specifically enforce HTTPS for AWS API calls and may break legitimate HTTP traffic to other services.",
@@ -72,7 +76,9 @@
         "C": "10 Reserved Instances (c5.2xlarge, 8 vCPUs each) running 24/7",
         "D": "25 Dedicated Instances (c5.xlarge) for the 4-hour processing window"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "On-Demand instances provide the required compute but at full price; for a fault-tolerant 4-hour batch job, On-Demand is significantly more expensive than Spot.",
@@ -102,7 +108,9 @@
         "C": "Create a Permission Boundary policy that excludes iam:* and require all new IAM Roles to have this boundary attached at creation time via an IAM condition",
         "D": "Configure AWS Config with a custom rule to detect IAM Roles with iam:* permissions and send alerts to the security team"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Weekly manual reviews are a reactive, operationally expensive process; non-compliant roles could operate with excessive permissions for up to a week before being caught.",
@@ -132,7 +140,9 @@
         "C": "Create a Lambda function that runs monthly to check all instances across all accounts and installs the SSM Agent via SSH",
         "D": "Configure AWS Config in each account to detect instances without SSM Agent and trigger a Systems Manager Automation document for remediation"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Manually updating Launch Templates across 5 accounts (with monthly new accounts) requires ongoing manual work per account and doesn't address existing running instances.",
@@ -162,7 +172,9 @@
         "C": "The call succeeds — Permission Boundaries only restrict IAM Users, not Roles",
         "D": "The call is denied — Action: * is not a valid IAM policy statement"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "The identity policy allows all actions, but effective permissions require the action to be allowed by both the identity policy AND the Permission Boundary; dynamodb:PutItem is not in the boundary.",
@@ -192,7 +204,9 @@
         "C": "The instances in the AZ with the most instances, prioritizing the oldest Launch Template version, then the instance closest to the next billing hour",
         "D": "Three random instances are selected from across all AZs"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "The default termination policy does not simply target the oldest instances first; it uses a multi-step process starting with AZ balance.",
@@ -222,7 +236,9 @@
         "C": "Store the credentials in an S3 bucket with server-side encryption and have the application download them at startup",
         "D": "Use AWS KMS to encrypt the credentials in the config file; rotate the encryption key monthly"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Base64 encoding is not encryption; encoded credentials are trivially decoded. Storing credentials in User Data makes them accessible to anyone with EC2 DescribeInstanceAttribute API access.",
@@ -252,7 +268,9 @@
         "C": "Use AWS Config with the 'encrypted-volumes' rule to detect unencrypted volumes and trigger automatic remediation",
         "D": "Create a Lambda function triggered by EC2 instance launch events that checks for unencrypted volumes and replaces them"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "IAM policy conditions restricting AMI usage can enforce specific encrypted AMIs but require maintaining an approved AMI list and updating it regularly; it is operationally complex.",
@@ -282,7 +300,9 @@
         "C": "Grant all developers production access through IAM Groups with AdministratorAccess",
         "D": "Create one shared IAM User per team (frontend, backend, ops) with AdministratorAccess to reduce the number of shared accounts"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Individual IAM Users with permanent AdministratorAccess creates persistent privileged access that violates the principle of least privilege and increases the attack surface.",
@@ -312,7 +332,9 @@
         "C": "Use C-series instances (compute-optimized) for production and M-series (general-purpose) for development, based on the CPU-intensive nature of the monolithic application",
         "D": "Use M-series instances (general-purpose) for both; m6i.16xlarge for production (64 vCPU, 256 GB RAM), m6i.xlarge for development (4 vCPU, 16 GB RAM)"
       },
-      "correctAnswer": "D",
+      "correctAnswer": [
+        "D"
+      ],
       "explanations": {
         "A": {
           "description": "T3 instances are burstable with a vCPU range up to 2-8 vCPUs per instance; they cannot provide 64 vCPUs on a single instance and are not designed for sustained high-compute workloads.",
@@ -342,7 +364,9 @@
         "C": "Use a Step Scaling Policy with a CloudWatch alarm on the SQS ApproximateNumberOfMessagesVisible metric",
         "D": "Use a Target Tracking Scaling Policy with a custom CloudWatch metric representing the number of SQS messages per EC2 instance (queue depth / fleet size)"
       },
-      "correctAnswer": "D",
+      "correctAnswer": [
+        "D"
+      ],
       "explanations": {
         "A": {
           "description": "CPU-based target tracking is the default metric but does not reflect queue backlog; SQS message processing may not always correlate with CPU utilization, leading to over- or under-scaling.",
@@ -372,7 +396,9 @@
         "C": "Add a Deny policy to the IAM Role that explicitly denies the over-broad permissions",
         "D": "Apply an SCP to the AWS account that restricts the specific permissions that are too broad"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Creating a new role with restricted permissions and updating the instance profile is a valid but disruptive approach that requires coordination with the team managing the role.",
@@ -402,7 +428,9 @@
         "C": "Apply an SCP with a Deny on iam:* unless aws:ViaAWSService is true or aws:SourceVpc is one of the company VPCs, ensuring all direct IAM calls originate from within the VPCs",
         "D": "Create Security Group rules on all EC2 instances that allow only HTTPS outbound to the IAM service endpoint IP ranges"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "An SCP denying iam:* unless aws:SourceVpc matches the VPCs would block IAM calls that come through AWS services on behalf of users (aws:ViaAWSService), breaking legitimate service-initiated IAM calls.",
@@ -432,7 +460,9 @@
         "C": "Tag prod resources with Environment=Production; apply an IAM policy to all dev roles that denies access to any resource tagged Environment=Production using the aws:ResourceTag condition key",
         "D": "Move prod resources to a separate AWS account and use cross-account IAM Roles with explicit allow lists"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Adding individual Deny statements for every prod resource ARN to every dev role requires updating all dev roles whenever prod resources are added or removed — highly operationally expensive.",
@@ -462,7 +492,9 @@
         "C": "The EC2 instances are in a different Region than the ALB",
         "D": "The ALB SSL certificate has expired, causing HTTPS requests to fail with timeout errors"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "ALBs do not have Security Groups that would block their own outbound traffic to registered targets; the ALB's SG must allow outbound traffic to target instances, but this would cause connection-refused errors, not 504 timeouts.",
@@ -492,7 +524,9 @@
         "C": "Create an IAM Role in the company's account with read-only permissions; use AWS STS to generate temporary credentials (AssumeRole) for a 7-day duration; provide those credentials directly to the auditors",
         "D": "Grant the auditors read-only access to the company's AWS Organizations management account, from which they can browse all member accounts"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Creating temporary IAM Users requires managing user lifecycle, ensuring deletion after 7 days, and creates long-term credentials until deleted — violating the no-IAM-Users and automatic-expiry requirements.",
@@ -522,7 +556,9 @@
         "C": "Create a new VPC in eu-central-1 and remove the developer's ability to create VPCs in us-east-1",
         "D": "Send an email communication to all developers informing them of the new region requirement"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "CLI configuration defaults can be overridden by developers using the --region flag or by changing the configuration at any time; this is not an enforceable technical control.",
@@ -552,7 +588,9 @@
         "C": "Create an IAM User in the Production account with S3 read access and store the credentials in the Lambda function's environment variables",
         "D": "Enable S3 Cross-Region Replication to copy the production bucket to the development account, then read from the replicated bucket"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Making the S3 bucket publicly readable exposes all objects in the bucket to anyone on the internet, not just the Lambda function — a significant security violation for a production bucket.",
@@ -582,7 +620,9 @@
         "C": "Change the ASG health check type from EC2 to ELB so the ALB determines when instances are healthy",
         "D": "Reduce the application initialization time to under 30 seconds to match the current grace period"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Launch Template User Data script timeout is not a configurable parameter in Launch Templates; User Data runs until the script exits, and its duration does not affect health check timing.",
@@ -612,7 +652,9 @@
         "C": "Download the IAM Credential Report monthly and manually deactivate expired keys through the IAM console",
         "D": "Apply an SCP that prevents IAM Users from using access keys older than 90 days"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Relying on 200 users to manually rotate keys is a soft control with no enforcement mechanism; compliance requires automated enforcement, not user discipline.",
@@ -642,7 +684,9 @@
         "C": "Security Group references automatically encrypt traffic between services",
         "D": "Security Group references replace the need for NACLs in the architecture"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Security Groups do not bypass the VPC router; they are evaluated at the network interface level and do not affect the routing path.",
@@ -672,7 +716,9 @@
         "C": "Apply an IAM policy to the EC2 instance role that restricts internet API calls",
         "D": "Enable VPC Flow Logs to detect downloads from unapproved sources and manually block them"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "NACLs can restrict outbound traffic to specific IPs, but they require manual maintenance of IP ranges, are stateless (requiring both inbound and outbound rules), and are subnet-wide affecting all instances in the subnet.",
@@ -702,7 +748,9 @@
         "C": "Request a Spot block (defined duration instance) for 12 hours to ensure the instance runs for the full duration",
         "D": "Configure an EC2 Auto Scaling Group with instance refresh enabled to replace instances automatically from S3 checkpoints"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Spot Instances cannot have termination protection applied; termination protection only applies to On-Demand and Reserved Instances and prevents manual termination, not AWS Spot reclamation.",
@@ -732,7 +780,9 @@
         "C": "Enable EC2 Termination Protection on the production instance; this requires an explicit DisableApiTermination API call before the instance can be terminated, adding a friction layer",
         "D": "Move the production EC2 instance to a separate VPC that junior developers cannot access"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Removing both TerminateInstances and StopInstances prevents developers from performing legitimate maintenance operations (stopping for type changes, OS maintenance, etc.).",
@@ -762,7 +812,9 @@
         "C": "EC2 Spot Instances with aggressive scaling policies, because they provide the lowest cost for variable workloads",
         "D": "EC2 Reserved Instances, because they guarantee capacity for sudden spikes"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "EC2 with Auto Scaling can scale but has scaling delays (minutes, not seconds for new instance launch, bootstrap, and health check), making it unsuitable for instantaneous 0-to-10K RPS spikes.",
@@ -792,7 +844,9 @@
         "C": "Enforce 1-hour maximum session duration through IAM Identity Center session management settings",
         "D": "Create an IAM policy with a condition that checks session age and denies access after 60 minutes using the aws:TokenIssueTime key"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Password policies set requirements for password complexity and rotation intervals (e.g., days, not minutes); they cannot enforce session inactivity timeouts.",
@@ -822,7 +876,9 @@
         "C": "Enable T3 Unlimited mode for all instances to maximize CPU performance",
         "D": "Move all instances to Reserved Instances with No Upfront payment to avoid commitment"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Converting 24/7 customer-facing On-Demand instances to Spot creates interruption risk. Terminating under-utilized instances without investigation may disrupt dependent services.",
@@ -852,7 +908,9 @@
         "C": "Use CloudFormation drift detection to monitor for any unexpected IAM Role changes",
         "D": "Create a separate CloudFormation stack for IAM resources and restrict who can run that stack"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Removing iam:CreateRole entirely prevents the CloudFormation stack from creating any IAM Roles, which may be required for the application's service roles and instance profiles.",
@@ -882,7 +940,9 @@
         "C": "The EBS volume attached to the instance must have read permissions enabled",
         "D": "The EC2 instance must have Enhanced Networking enabled to handle public traffic"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "IAM Roles on EC2 instances grant permissions to call AWS APIs (S3, DynamoDB, etc.); they have no role in allowing or blocking inbound HTTP traffic from the internet.",
@@ -912,7 +972,9 @@
         "C": "Store logs on additional EC2 instance store volumes for faster I/O performance",
         "D": "Create an Amazon EFS file system and mount it to all EC2 instances for centralized log storage"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "EBS volumes are expensive block storage ($0.08/GB for gp3) designed for low-latency, random I/O workloads; using EBS for 2 years of log archives is significantly more expensive than S3 ($0.023/GB standard).",
@@ -942,7 +1004,9 @@
         "C": "Use AWS Config to detect unpatched instances and send notifications to the operations team",
         "D": "Create an AMI with all patches applied monthly and use instance refresh to replace all running instances"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Cron-based yum update applies all available patches without approval control, doesn't integrate with compliance reporting, and requires manual deployment to each instance.",
@@ -972,7 +1036,9 @@
         "C": "Stop the instance, modify it to a different instance type, and restart to reset the network",
         "D": "Take an EBS snapshot, create a new instance from the snapshot, and diagnose from there"
       },
-      "correctAnswer": "B",
+      "correctAnswer": [
+        "B"
+      ],
       "explanations": {
         "A": {
           "description": "Adding a Security Group rule for port 22 and SSHing requires the instance's network stack to be functional and the SSH daemon to be running. If the instance is unresponsive due to a network or OS issue, SSH would also fail.",
@@ -1002,7 +1068,9 @@
         "C": "Set min=6, max=6, desired=6 with the ASG configured across all 3 AZs; the ASG uses AZ rebalancing by default to maintain even distribution; a replacement is launched in the same AZ as the terminated instance",
         "D": "Use EC2 Auto Recovery instead of an ASG to recover failed instances in the same AZ"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "min=max=desired=6 keeps capacity fixed. However, the question asks specifically about maintaining 2-per-AZ and launching replacements in the same AZ — these are behaviors that require the ASG to be configured across the 3 AZs, which is what Option C clarifies.",
@@ -1032,7 +1100,9 @@
         "C": "EBS volumes encrypted with CMK; HTTPS listener on ALB with a TLS 1.2+ security policy (e.g., ELBSecurityPolicy-TLS13-1-2-2021-06); application-level logging to CloudWatch Logs or ALB access logs for API call tracking",
         "D": "Instance store volumes (inherently unreadable when detached); HTTP between ALB and instances (encrypted at edge only); AWS Config for API logging"
       },
-      "correctAnswer": "C",
+      "correctAnswer": [
+        "C"
+      ],
       "explanations": {
         "A": {
           "description": "Default AWS-managed keys don't meet the customer-managed key requirement; HTTP (not HTTPS) violates TLS in-transit requirement; CloudWatch Logs on instances doesn't log API calls at the ALB level.",

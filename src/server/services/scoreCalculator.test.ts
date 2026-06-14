@@ -11,8 +11,8 @@ import type { SnapshotQuestion } from "@/domain/schemas";
  * Pure, deterministic, no IO. These tests pin every outcome rule and the rounding.
  */
 
-/** Build a single-choice snapshot question (correctAnswer defaults to "A"). */
-function q(id: number, correctAnswer = "A"): SnapshotQuestion {
+/** Build a single-choice snapshot question (correctAnswer defaults to ["A"]). */
+function q(id: number, correctAnswer: string | string[] = ["A"]): SnapshotQuestion {
   return {
     id,
     order: id,
@@ -34,7 +34,7 @@ function ans(
 
 describe("gradeSession — outcomes", () => {
   it("all correct → 100%", () => {
-    const snap = [q(1, "A"), q(2, "B"), q(3, "C")];
+    const snap = [q(1, ["A"]), q(2, ["B"]), q(3, ["C"])];
     const answers = [ans(1, ["A"]), ans(2, ["B"]), ans(3, ["C"])];
     const { totals } = gradeSession(snap, answers);
     expect(totals).toMatchObject({
@@ -48,7 +48,7 @@ describe("gradeSession — outcomes", () => {
   });
 
   it("all wrong → 0%", () => {
-    const snap = [q(1, "A"), q(2, "A")];
+    const snap = [q(1, ["A"]), q(2, ["A"])];
     const answers = [ans(1, ["B"]), ans(2, ["C"])];
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals).toMatchObject({ correct: 0, incorrect: 2, scorePercent: 0 });
@@ -56,7 +56,7 @@ describe("gradeSession — outcomes", () => {
   });
 
   it("mixed correct/incorrect", () => {
-    const snap = [q(1, "A"), q(2, "B"), q(3, "C"), q(4, "D")];
+    const snap = [q(1, ["A"]), q(2, ["B"]), q(3, ["C"]), q(4, ["D"])];
     const answers = [
       ans(1, ["A"]), // correct
       ans(2, ["A"]), // incorrect
@@ -72,7 +72,7 @@ describe("gradeSession — outcomes", () => {
   });
 
   it("unanswered (empty selection, not revealed) counts as unanswered, not incorrect", () => {
-    const snap = [q(1, "A"), q(2, "B")];
+    const snap = [q(1, ["A"]), q(2, ["B"])];
     const answers = [ans(1, ["A"]), ans(2, [])];
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals).toMatchObject({
@@ -87,17 +87,26 @@ describe("gradeSession — outcomes", () => {
   });
 
   it("a missing answer row is treated as unanswered", () => {
-    const snap = [q(1, "A"), q(2, "B")];
+    const snap = [q(1, ["A"]), q(2, ["B"])];
     const answers = [ans(1, ["A"])]; // no row for q2
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals.unanswered).toBe(1);
     expect(perQuestion[1]!.outcome).toBe("unanswered");
   });
+
+  it("accepts the legacy string-shaped correctAnswer (backward-compat shim) and grades correctly", () => {
+    // Pre-ADR-13 snapshots may still hold a string for `single` questions.
+    const snap = [q(1, "A")];
+    const answers = [ans(1, ["A"])];
+    const { totals } = gradeSession(snap, answers);
+    expect(totals.correct).toBe(1);
+    expect(totals.scorePercent).toBe(100);
+  });
 });
 
 describe("gradeSession — revealed ('gave up') semantics", () => {
   it("revealed counts as revealed, NOT incorrect, and is excluded from correct", () => {
-    const snap = [q(1, "A"), q(2, "B"), q(3, "C")];
+    const snap = [q(1, ["A"]), q(2, ["B"]), q(3, ["C"])];
     const answers = [
       ans(1, ["A"]), // correct
       ans(2, [], true), // revealed, no selection
@@ -117,7 +126,7 @@ describe("gradeSession — revealed ('gave up') semantics", () => {
 
   it("revealed pulls the percentage down (denominator is full total, not just graded)", () => {
     // 1 correct out of 2 questions, the other revealed → 1/2 = 50%, NOT 100%.
-    const snap = [q(1, "A"), q(2, "B")];
+    const snap = [q(1, ["A"]), q(2, ["B"])];
     const answers = [ans(1, ["A"]), ans(2, ["B"], true)];
     const { totals } = gradeSession(snap, answers);
     expect(totals.scorePercent).toBe(50);
@@ -126,7 +135,7 @@ describe("gradeSession — revealed ('gave up') semantics", () => {
   });
 
   it("revealed-but-correct-guess still does not count as correct", () => {
-    const snap = [q(1, "A")];
+    const snap = [q(1, ["A"])];
     const answers = [ans(1, ["A"], true)]; // would be correct, but gave up
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals.correct).toBe(0);
@@ -145,7 +154,7 @@ describe("gradeSession — selection edge cases", () => {
   });
 
   it("multiple selected options for a single-type question is NOT correct", () => {
-    const snap = [q(1, "A")];
+    const snap = [q(1, ["A"])];
     const answers = [ans(1, ["A", "B"])];
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals.correct).toBe(0);
@@ -168,38 +177,97 @@ describe("gradeSession — selection edge cases", () => {
 
 describe("gradeSession — rounding (half-up via Math.round, documented)", () => {
   it("rounds 1/3 to 33", () => {
-    const snap = [q(1, "A"), q(2, "A"), q(3, "A")];
+    const snap = [q(1, ["A"]), q(2, ["A"]), q(3, ["A"])];
     const answers = [ans(1, ["A"]), ans(2, ["B"]), ans(3, ["B"])];
     expect(gradeSession(snap, answers).totals.scorePercent).toBe(33);
   });
 
   it("rounds 2/3 to 67", () => {
-    const snap = [q(1, "A"), q(2, "A"), q(3, "A")];
+    const snap = [q(1, ["A"]), q(2, ["A"]), q(3, ["A"])];
     const answers = [ans(1, ["A"]), ans(2, ["A"]), ans(3, ["B"])];
     expect(gradeSession(snap, answers).totals.scorePercent).toBe(67);
   });
 
   it("rounds 1/8 (12.5) half-up to 13", () => {
-    const snap = Array.from({ length: 8 }, (_, i) => q(i + 1, "A"));
+    const snap = Array.from({ length: 8 }, (_, i) => q(i + 1, ["A"]));
     const answers = snap.map((sq, i) => ans(sq.id, i === 0 ? ["A"] : ["B"]));
     expect(gradeSession(snap, answers).totals.scorePercent).toBe(13);
   });
 });
 
-describe("gradeSession — structure ready for multi (future branch)", () => {
-  it("an unsupported question type at grade time scores 0, never throws", () => {
-    const multi: SnapshotQuestion = {
+describe("gradeSession — multi (set equality, ADR-13)", () => {
+  function multiQ(id: number, correctAnswer: string[]): SnapshotQuestion {
+    return {
+      id,
+      order: id,
+      questionType: "multi",
+      questionText: `MQ${id}`,
+      options: { A: "a", B: "b", C: "c", D: "d" },
+      correctAnswer,
+    };
+  }
+
+  it("a matching set selection is correct (100%)", () => {
+    const { totals, perQuestion } = gradeSession(
+      [multiQ(1, ["A", "C"])],
+      [ans(1, ["A", "C"])],
+    );
+    expect(perQuestion[0]!.outcome).toBe("correct");
+    expect(perQuestion[0]!.isCorrect).toBe(true);
+    expect(totals.scorePercent).toBe(100);
+  });
+
+  it("a partial selection is incorrect (strict set equality, no partial credit)", () => {
+    const { totals, perQuestion } = gradeSession(
+      [multiQ(1, ["A", "B"])],
+      [ans(1, ["A"])],
+    );
+    expect(perQuestion[0]!.outcome).toBe("incorrect");
+    expect(perQuestion[0]!.isCorrect).toBe(false);
+    expect(totals.scorePercent).toBe(0);
+  });
+
+  it("an extra selection (user picked 1 too many) is incorrect", () => {
+    const { perQuestion } = gradeSession(
+      [multiQ(1, ["A", "B"])],
+      [ans(1, ["A", "B", "C"])],
+    );
+    expect(perQuestion[0]!.outcome).toBe("incorrect");
+  });
+
+  it("a different order but the same set is correct (set equality, not sequence)", () => {
+    const { perQuestion } = gradeSession(
+      [multiQ(1, ["A", "B"])],
+      [ans(1, ["B", "A"])],
+    );
+    expect(perQuestion[0]!.outcome).toBe("correct");
+  });
+
+  it("an empty selection on a multi question is unanswered", () => {
+    const { totals, perQuestion } = gradeSession(
+      [multiQ(1, ["A", "B"])],
+      [ans(1, [])],
+    );
+    expect(perQuestion[0]!.outcome).toBe("unanswered");
+    expect(perQuestion[0]!.isCorrect).toBeNull();
+    expect(totals.scorePercent).toBe(0);
+  });
+});
+
+describe("gradeSession — ordered (still unsupported, defensive floor)", () => {
+  it("an ordered-type question at grade time scores 0, never throws", () => {
+    const ordered: SnapshotQuestion = {
       id: 1,
       order: 1,
-      questionType: "multi",
-      questionText: "pick all",
-      options: { A: "a", B: "b" },
-      correctAnswer: ["A", "B"],
+      questionType: "ordered",
+      questionText: "rank",
+      options: { A: "a", B: "b", C: "c" },
+      correctAnswer: ["A", "B", "C"],
     };
     // Engine refuses to create these; ScoreCalculator must still be total/defensive.
     const { totals, perQuestion } = gradeSession(
-      [multi],
-      [ans(1, ["A", "B"])],
+      [ordered],
+      [ans(1, ["A", "B", "C"])],
     );
     expect(perQuestion[0]!.outcome).toBe("incorrect");
     expect(totals.scorePercent).toBe(0);

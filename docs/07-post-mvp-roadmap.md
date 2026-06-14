@@ -22,7 +22,7 @@
 | Feature | What | Hook already in place |
 |---|---|---|
 | **Spaced repetition engine** | Track per-question performance; surface weak questions more often. | `question_performance` table designed (§3.2 data model); StatsService extends. |
-| **Multi-select question type** | "Select all that apply" (common in AWS SAA). | `questionType: "multi"`, `correctAnswer` as array, ScoreCalculator set-equality + partial credit already specced. |
+| ~~**Multi-select question type**~~ | ~~"Select all that apply" (common in AWS SAA).~~ | **DONE — in-MVP as of ADR-13.** `questionType: "multi"` is fully supported; the grader uses set equality (strict, no partial credit) on a normalised `string[]`. Every question renders as a checkbox group, regardless of `questionType` — the user is never told whether a question is single or multi (pedagogical: trains choice elimination). |
 | **Interview / freetext mode** | Open-ended, no auto-grade, self-rated after revealing a model answer. | `questionType: "freetext"`; reveal flow + self-rating reuse the give-up + confidence machinery. |
 | **Question-linked notes** | Per-question notes that resurface on future appearances. | `question_notes` table designed; notes UI generalises from result-level notes. |
 | **Tag system** | Filter exams by topic tag across sets. | `tags`/`set_tags` tables designed; history filters extend. |

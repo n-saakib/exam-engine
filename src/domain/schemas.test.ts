@@ -19,7 +19,8 @@ describe("question set schema", () => {
         id: 1,
         questionText: "Q1?",
         options: { A: "a", B: "b", C: "c", D: "d" },
-        correctAnswer: "B",
+        // ADR-13: unified array shape.
+        correctAnswer: ["B"],
         explanations: {
           A: { description: "x", reason: "y" },
           B: { description: "x", reason: "y" },
@@ -46,7 +47,7 @@ describe("question set schema", () => {
   it("hard-errors when correctAnswer is not an option key", () => {
     const bad = {
       ...goodSet,
-      questions: [{ ...goodSet.questions[0], correctAnswer: "Z" }],
+      questions: [{ ...goodSet.questions[0], correctAnswer: ["Z"] }],
     };
     const result = validateQuestionSet(bad);
     expect(result.ok).toBe(false);
@@ -57,7 +58,7 @@ describe("question set schema", () => {
   it("hard-errors on fewer than 2 options", () => {
     const bad = {
       ...goodSet,
-      questions: [{ ...goodSet.questions[0], options: { A: "a" }, correctAnswer: "A" }],
+      questions: [{ ...goodSet.questions[0], options: { A: "a" }, correctAnswer: ["A"] }],
     };
     expect(validateQuestionSet(bad).ok).toBe(false);
   });
@@ -70,6 +71,18 @@ describe("question set schema", () => {
     expect(validateQuestionSet(bad).ok).toBe(false);
   });
 
+  it("hard-errors on a single-type question whose correctAnswer has more than 1 key", () => {
+    const bad = {
+      ...goodSet,
+      questions: [{ ...goodSet.questions[0], correctAnswer: ["A", "B"] }],
+    };
+    const result = validateQuestionSet(bad);
+    expect(result.ok).toBe(false);
+    expect(
+      result.diagnostics.some((d) => d.severity === "error" && d.message.includes("single-type")),
+    ).toBe(true);
+  });
+
   it("warns (not errors) on missing explanation keys", () => {
     const set = {
       ...goodSet,
@@ -80,7 +93,7 @@ describe("question set schema", () => {
     expect(result.diagnostics.some((d) => d.severity === "warning")).toBe(true);
   });
 
-  it("catalogues but warns on an unsupported question type", () => {
+  it("accepts a multi-type question with no warning (engine + grader support it)", () => {
     const set = {
       ...goodSet,
       questions: [
@@ -93,11 +106,38 @@ describe("question set schema", () => {
     };
     const result = validateQuestionSet(set);
     expect(result.ok).toBe(true);
+    expect(result.diagnostics.some((d) => d.severity === "warning")).toBe(false);
+  });
+
+  it("rejects the `ordered` question type as unsupported (warning, not error)", () => {
+    const set = {
+      ...goodSet,
+      questions: [
+        {
+          ...goodSet.questions[0],
+          questionType: "ordered",
+          correctAnswer: ["A", "B", "C"],
+        },
+      ],
+    };
+    const result = validateQuestionSet(set);
+    expect(result.ok).toBe(true);
     expect(
       result.diagnostics.some(
         (d) => d.severity === "warning" && d.message.includes("unsupported question type"),
       ),
     ).toBe(true);
+  });
+
+  it("accepts the legacy string-shaped correctAnswer (backward-compat shim)", () => {
+    const set = {
+      ...goodSet,
+      questions: [{ ...goodSet.questions[0], correctAnswer: "B" }],
+    };
+    const result = validateQuestionSet(set);
+    // Permissive: the schema still accepts the string for historical JSON
+    // files and snapshots (see ADR-13).
+    expect(result.ok).toBe(true);
   });
 });
 

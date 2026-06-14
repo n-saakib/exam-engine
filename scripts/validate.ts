@@ -3,6 +3,12 @@
  * schema (reusing the shared zod schema — no duplicate rules). Run via
  * `npm run validate`. Exit code 1 if any file has a hard error; warnings are
  * reported but don't fail the run. Pure node/tsx — never touches the DB.
+ *
+ * Flags:
+ *   --strict-correct-answer  Reject any file whose `correctAnswer` is a string
+ *                            (post ADR-13 migration, every JSON file MUST use
+ *                            a string[]). Default mode stays permissive so any
+ *                            in-flight migration can validate file-by-file.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -12,6 +18,8 @@ const EXAMS_ROOT = path.resolve(
   process.cwd(),
   process.env.EXAMS_ROOT?.trim() || "./Exams",
 );
+
+const STRICT_CORRECT_ANSWER = process.argv.includes("--strict-correct-answer");
 
 function findJsonFiles(dir: string): string[] {
   const out: string[] = [];
@@ -46,8 +54,24 @@ function main(): void {
     }
 
     const result = validateQuestionSet(raw);
-    const errors = result.diagnostics.filter((d) => d.severity === "error");
-    const warnings = result.diagnostics.filter((d) => d.severity === "warning");
+    const errors = [...result.diagnostics.filter((d) => d.severity === "error")];
+    const warnings = [...result.diagnostics.filter((d) => d.severity === "warning")];
+
+    // Strict mode (opt-in): every `correctAnswer` MUST be an array of ≥1 key.
+    if (STRICT_CORRECT_ANSWER) {
+      const parsed = result.data;
+      if (parsed) {
+        parsed.questions.forEach((q, idx) => {
+          if (typeof q.correctAnswer === "string") {
+            errors.push({
+              severity: "error",
+              path: `questions.${idx}.correctAnswer`,
+              message: `correctAnswer must be an array of keys (run scripts/migrate-correctAnswer.ts --write to migrate)`,
+            });
+          }
+        });
+      }
+    }
 
     if (errors.length > 0) {
       errorCount += errors.length;
@@ -63,8 +87,9 @@ function main(): void {
     }
   }
 
+  const mode = STRICT_CORRECT_ANSWER ? " [strict-correct-answer]" : "";
   console.log(
-    `\n${files.length} file(s): ${errorCount} error(s), ${warningCount} warning(s).`,
+    `\n${files.length} file(s)${mode}: ${errorCount} error(s), ${warningCount} warning(s).`,
   );
   if (errorCount > 0) process.exitCode = 1;
 }

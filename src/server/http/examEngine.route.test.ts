@@ -44,9 +44,11 @@ function makeSet(name: string, opts: { questions?: number; type?: string } = {})
     ...(opts.type ? { questionType: opts.type } : {}),
     questionText: `Question ${i + 1} of ${name}`,
     options: { A: "alpha", B: "bravo", C: "charlie", D: "delta" },
-    // Correct answer cycles A,B,C,D so tests can construct known scores. For a
-    // (schema-valid) multi set the correctAnswer must be a non-empty array.
-    correctAnswer: isMulti ? ["A", "B"] : ["A", "B", "C", "D"][i % 4],
+    // Correct answer cycles A,B,C,D so tests can construct known scores. For
+    // multi, the answer is always ["A","B"]; for single, the answer is a
+    // length-1 array (post-ADR-13 unified shape). `ordered` and `freetext`
+    // are 422-rejected at create time, so they never reach the grader here.
+    correctAnswer: isMulti ? ["A", "B"] : [["A"], ["B"], ["C"], ["D"]][i % 4],
     explanations: {
       A: { description: "A", reason: "ra" },
       B: { description: "B", reason: "rb" },
@@ -170,11 +172,21 @@ describe("POST /api/sessions — create", () => {
     expect(a.questions.map((q) => q.id)).toEqual(b.questions.map((q) => q.id));
   });
 
-  it("422 UNSUPPORTED_QUESTION_TYPE for a multi set", async () => {
+  it("creates a session for a multi set (multi is supported post ADR-13)", async () => {
     writeSet("multi", { type: "multi" });
     await scan();
     const res = await POST_create(
       createReq({ quesPath: QUES_PATH, setId: "set-multi" }),
+      emptyCtx,
+    );
+    expect(res.status).toBe(201);
+  });
+
+  it("422 UNSUPPORTED_QUESTION_TYPE for an `ordered` set (still catalogue-only)", async () => {
+    writeSet("ordered", { type: "ordered" });
+    await scan();
+    const res = await POST_create(
+      createReq({ quesPath: QUES_PATH, setId: "set-ordered" }),
       emptyCtx,
     );
     expect(res.status).toBe(422);
@@ -243,7 +255,7 @@ describe("PATCH /api/sessions/:id — autosave", () => {
     };
     const q1 = dto.questions.find((q) => q.id === 1)!;
     const q2 = dto.questions.find((q) => q.id === 2)!;
-    expect(q1.correctAnswer).toBe("A");
+    expect(q1.correctAnswer).toEqual(["A"]);
     expect(q1.Tips).toBeDefined();
     expect(q2.correctAnswer).toBeUndefined();
   });
@@ -476,8 +488,8 @@ describe("SNAPSHOT INTEGRITY regression (09 §7.4) — REQUIRED", () => {
 
     // ── Tamper: flip the correct answers in the file, then DELETE it entirely. ──
     const tampered = makeSet("snap", { questions: 2 });
-    tampered.questions[0]!.correctAnswer = "D"; // was A
-    tampered.questions[1]!.correctAnswer = "A"; // was B (would make q2 'correct')
+    tampered.questions[0]!.correctAnswer = ["D"]; // was ["A"]
+    tampered.questions[1]!.correctAnswer = ["A"]; // was ["B"] (would make q2 'correct')
     tampered.questions[0]!.questionText = "TAMPERED TEXT";
     fs.writeFileSync(file, JSON.stringify(tampered));
     fs.rmSync(file); // gone from disk entirely
@@ -501,10 +513,10 @@ describe("SNAPSHOT INTEGRITY regression (09 §7.4) — REQUIRED", () => {
     expect(results.summary).toMatchObject({ correct: 1, incorrect: 1, total: 2, scorePercent: 50 });
     const q1 = results.questions.find((q) => q.id === 1)!;
     const q2 = results.questions.find((q) => q.id === 2)!;
-    expect(q1.correctAnswer).toBe("A"); // snapshot value, NOT tampered "D"
+    expect(q1.correctAnswer).toEqual(["A"]); // snapshot value, NOT tampered "D"
     expect(q1.questionText).not.toBe("TAMPERED TEXT");
     expect(q1.outcome).toBe("correct");
-    expect(q2.correctAnswer).toBe("B"); // snapshot value, NOT tampered "A"
+    expect(q2.correctAnswer).toEqual(["B"]); // snapshot value, NOT tampered "A"
     expect(q2.outcome).toBe("incorrect");
   });
 });

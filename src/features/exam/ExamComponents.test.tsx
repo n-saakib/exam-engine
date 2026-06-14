@@ -147,16 +147,19 @@ describe("<ProgressBar>", () => {
 });
 
 describe("<QuestionPanel> options", () => {
-  it("renders a radio group and records a single-choice selection", () => {
+  it("renders a checkbox group (ADR-13: every question is checkboxes) and records an appended selection", () => {
     const store = makeStore();
     wrap(<QuestionPanel store={store} progressiveReveal={false} />);
 
-    const optionGroup = screen.getByRole("radiogroup", { name: /answer options/i });
-    const radios = within(optionGroup).getAllByRole("radio");
-    expect(radios.length).toBe(4);
-    fireEvent.click(radios[0]); // A
+    const optionGroup = screen.getByTestId("option-list");
+    const checkboxes = within(optionGroup).getAllByRole("checkbox");
+    expect(checkboxes.length).toBe(4);
+    fireEvent.click(checkboxes[0]); // A
     expect(store.getState().answers[1].selected).toEqual(["A"]);
-    expect(radios[0]).toHaveAttribute("aria-checked", "true");
+    expect(checkboxes[0]).toHaveAttribute("aria-checked", "true");
+    // A second click appends (not replaces) — multi-select semantics.
+    fireEvent.click(checkboxes[1]); // B
+    expect(store.getState().answers[1].selected).toEqual(["A", "B"]);
   });
 
   it("shows per-option correctness styling after reveal", async () => {
@@ -165,7 +168,8 @@ describe("<QuestionPanel> options", () => {
     revealed.questions[0] = {
       ...revealed.questions[0],
       answer: { ...revealed.questions[0].answer, selected: ["A"], revealed: true },
-      correctAnswer: "C",
+      // ADR-13: correctAnswer is now an array.
+      correctAnswer: ["C"],
       explanations: {
         C: { description: "right", reason: "because" },
         A: { description: "nope", reason: "wrong" },
@@ -180,9 +184,9 @@ describe("<QuestionPanel> options", () => {
     });
 
     wrap(<QuestionPanel store={store} progressiveReveal={false} />);
-    const correct = screen.getByRole("radio", { name: /Cherry/ });
+    const correct = screen.getByRole("checkbox", { name: /Cherry/ });
     expect(correct).toHaveAttribute("data-correct", "true");
-    const wrong = screen.getByRole("radio", { name: /Apple/ });
+    const wrong = screen.getByRole("checkbox", { name: /Apple/ });
     expect(wrong).toHaveAttribute("data-incorrect", "true");
   });
 });
@@ -193,7 +197,8 @@ describe("<RevealedDetail> progressive reveal", () => {
     return {
       ...q,
       answer: { ...q.answer, revealed: true },
-      correctAnswer: "C" as const,
+      // ADR-13: correctAnswer is now an array.
+      correctAnswer: ["C"],
       explanations: {
         C: { description: "Cherry", reason: "it is correct" },
         A: { description: "Apple", reason: "it is wrong" },

@@ -354,6 +354,7 @@ stateDiagram-v2
 | ADR-10 | **`better-sqlite3` in Next Node runtime** (`serverExternalPackages` + `globalThis` singleton + `instrumentation.ts` boot) | Synchronous, fast, simplest correct code for one local user; survives HMR | Native build per platform (Node 22 pinned); never edge |
 | ADR-11 | **Timer = client tick + absolute-`elapsedMs` autosave, server-clamped (replace semantics)** | Idempotent autosave; instant UI | Trusts a clamped client value; ~400 ms crash window |
 | ADR-12 | **`instrumentation.register()` runs migrations + boot scan** + lazy `getDb()` guard | Next-idiomatic single boot hook; idempotent, test-safe | Must guard to `NEXT_RUNTIME==='nodejs'` |
+| ADR-13 | **Unified array shape for `correctAnswer`** (always `string[]`) + checkbox-group UI for BOTH `single` and `multi` (user is never told which is which) + set-equality grader on a normalised array | Removes the polymorphic-shape pain across schema, mapper, display, grader; makes `multi` in-MVP; trains choice elimination (pedagogical) | Historical `exam_sessions.question_snapshot` rows still hold strings; the grader normalises both shapes. Picking 2+ options on a `single` question scores `incorrect` (intentional — the user is not prevented from over-selecting). Display components keep a defensive `Array.isArray` branch (cheap) until snapshots age out. |
 
 ADR-9–12 are detailed in [`09-nextjs-refinement.md`](09-nextjs-refinement.md). These mirror and extend the recommendations in the product plan; revisit them in [`05-feature-roadmap.md`](05-feature-roadmap.md) when sequencing.
 

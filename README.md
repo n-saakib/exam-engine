@@ -66,10 +66,12 @@ npm run build && npm run start    # production build + serve on :3000
 explanations over scores · portable (copy `data/certprep.db` + `Exams/` and you've
 backed up everything).
 
-> **MVP scope note:** questions are single-answer multiple choice. A few authored
-> questions encode "select all that apply" as free text (e.g. `"A and B"`); those are
-> intentionally flagged in **Settings → diagnostics** and skipped, since multi-select
-> is a post-MVP item. Run `npm run validate` to see the current diagnostics.
+> **MVP scope note:** every question renders as a **checkbox group**, regardless of
+> whether it's a `single`- or `multi`-type question. The user is never told which
+> is which — this trains choice elimination. The correct answer is always a JSON
+> array of option keys (e.g. `["B"]` for single, `["A","B"]` for multi). The
+> grader uses set equality: selecting more than the correct options on a `single`
+> question scores `incorrect`. See ADR-13 in `docs/01-architecture.md`.
 
 ---
 
@@ -204,7 +206,7 @@ File-naming convention (advisory — the catalogue keys on path + `setId`, not t
         "C": "AWS Secrets Manager",
         "D": "AWS Certificate Manager"
       },
-      "correctAnswer": "B",
+      "correctAnswer": ["B"],
       "explanations": {
         "A": { "description": "KMS", "reason": "Manages encryption keys, not user access." },
         "B": { "description": "IAM", "reason": "Manages users, groups, roles, and permissions." },
@@ -221,10 +223,12 @@ File-naming convention (advisory — the catalogue keys on path + `setId`, not t
 - **difficulty** — one of `Easy` · `Medium` · `Hard` · `Mock` (case-insensitive).
 - **questions[]** — each has an integer **id** (unique within the set),
   **questionText**, **options** (2–6 keys, single uppercase letters),
-  **correctAnswer** (one of the option keys), **explanations** (one `{description, reason}`
+  **correctAnswer** (a JSON **array** of option keys — length 1 for `single`,
+  length ≥ 1 for `multi`; see ADR-13), **explanations** (one `{description, reason}`
   per option; a missing one is a *warning*, not a failure), and an optional **Tips** string.
 
-Validate before committing: `npm run validate`.
+Validate before committing: `npm run validate` (add `--strict-correct-answer` to
+fail any file whose `correctAnswer` is not an array).
 
 ### 3. Wire it into the navigation (`exam-paths.json`)
 

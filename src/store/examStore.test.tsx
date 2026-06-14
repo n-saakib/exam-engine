@@ -74,17 +74,20 @@ afterEach(() => {
 });
 
 describe("ExamStore — state mutations", () => {
-  it("select replaces selection (single-choice) and toggles off when re-clicked", () => {
+  it("select accumulates (multi-select, checkbox) and toggles off when re-clicked", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(fixture());
 
     store.getState().select(1, "A");
     expect(store.getState().answers[1].selected).toEqual(["A"]);
 
-    store.getState().select(1, "B");
+    store.getState().select(1, "B"); // append, not replace
+    expect(store.getState().answers[1].selected).toEqual(["A", "B"]);
+
+    store.getState().select(1, "A"); // toggle off
     expect(store.getState().answers[1].selected).toEqual(["B"]);
 
-    store.getState().select(1, "B"); // re-click clears
+    store.getState().select(1, "B"); // toggle off → empty
     expect(store.getState().answers[1].selected).toEqual([]);
   });
 
@@ -129,7 +132,7 @@ describe("ExamStore — debounced autosave", () => {
 
     store.getState().tick(1000); // elapsed = 1000
     store.getState().select(1, "A");
-    store.getState().select(1, "B"); // latest wins
+    store.getState().select(1, "B"); // appends under multi-select
 
     expect(patch).not.toHaveBeenCalled(); // still within debounce window
 
@@ -140,7 +143,7 @@ describe("ExamStore — debounced autosave", () => {
     expect(path).toBe("/sessions/sess-1");
     expect((opts as { json: Record<string, unknown> }).json).toMatchObject({
       elapsedMs: 1000,
-      answer: { questionId: 1, selected: ["B"] },
+      answer: { questionId: 1, selected: ["A", "B"] },
     });
   });
 
@@ -158,6 +161,23 @@ describe("ExamStore — debounced autosave", () => {
       answer: { questionId: 1, selected: ["A"], flagged: true },
     });
   });
+
+  it("coalesces multiple append-selects into a single flush with the union of selections", async () => {
+    const store = createExamStore();
+    store.getState().loadFromDTO(fixture());
+    store.getState().select(1, "A");
+    store.getState().select(1, "B");
+    store.getState().select(1, "C");
+    store.getState().toggleFlag(1);
+    store.getState().goTo(1);
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS);
+    expect(patch).toHaveBeenCalledTimes(1);
+    const json = (patch.mock.calls[0][1] as { json: Record<string, unknown> }).json;
+    expect(json).toMatchObject({
+      currentIndex: 1,
+      answer: { questionId: 1, selected: ["A", "B", "C"], flagged: true },
+    });
+  });
 });
 
 describe("ExamStore — reveal (forced immediate flush + merge)", () => {
@@ -172,7 +192,8 @@ describe("ExamStore — reveal (forced immediate flush + merge)", () => {
     revealed.questions[0] = {
       ...revealed.questions[0],
       answer: { ...revealed.questions[0].answer, selected: ["A"], revealed: true },
-      correctAnswer: "C",
+      // ADR-13: correctAnswer is now an array.
+      correctAnswer: ["C"],
       explanations: { C: { description: "right", reason: "because" } },
       Tips: "remember C",
     };
@@ -198,7 +219,8 @@ describe("ExamStore — reveal (forced immediate flush + merge)", () => {
     revealed.questions[0] = {
       ...revealed.questions[0],
       answer: { ...revealed.questions[0].answer, revealed: true },
-      correctAnswer: "C",
+      // ADR-13: correctAnswer is now an array.
+      correctAnswer: ["C"],
       explanations: { C: { description: "right", reason: "because" } },
       Tips: "remember C",
     };
@@ -208,7 +230,7 @@ describe("ExamStore — reveal (forced immediate flush + merge)", () => {
 
     const q = store.getState().questions[0];
     expect(store.getState().answers[1].revealed).toBe(true);
-    expect(q.correctAnswer).toBe("C");
+    expect(q.correctAnswer).toEqual(["C"]);
     expect(q.explanations).toEqual({ C: { description: "right", reason: "because" } });
     expect(q.Tips).toBe("remember C");
   });
