@@ -1,0 +1,647 @@
+{
+  "setId": "b7e4d9a2-8c31-4f58-a6d9-2e5f7b1c4a83",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Quick Practice Exam 2",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company (Account A) hires an external auditing firm that operates its own AWS account (Account B). The auditors need read-only access to resources in Account A for a 6-week engagement. Security policy prohibits creating long-term credentials for third parties. What is the MOST secure way to grant this access?",
+      "options": {
+        "A": "Create IAM users in Account A for each auditor and email them their access keys",
+        "B": "Create an IAM role in Account A with a read-only policy and a trust policy that allows Account B to assume it via STS",
+        "C": "Share the Account A root user credentials with the audit firm for the duration of the engagement",
+        "D": "Attach Account A's read-only policies directly to the IAM users in Account B"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Creating dedicated IAM users with long-term access keys and distributing them by email.",
+          "reason": "Incorrect - this creates long-term credentials for third parties, which the security policy prohibits, and emailing access keys is a serious credential-handling anti-pattern."
+        },
+        "B": {
+          "description": "A cross-account IAM role in Account A whose trust policy names Account B as a trusted principal; auditors call sts:AssumeRole to receive temporary credentials.",
+          "reason": "Correct - cross-account roles are the AWS best practice for third-party access. The auditors use their own identities in Account B, receive short-lived STS credentials, and Account A can revoke access instantly by deleting the role or editing the trust policy."
+        },
+        "C": {
+          "description": "Handing over the root user credentials of Account A to an external party.",
+          "reason": "Incorrect - root credentials must never be shared. The root user has unrestricted access to the account, cannot be limited by IAM policies, and sharing it violates every AWS security best practice."
+        },
+        "D": {
+          "description": "Attaching Account A's IAM policies to identities that live in Account B.",
+          "reason": "Incorrect - IAM policies cannot be attached across accounts. A policy in Account A can only be attached to users, groups, or roles that exist in Account A; cross-account access requires a role with a trust policy."
+        }
+      },
+      "Tips": "Keywords 'cross-account', 'third party', 'temporary access', or 'no long-term credentials' map directly to 'IAM Role + STS AssumeRole + trust policy'. Eliminate any option that creates IAM users with access keys for outsiders or mentions root credentials. Remember: trust policy defines WHO can assume the role; the permissions policy defines WHAT the role can do."
+    },
+    {
+      "id": 2,
+      "questionText": "A solutions architect must ensure that administrators can only stop or terminate production EC2 instances if they have authenticated with multi-factor authentication (MFA). Regular describe and start actions should remain available without MFA. How should this be enforced?",
+      "options": {
+        "A": "Attach an IAM policy that allows ec2:StopInstances and ec2:TerminateInstances only when the condition aws:MultiFactorAuthPresent is true",
+        "B": "Enable MFA Delete on the EC2 instances to require MFA for destructive actions",
+        "C": "Configure the Security Groups of the production instances to require MFA for management traffic",
+        "D": "No action is needed because the AWS CLI automatically enforces MFA for all destructive API calls"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An IAM policy whose Allow statement for stop and terminate actions includes a Condition block checking that aws:MultiFactorAuthPresent equals true.",
+          "reason": "Correct - the aws:MultiFactorAuthPresent condition key evaluates whether the caller's session was authenticated with MFA. Scoping it to only the destructive actions leaves describe and start unaffected, exactly matching the requirement."
+        },
+        "B": {
+          "description": "MFA Delete, a feature that requires MFA for permanently deleting object versions.",
+          "reason": "Incorrect - MFA Delete is an Amazon S3 versioning feature. It has no equivalent on EC2 instances and cannot protect stop or terminate API calls."
+        },
+        "C": {
+          "description": "Using Security Group rules as a mechanism to demand MFA.",
+          "reason": "Incorrect - Security Groups filter network traffic by port, protocol, and source. They operate at the network layer and have no concept of IAM authentication or MFA; API calls like StopInstances do not pass through Security Groups at all."
+        },
+        "D": {
+          "description": "Relying on a supposed built-in CLI behavior that forces MFA for destructive operations.",
+          "reason": "Incorrect - the AWS CLI does not enforce MFA by itself. MFA requirements must be expressed in IAM policies (or enforced via role assumption with MFA); otherwise any valid credentials can call any permitted API."
+        }
+      },
+      "Tips": "When a question asks to 'require MFA for specific API actions', the answer is an IAM policy Condition with aws:MultiFactorAuthPresent. Watch for the classic decoys: MFA Delete (S3 only) and Security Groups (network layer, not identity). Conditions let one policy treat sensitive actions differently from read-only actions."
+    },
+    {
+      "id": 3,
+      "questionText": "An EC2 instance hosts an HTTPS web application. Its Security Group allows inbound TCP 443 from 0.0.0.0/0. During a cleanup, an engineer deletes ALL outbound rules from the Security Group. Immediately afterwards, external users browse the application. What is the result?",
+      "options": {
+        "A": "Inbound requests arrive but responses are blocked because there is no outbound rule allowing return traffic",
+        "B": "The application keeps working because Security Groups are stateful and automatically allow return traffic for permitted inbound connections",
+        "C": "All traffic is blocked because a Security Group must have at least one outbound rule to function",
+        "D": "The application works only if an outbound rule for ephemeral ports 1024-65535 is added"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A model where inbound and outbound directions are evaluated independently, so responses need their own outbound rule.",
+          "reason": "Incorrect - this describes stateless filtering, which is how Network ACLs behave. Security Groups do not work this way; response traffic is tracked per connection."
+        },
+        "B": {
+          "description": "Stateful connection tracking: once an inbound connection is allowed, the corresponding outbound response is automatically permitted regardless of outbound rules.",
+          "reason": "Correct - Security Groups are stateful. The connection-tracking table remembers the allowed inbound session on port 443, so reply packets flow out even with zero outbound rules. Only NEW outbound connections initiated by the instance would be blocked."
+        },
+        "C": {
+          "description": "A requirement that a Security Group must contain at least one outbound rule to pass any traffic.",
+          "reason": "Incorrect - there is no such requirement. An empty outbound rule set simply means the instance cannot initiate new outbound connections; established inbound sessions still receive replies."
+        },
+        "D": {
+          "description": "Opening the ephemeral port range outbound so that response packets can leave the instance.",
+          "reason": "Incorrect - ephemeral port rules are needed on stateless Network ACLs, not on stateful Security Groups. This is the classic trap that mixes up the two."
+        }
+      },
+      "Tips": "Memorize the pairing: Security Group = stateful, allow rules only, instance/ENI level. NACL = stateless, allow and deny rules, subnet level, needs ephemeral ports (1024-65535) for return traffic. Any answer that requires ephemeral-port rules on a Security Group is wrong. 'Return traffic automatically allowed' = stateful = Security Group."
+    },
+    {
+      "id": 4,
+      "questionText": "A company maintains a hardened 'golden' AMI in us-east-1. A new project must launch EC2 instances from this exact AMI in eu-west-1. What must the team do before they can launch in eu-west-1?",
+      "options": {
+        "A": "Nothing; AMIs are global resources and can be used to launch instances in any Region",
+        "B": "Copy the AMI to eu-west-1 using the CopyImage operation, then launch from the new AMI ID in that Region",
+        "C": "Make the AMI public so that it becomes visible in all Regions",
+        "D": "Create a new Security Group in eu-west-1 that references the AMI from us-east-1"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating AMIs as global resources available everywhere, like IAM users or Route 53 zones.",
+          "reason": "Incorrect - AMIs are Regional resources. An AMI built in us-east-1 cannot be referenced by a launch request in eu-west-1; the console and API in eu-west-1 will not even list it."
+        },
+        "B": {
+          "description": "Using the AMI copy feature to replicate the image (and its backing snapshots) into the destination Region, which produces a new AMI ID there.",
+          "reason": "Correct - CopyImage is the supported way to move an AMI across Regions. The copy gets a new AMI ID in eu-west-1, after which instances can be launched normally. Encrypted AMIs can also be re-encrypted with a different KMS key during the copy."
+        },
+        "C": {
+          "description": "Changing the AMI's launch permissions so any AWS account can use it.",
+          "reason": "Incorrect - making an AMI public changes WHO can use it, not WHERE it exists. A public AMI in us-east-1 is still only launchable in us-east-1."
+        },
+        "D": {
+          "description": "Creating a networking construct in the destination Region that points at the source AMI.",
+          "reason": "Incorrect - Security Groups control traffic to instances and have no relationship to AMI availability or Region placement."
+        }
+      },
+      "Tips": "Drill the scope of resources: AMIs, EBS volumes/snapshots, Security Groups, and key pairs are Regional (volumes are even AZ-specific); IAM is global. 'Use AMI in another Region' always equals 'Copy AMI'. Sharing/public settings change visibility across ACCOUNTS, never across REGIONS."
+    },
+    {
+      "id": 5,
+      "questionText": "A payments company runs six critical EC2 instances that each hold an independent copy of a licensing service. The architect must minimize the chance that a single underlying hardware failure takes down more than one instance, and the instances should be distributed across multiple Availability Zones. Which placement strategy meets the requirement?",
+      "options": {
+        "A": "Launch all six instances in a cluster placement group in one Availability Zone",
+        "B": "Launch the instances in a spread placement group across multiple Availability Zones",
+        "C": "Launch the instances in a single partition of a partition placement group",
+        "D": "Launch the instances with no placement group because EC2 never places two instances on the same hardware"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A cluster placement group, which packs instances close together on the same high-bisection-bandwidth hardware in one AZ.",
+          "reason": "Incorrect - cluster placement groups maximize network performance by co-locating instances, which INCREASES correlated failure risk and is limited to a single AZ. This is the opposite of the requirement."
+        },
+        "B": {
+          "description": "A spread placement group, which places each instance on distinct underlying hardware racks, supporting placement across multiple AZs.",
+          "reason": "Correct - spread placement groups guarantee each instance lands on different hardware, capped at 7 running instances per AZ per group. Six critical instances fit comfortably, and the group can span AZs for additional isolation."
+        },
+        "C": {
+          "description": "Placing all instances inside one partition of a partition placement group.",
+          "reason": "Incorrect - instances within the SAME partition can share hardware; only different partitions are isolated from each other. Putting all six in one partition gives no per-instance hardware isolation."
+        },
+        "D": {
+          "description": "Relying on default EC2 placement behavior to keep instances on separate hardware.",
+          "reason": "Incorrect - without a placement group, EC2 makes no guarantee; multiple instances from the same account can absolutely share a host. Hardware isolation must be requested explicitly via a spread (or partition) strategy."
+        }
+      },
+      "Tips": "Placement group keyword map: 'low latency / HPC / highest network throughput' = cluster (one AZ, high blast radius). 'Critical instances on distinct hardware' = spread (max 7 instances per AZ per group). 'Large distributed systems like Hadoop/Kafka/Cassandra needing rack-level isolation' = partition (up to 7 partitions per AZ, hundreds of instances). The number 7 appears in two different limits - know which is which."
+    },
+    {
+      "id": 6,
+      "questionText": "A team wants to use EC2 Hibernate on a memory-intensive instance so that its in-memory state survives a stop. Which configuration is REQUIRED for hibernation to work?",
+      "options": {
+        "A": "An instance store root volume large enough to hold the RAM contents",
+        "B": "An encrypted EBS root volume with enough space to store the contents of the instance's RAM, with hibernation enabled at launch",
+        "C": "A second ENI dedicated to writing the memory snapshot",
+        "D": "An EFS file system mounted at /hibernate to receive the memory image"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Using ephemeral instance store as the root device to persist the RAM image.",
+          "reason": "Incorrect - hibernation writes the RAM image to the EBS root volume, and instance store contents do not survive a stop. Instance-store-backed instances cannot hibernate at all."
+        },
+        "B": {
+          "description": "An EBS root volume that is encrypted and sized to hold the RAM dump, on an instance where hibernation was enabled at launch time.",
+          "reason": "Correct - the RAM contents are written to the encrypted EBS root volume, so encryption is mandatory and the volume must have free space at least equal to the RAM size. Hibernation must be enabled when the instance is launched; it cannot be switched on later."
+        },
+        "C": {
+          "description": "A dedicated network interface for transferring the memory snapshot.",
+          "reason": "Incorrect - ENIs are network constructs and play no role in hibernation. The memory image is written locally to the root EBS volume, not over the network."
+        },
+        "D": {
+          "description": "An EFS mount acting as the destination for the hibernation image.",
+          "reason": "Incorrect - hibernation does not use EFS. The RAM image goes to the EBS root volume only."
+        }
+      },
+      "Tips": "Memorize the hibernate checklist: (1) encrypted EBS root volume, (2) root volume free space >= RAM size, (3) enabled at launch only, (4) instance RAM under 150 GB, (5) supported instance families and OSes, (6) cannot stay hibernated more than 60 days. Exam phrasing 'preserve in-memory state / avoid warm-up time' = Hibernate; any option mentioning instance store or EFS for the RAM image is wrong."
+    },
+    {
+      "id": 7,
+      "questionText": "A compliance audit finds a production EC2 instance using an UNENCRYPTED 1 TB gp3 EBS volume. The data must be encrypted at rest with minimal risk to the existing data. The team accepts a short maintenance window. What is the correct process?",
+      "options": {
+        "A": "Open the volume settings in the EC2 console and toggle encryption on for the existing volume",
+        "B": "Create a snapshot of the volume, copy the snapshot with encryption enabled, create a new volume from the encrypted copy, and swap it onto the instance",
+        "C": "Enable EBS encryption by default in the account settings, which retroactively encrypts all existing volumes",
+        "D": "Attach the volume to an encrypted instance so the data inherits the instance's encryption"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "In-place encryption of an existing EBS volume via a console setting.",
+          "reason": "Incorrect - EBS does not support encrypting an existing unencrypted volume in place. Encryption can only be set when a volume (or snapshot copy) is created."
+        },
+        "B": {
+          "description": "The snapshot -> encrypted copy -> new volume -> swap workflow.",
+          "reason": "Correct - this is the standard procedure: snapshot the unencrypted volume, copy the snapshot with encryption enabled (choosing a KMS key), create a new encrypted volume from that copy in the same AZ, stop the instance, detach the old volume, attach the new one. Data is preserved and ends up encrypted at rest."
+        },
+        "C": {
+          "description": "Account-level 'encryption by default' for EBS.",
+          "reason": "Incorrect - encryption by default only affects NEW volumes and snapshot copies created after the setting is enabled. It never retroactively encrypts existing volumes."
+        },
+        "D": {
+          "description": "Encryption inheritance from the instance to attached volumes.",
+          "reason": "Incorrect - there is no concept of an 'encrypted instance' that propagates encryption to attached volumes. Encryption is a property of each individual EBS volume."
+        }
+      },
+      "Tips": "'Encrypt an existing unencrypted volume' always equals the 4-step dance: snapshot -> copy snapshot WITH encryption -> create volume from encrypted snapshot -> swap. There is no in-place toggle, and 'encrypt by default' is forward-looking only. Bonus fact: an encrypted volume's snapshots and the volumes created from them stay encrypted automatically."
+    },
+    {
+      "id": 8,
+      "questionText": "A big data team runs nightly jobs that sequentially scan multiple terabytes of log files stored on an EBS volume attached to a single large instance. The workload is throughput-bound, the data is accessed frequently, and the team wants the LOWEST storage cost that still delivers high sequential throughput. Which volume type should they choose?",
+      "options": {
+        "A": "io2 Provisioned IOPS SSD",
+        "B": "gp3 General Purpose SSD",
+        "C": "st1 Throughput Optimized HDD",
+        "D": "sc1 Cold HDD"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The highest-performance SSD class, designed for low-latency, high-IOPS transactional workloads.",
+          "reason": "Incorrect - io2 is the most expensive option and optimizes for random IOPS and latency, which this sequential, throughput-bound workload does not need."
+        },
+        "B": {
+          "description": "The default general purpose SSD balancing price and performance for mixed workloads.",
+          "reason": "Incorrect - gp3 would work technically, but for large sequential scans an HDD volume delivers comparable streaming throughput at a significantly lower per-GB cost, so gp3 is not the LOWEST-cost fit."
+        },
+        "C": {
+          "description": "Throughput Optimized HDD, built for large, sequential, frequently accessed workloads like log processing, ETL, and data warehouses.",
+          "reason": "Correct - st1 is purpose-built for exactly this pattern: big sequential reads, throughput measured in MB/s, frequent access, low cost per GB. It is the textbook answer for 'frequently accessed, throughput-intensive, sequential' data."
+        },
+        "D": {
+          "description": "Cold HDD, the cheapest EBS volume, intended for infrequently accessed data.",
+          "reason": "Incorrect - sc1 is cheaper but is designed for INFREQUENTLY accessed data with lower throughput ceilings. The scenario explicitly says the data is accessed frequently every night, which points to st1."
+        }
+      },
+      "Tips": "HDD decision rule: st1 = 'Throughput, frequent access, sequential' (logs, ETL, big data). sc1 = 'Cold, infrequent access, lowest cost'. Both HDD types CANNOT be boot volumes and are measured in MB/s, not IOPS. If the question says 'small random I/O' or 'database', go back to SSD (gp3/io2). Keyword 'lowest cost + frequent sequential scans' = st1."
+    },
+    {
+      "id": 9,
+      "questionText": "A specialized clustered database requires four EC2 instances in the SAME Availability Zone to read and write to ONE shared block device simultaneously. The database software is cluster-aware and manages write coordination itself. Which storage solution satisfies this?",
+      "options": {
+        "A": "A gp3 volume attached to all four instances",
+        "B": "An io2 volume with Multi-Attach enabled, attached to the four Nitro-based instances",
+        "C": "An EFS file system mounted on all four instances",
+        "D": "Four separate io2 volumes kept in sync with cron-based rsync jobs"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Attaching a general purpose SSD volume to multiple instances at once.",
+          "reason": "Incorrect - Multi-Attach is only supported on Provisioned IOPS volumes (io1/io2). gp3 volumes can be attached to exactly one instance at a time."
+        },
+        "B": {
+          "description": "EBS Multi-Attach on a Provisioned IOPS io2 volume, shared by up to 16 Nitro instances within one AZ.",
+          "reason": "Correct - Multi-Attach lets a single io1/io2 volume be attached to up to 16 Nitro-based instances in the same AZ, all with read/write access. It requires a cluster-aware file system or application (which this database provides) because EBS does not coordinate writes itself."
+        },
+        "C": {
+          "description": "A shared NFS file system mounted across the instances.",
+          "reason": "Incorrect - EFS provides FILE-level (NFS) storage, not a block device. The requirement explicitly says a shared BLOCK device, which EFS cannot provide."
+        },
+        "D": {
+          "description": "Independent volumes synchronized periodically with rsync.",
+          "reason": "Incorrect - periodic file sync is not simultaneous shared block access; it introduces lag, conflicts, and does not meet the 'one shared block device' requirement."
+        }
+      },
+      "Tips": "Multi-Attach fact pack: io1/io2 only, up to 16 instances, all in ONE AZ, Nitro instances only, and the application/file system must be cluster-aware (standard XFS/EXT4 alone will corrupt). Decision rule: 'shared BLOCK storage, same AZ' = io1/io2 Multi-Attach; 'shared FILE storage, multi-AZ, Linux' = EFS. The words 'block' vs 'file' decide the answer."
+    },
+    {
+      "id": 10,
+      "questionText": "A development team runs a CI build server on a t3.medium instance. Builds are fast in the morning, but after several hours of continuous compilation the instance becomes very slow, and CloudWatch shows CPU utilization pinned at roughly 20% even though the build queue is full. What is the MOST likely explanation?",
+      "options": {
+        "A": "The instance has a failing vCPU and should be stopped and started to move to new hardware",
+        "B": "The t3 instance has exhausted its CPU credits and is throttled to its baseline performance",
+        "C": "The EBS volume has run out of IOPS, which caps CPU utilization at 20%",
+        "D": "A Security Group rule is rate-limiting the CPU"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A hardware fault on the underlying host degrading one of the vCPUs.",
+          "reason": "Incorrect - a hardware fault would not produce a clean, sustained cap at the documented baseline percentage. The pattern of 'fine at first, throttled after sustained load' is the signature of credit exhaustion, not failing silicon."
+        },
+        "B": {
+          "description": "Burstable (T-family) instances earn CPU credits while idle and spend them to burst above a baseline; when credits run out, performance drops to the baseline.",
+          "reason": "Correct - a t3.medium has a baseline around 20% per vCPU. Hours of continuous compilation drain the credit balance, after which the hypervisor throttles the instance to baseline - exactly matching the symptoms. Check the CPUCreditBalance metric to confirm."
+        },
+        "C": {
+          "description": "Storage-level IOPS exhaustion limiting how busy the CPU can be.",
+          "reason": "Incorrect - running out of EBS IOPS causes high I/O wait and slow disk operations, but it does not impose a fixed 20% CPU ceiling. The precise cap at the T-family baseline points to CPU credits."
+        },
+        "D": {
+          "description": "A network rule constraining processor usage.",
+          "reason": "Incorrect - Security Groups filter network packets; they have no ability to limit CPU."
+        }
+      },
+      "Tips": "Symptom 'T2/T3 instance fast at first, then capped at a low fixed CPU %' = CPU credits exhausted. Confirm with the CPUCreditBalance / CPUCreditUsage CloudWatch metrics. Fixes: enable T2/T3 Unlimited (pay for extra bursting), or move to a fixed-performance family (M for general purpose, C for compute-heavy). If the exam says 'consistent sustained high CPU workload', burstable T family is the WRONG instance choice from the start."
+    },
+    {
+      "id": 11,
+      "questionText": "A backend application authenticates with an IAM user's access keys. Security policy requires the keys to be rotated with ZERO downtime for the application. What is the correct rotation procedure?",
+      "options": {
+        "A": "Delete the current access key, then immediately create a new one and update the application",
+        "B": "Do nothing; AWS automatically rotates IAM user access keys every 90 days",
+        "C": "Create a second access key, update the application to use it, deactivate the old key, verify everything works, then delete the old key",
+        "D": "Use the console's 'regenerate' button to refresh the same access key ID with a new secret"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A delete-first rotation.",
+          "reason": "Incorrect - the moment the old key is deleted the application starts failing until the new key is deployed, which guarantees downtime and risks a broken rollback path."
+        },
+        "B": {
+          "description": "Relying on automatic rotation by AWS.",
+          "reason": "Incorrect - AWS never rotates IAM user access keys automatically; rotation is entirely the customer's responsibility (this is one reason roles with temporary credentials are preferred)."
+        },
+        "C": {
+          "description": "Overlap-based rotation, possible because an IAM user can have up to TWO active access keys at once: create new, cut over, deactivate old, test, delete.",
+          "reason": "Correct - the two-key allowance exists precisely for zero-downtime rotation. Deactivation is reversible (a safety net while verifying); deletion is permanent and done last."
+        },
+        "D": {
+          "description": "Refreshing the secret behind an existing key ID.",
+          "reason": "Incorrect - access keys cannot be regenerated in place; a new key always means a new access key ID and secret pair."
+        }
+      },
+      "Tips": "Key rotation choreography: create 2nd key -> deploy -> DEACTIVATE old (reversible) -> verify -> DELETE old (permanent). Enabled by the 2-active-keys-per-user limit. Use the credentials report / 'access key last used' to find stale keys. The deeper exam lesson: anywhere you can use a ROLE instead, rotation disappears entirely because STS credentials are short-lived."
+    },
+    {
+      "id": 12,
+      "questionText": "An IAM user belongs to the group 'Developers' (policy allows s3:Get* on all buckets) and the group 'QA' (policy allows ec2:Describe*). The user also has an inline policy allowing dynamodb:GetItem on one table. No deny statements exist anywhere. What can the user do?",
+      "options": {
+        "A": "Only the DynamoDB action, because inline policies override group policies",
+        "B": "Only the actions common to all three policies, because permissions are intersected",
+        "C": "Only the actions from the first group alphabetically, because one group wins",
+        "D": "All three sets of actions: S3 reads, EC2 describes, and the DynamoDB read - the union of every attached policy"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A precedence model where inline policies beat group policies.",
+          "reason": "Incorrect - there is no override hierarchy between inline and group policies; all applicable Allow statements simply accumulate."
+        },
+        "B": {
+          "description": "An intersection model granting only overlapping permissions.",
+          "reason": "Incorrect - intersection logic applies to permissions BOUNDARIES and SCPs, not to ordinary identity policies, which are additive."
+        },
+        "C": {
+          "description": "A first-group-wins evaluation order.",
+          "reason": "Incorrect - group order is irrelevant; IAM evaluates the complete set of policies attached to the user and all of their groups together."
+        },
+        "D": {
+          "description": "Cumulative evaluation: effective permissions are the UNION of the user's inline/attached policies plus the policies of every group they belong to, with any explicit Deny overriding everything.",
+          "reason": "Correct - the user can perform the S3 reads, EC2 describes, and the DynamoDB GetItem. Allows add up across sources; only an explicit Deny (none here) would subtract."
+        }
+      },
+      "Tips": "Identity permissions are a UNION across user policies + all group policies; evaluation order is: explicit Deny > Allow > implicit (default) Deny. Contrast with the INTERSECTION features: permissions boundaries and SCPs cap the union. Also recall structural facts: groups cannot nest, and a user can be in up to 10 groups."
+    },
+    {
+      "id": 13,
+      "questionText": "An EC2 instance has an IAM role granting full S3 access, yet the AWS CLI on the instance returns AccessDenied, and 'aws sts get-caller-identity' shows an unfamiliar IAM USER instead of the role. A developer admits they once ran 'aws configure' on this instance with their old personal keys. What is happening?",
+      "options": {
+        "A": "Static credentials in ~/.aws/credentials take precedence over the instance profile role in the CLI's credential provider chain; removing the stored keys restores the role",
+        "B": "Attaching a role automatically deletes any configured access keys, so the keys must be corrupted",
+        "C": "The instance metadata service is disabled, which forces the CLI to invent a user identity",
+        "D": "The CLI merges the user and role permissions, and the merge is failing"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The CLI credential provider chain checks sources in a fixed order - command line options, environment variables, the credentials file, then (near the end) instance profile credentials - and uses the FIRST match.",
+          "reason": "Correct - the personal keys stored by 'aws configure' sit earlier in the chain than the instance role, so every call authenticates as the old user. Deleting the stored profile (or the credentials file) lets the chain fall through to the role's temporary credentials."
+        },
+        "B": {
+          "description": "Role attachment wiping local key files.",
+          "reason": "Incorrect - attaching a role never touches files on the instance; both credential sources coexist, and the chain order decides which is used."
+        },
+        "C": {
+          "description": "A disabled IMDS causing fabricated identities.",
+          "reason": "Incorrect - the CLI never invents identities. The observed user ARN comes from real stored keys; a disabled IMDS would simply make role credentials unavailable."
+        },
+        "D": {
+          "description": "A combined user-plus-role permission set.",
+          "reason": "Incorrect - the CLI authenticates as exactly ONE principal per call; permissions from different credential sources are never merged."
+        }
+      },
+      "Tips": "Credential provider chain order (memorize): 1) command line options, 2) environment variables, 3) ~/.aws/credentials file, 4) config file, 5) container credentials, 6) instance profile (IMDS) - first hit wins. Classic exam bug: stale static keys silently masking the instance role. Diagnose with 'aws sts get-caller-identity'; fix by removing the stored keys. Best practice: on EC2, never run 'aws configure' with keys at all."
+    },
+    {
+      "id": 14,
+      "questionText": "A company will commit to a consistent amount of compute spend per hour for 3 years, but wants the discount to keep applying if they switch EC2 instance families, move workloads between Regions, or shift some services to Fargate and Lambda. Which pricing model fits?",
+      "options": {
+        "A": "EC2 Instance Savings Plan",
+        "B": "Standard Reserved Instances",
+        "C": "Compute Savings Plan",
+        "D": "Zonal Reserved Instances"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A Savings Plan committed to a specific instance FAMILY in a specific REGION (e.g., m5 in us-east-1), in exchange for the highest SP discount.",
+          "reason": "Incorrect - it gives RI-level discounts but locks the family and Region, so switching families or Regions would break the requirement. It also does not cover Fargate or Lambda."
+        },
+        "B": {
+          "description": "Classic reservations tied to instance attributes.",
+          "reason": "Incorrect - Standard RIs are bound to instance type attributes and cannot follow workloads to Fargate/Lambda; changing families requires selling/rebuying."
+        },
+        "C": {
+          "description": "A commitment to $/hour of compute usage that automatically applies across ANY instance family, size, Region, OS, and tenancy - and also covers Fargate and Lambda usage.",
+          "reason": "Correct - Compute Savings Plans are the most flexible discount instrument (up to ~66% off), exactly matching 'spend commitment + freedom to change families, Regions, and container/serverless compute'."
+        },
+        "D": {
+          "description": "Reservations pinned to one Availability Zone.",
+          "reason": "Incorrect - zonal RIs are the LEAST flexible option (fixed AZ, type), purchased mainly for their capacity reservation."
+        }
+      },
+      "Tips": "Discount-flexibility ladder: Zonal RI (least flexible, capacity guarantee) < Standard RI < EC2 Instance Savings Plan (family+Region locked, biggest SP discount) < Compute Savings Plan (any family/size/Region/OS + Fargate + Lambda). Keywords 'flexibility across families/Regions/serverless' = Compute Savings Plan; 'maximum discount, never changing anything' = 3-yr Standard RI All Upfront or EC2 Instance SP."
+    },
+    {
+      "id": 15,
+      "questionText": "A web application is being hammered by a single malicious IP address. An engineer opens the instance's Security Group to add a DENY rule for that IP and cannot find any such option. Why, and what should be used instead?",
+      "options": {
+        "A": "Security Groups support deny rules only in the default VPC; move the instance there",
+        "B": "Remove all Security Groups from the instance, which blocks every IP including the attacker",
+        "C": "Associate a new Elastic IP so the attacker loses the target address",
+        "D": "Security Groups are allow-only; add an explicit DENY rule for the attacker's IP in the subnet's Network ACL"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "VPC-dependent deny capability for Security Groups.",
+          "reason": "Incorrect - no VPC type changes SG semantics; Security Groups never support deny rules anywhere."
+        },
+        "B": {
+          "description": "Stripping SGs to create a total block.",
+          "reason": "Incorrect - an ENI must have at least one Security Group, and the goal is to block ONE address while serving everyone else, not to take the app offline."
+        },
+        "C": {
+          "description": "Rotating the public IP to dodge the attacker.",
+          "reason": "Incorrect - this disrupts legitimate clients (DNS, whitelists) and the attacker can simply re-discover the new address; it is evasion, not control."
+        },
+        "D": {
+          "description": "Using the stateless, subnet-level Network ACL, which supports numbered ALLOW and DENY rules evaluated lowest-number-first.",
+          "reason": "Correct - blocking specific IPs/CIDRs is exactly what NACL deny rules are for. Place a low-numbered DENY for the attacker's IP ahead of the broader allow rules. (At scale or at the edge, AWS WAF on an ALB/CloudFront is the managed alternative.)"
+        }
+      },
+      "Tips": "The asymmetry to memorize: Security Group = ALLOW rules only, stateful, instance/ENI level - it can never block a specific IP. NACL = ALLOW + DENY, stateless, subnet level, rules processed in number order (first match wins). 'Block a specific IP/CIDR' = NACL deny rule (or WAF IP set for HTTP apps). Any answer adding a 'deny' to an SG is automatically wrong."
+    },
+    {
+      "id": 16,
+      "questionText": "An Auto Scaling group launches instances that run a 12-minute user data script installing the runtime, agents, and application dependencies. Scale-out events are too slow to absorb traffic spikes. What is the BEST way to reduce instance launch time?",
+      "options": {
+        "A": "Bake a golden AMI with the runtime, agents, and dependencies pre-installed, and keep only light dynamic configuration in user data",
+        "B": "Use a larger instance type so the script finishes faster",
+        "C": "Move the installation script from user data into instance metadata so it runs before boot",
+        "D": "Enable hibernation on new instances so they skip initialization"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Pre-baking: capture a fully prepared instance as a custom AMI so new launches boot with everything already installed, leaving only fast, environment-specific steps (config, registration) in user data.",
+          "reason": "Correct - the golden AMI pattern converts 12 minutes of per-launch installation into near-instant boots and also makes launches more consistent and less dependent on external repositories. The AMI+light-user-data hybrid is the standard exam answer for slow ASG scale-out."
+        },
+        "B": {
+          "description": "Throwing more compute at the install phase.",
+          "reason": "Incorrect - much of the time is network downloads and package management; a bigger instance marginally helps while permanently raising cost. It does not address the architectural cause."
+        },
+        "C": {
+          "description": "Relocating the script into the metadata service.",
+          "reason": "Incorrect - instance metadata is a read-only information endpoint; scripts cannot be 'moved' there, and nothing executes 'before boot'."
+        },
+        "D": {
+          "description": "Hibernation as a launch accelerator for new instances.",
+          "reason": "Incorrect - hibernate preserves RAM of an EXISTING instance across a stop; it does not apply to freshly launched ASG instances (warm pools are a separate feature, not offered here)."
+        }
+      },
+      "Tips": "Boot-time trade-off the exam tests: golden AMI = everything pre-installed, FAST + consistent launches, but you must rebuild the AMI to update software; user data = flexible/dynamic, but slow at every launch. Best practice = hybrid (bake the heavy stuff, configure the rest). Related fact: creating an AMI from an instance reboots it by default for file system consistency - skipping the reboot ('no-reboot') risks an inconsistent image."
+    },
+    {
+      "id": 17,
+      "questionText": "A vendor's software license on EC2 is tied to the network interface's MAC address. The team must be able to replace the instance (new instance type, fresh OS) WITHOUT invalidating the license. How should this be architected?",
+      "options": {
+        "A": "Bake the MAC address into the AMI so every instance launched from it inherits the MAC",
+        "B": "Associate an Elastic IP, since the license can follow the public IP's MAC",
+        "C": "Attach a secondary ENI that carries the licensed MAC address; when replacing the instance, detach the ENI and attach it to the new instance",
+        "D": "MAC-bound licensing cannot be supported on EC2"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Persisting a MAC through an image.",
+          "reason": "Incorrect - AMIs capture disk contents and metadata, not network interfaces; every new primary ENI receives a new MAC."
+        },
+        "B": {
+          "description": "Tying the MAC to a public IP.",
+          "reason": "Incorrect - an Elastic IP is a layer-3 address mapping; it has no MAC and does not preserve layer-2 identity."
+        },
+        "C": {
+          "description": "Using the ENI as the stable identity unit: an ENI permanently keeps its MAC address, private IPs, and Security Group associations, and a SECONDARY ENI can be detached and re-attached to another instance in the same AZ.",
+          "reason": "Correct - the licensed MAC lives on the movable ENI, so instance replacements (same AZ) keep the license valid. This MAC-bound licensing scenario is a classic ENI use case on the exam."
+        },
+        "D": {
+          "description": "Declaring the requirement impossible.",
+          "reason": "Incorrect - the ENI mechanism exists precisely to give portable, persistent network identity."
+        }
+      },
+      "Tips": "An ENI bundles persistent identity: MAC address, primary/secondary private IPs, Elastic IP associations, and Security Groups - all of it moves WITH the ENI. Secondary ENIs can be hot-attached (running), warm-attached (stopped), or cold-attached (launch); the primary eth0 cannot be detached, and ENIs are bound to one AZ. Keywords 'license tied to MAC' or 'keep the same private IP through failover' = movable secondary ENI."
+    },
+    {
+      "id": 18,
+      "questionText": "A self-managed database needs about 30,000 IOPS. The team strongly prefers gp3 pricing, and data redundancy is already handled by application-level replication to another instance, so volume-level fault tolerance is not required. How can the IOPS target be met with gp3?",
+      "options": {
+        "A": "Provision a single gp3 volume at 30,000 IOPS",
+        "B": "Create two gp3 volumes and mirror them with RAID 1 to double the IOPS",
+        "C": "Use an st1 volume, which exceeds 30,000 IOPS for sequential workloads",
+        "D": "Stripe two gp3 volumes (16,000 IOPS each) together with RAID 0, presenting one logical volume with roughly 32,000 combined IOPS"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A single general purpose volume provisioned beyond its ceiling.",
+          "reason": "Incorrect - gp3 has a hard maximum of 16,000 IOPS per volume; 30,000 cannot be provisioned on one gp3 volume (that territory belongs to io1/io2)."
+        },
+        "B": {
+          "description": "Mirroring, where every write is duplicated to both volumes.",
+          "reason": "Incorrect - RAID 1 provides redundancy, not aggregated performance: usable capacity is halved and each write costs two volume writes. The scenario explicitly does not need volume-level redundancy."
+        },
+        "C": {
+          "description": "A throughput-oriented HDD.",
+          "reason": "Incorrect - st1 delivers MB/s for sequential streams but only low hundreds of IOPS; a random-I/O database would collapse on it."
+        },
+        "D": {
+          "description": "RAID 0 striping at the OS level, which sums the IOPS and throughput of member volumes into one logical device with no redundancy.",
+          "reason": "Correct - two 16,000-IOPS gp3 volumes in RAID 0 yield ~32,000 IOPS at gp3 prices. The loss of any member volume destroys the array, which is acceptable here because durability is handled by application replication. (A single io2 volume is the alternative when budget allows or redundancy matters.)"
+        }
+      },
+      "Tips": "RAID on EBS: RAID 0 = stripe for PERFORMANCE (IOPS/throughput add up, zero fault tolerance); RAID 1 = mirror for REDUNDANCY (no performance gain, doubles write traffic). EBS volumes are already replicated within their AZ, so RAID 1 is rarely justified. 'Need more IOPS than one volume's limit, on a budget' = RAID 0 of gp3; 'single volume, mission-critical, >16,000 IOPS' = io2."
+    },
+    {
+      "id": 19,
+      "questionText": "Instances in a private subnet hang indefinitely when mounting a newly created EFS file system and eventually time out. The file system, mount targets, and instances are in the same VPC. What is the MOST likely cause?",
+      "options": {
+        "A": "The Security Group on the EFS mount targets does not allow inbound NFS (TCP 2049) from the instances' Security Group",
+        "B": "The instances' Security Group is missing an inbound rule for TCP 443 from EFS",
+        "C": "The mount targets need an OUTBOUND rule on TCP 2049 to reach the instances first",
+        "D": "EFS requires the file system to be made public before private subnets can mount it"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EFS is consumed through mount targets (one ENI per AZ), and each mount target has Security Groups; clients connect TO the mount target on NFS port 2049.",
+          "reason": "Correct - a mount that hangs/times out is the classic symptom of the mount target SG not allowing inbound TCP 2049 from the clients. Best practice is SG chaining: mount-target SG allows 2049 with the source set to the instances' SG."
+        },
+        "B": {
+          "description": "An inbound HTTPS rule on the clients.",
+          "reason": "Incorrect - the clients INITIATE the NFS connection (so their stateful SG needs no special inbound rule), and NFS uses port 2049, not 443."
+        },
+        "C": {
+          "description": "An outbound rule on the mount target toward the clients.",
+          "reason": "Incorrect - the mount target is the SERVER side; with stateful Security Groups, allowing the inbound 2049 connection automatically permits its return traffic."
+        },
+        "D": {
+          "description": "A public-access prerequisite for EFS.",
+          "reason": "Incorrect - EFS is accessed privately inside the VPC via mount targets; there is no 'public' setting involved in mounting from private subnets."
+        }
+      },
+      "Tips": "EFS networking checklist: a MOUNT TARGET per AZ (each is an ENI with its own SGs); clients need network path + mount-target SG allowing inbound NFS TCP 2049, ideally with the client SG as source (SG chaining). 'EFS mount hangs/times out' = port 2049 not allowed, almost every time. Use the amazon-efs-utils mount helper for TLS-encrypted mounts."
+    },
+    {
+      "id": 20,
+      "questionText": "Operations must automatically create snapshots of all production EBS volumes every night at 03:00 and retain exactly the last 14 snapshots per volume, with the LEAST ongoing operational effort. What should they implement?",
+      "options": {
+        "A": "A cron job on an admin server running aws ec2 create-snapshot and a cleanup script",
+        "B": "An Amazon Data Lifecycle Manager (DLM) policy targeting the volumes by tag, with a daily 03:00 schedule and a 14-snapshot retention rule",
+        "C": "A reminder for the on-call engineer to take snapshots from the console each night",
+        "D": "A custom EventBridge rule invoking a Lambda function that creates and prunes snapshots"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Self-managed scripting on a pet server.",
+          "reason": "Incorrect - it works until the server, credentials, or script silently fail; you now operate backup infrastructure, the opposite of least effort."
+        },
+        "B": {
+          "description": "DLM is the native EBS automation service: tag-based policies define snapshot (or AMI) creation schedules and retention counts/ages, executed and pruned by AWS with no infrastructure to run.",
+          "reason": "Correct - a single DLM policy ('volumes tagged env=prod, daily 03:00, retain 14') fully meets the requirement and is the canonical least-effort answer for automated EBS snapshot lifecycles."
+        },
+        "C": {
+          "description": "Manual nightly console work.",
+          "reason": "Incorrect - manual processes are error-prone, unscalable, and the maximum possible operational effort."
+        },
+        "D": {
+          "description": "A hand-built serverless scheduler.",
+          "reason": "Incorrect - this can achieve the goal but requires writing, securing, and maintaining custom code that duplicates an existing managed feature; more effort than DLM for no benefit."
+        }
+      },
+      "Tips": "'Automate EBS snapshot creation + retention' = Data Lifecycle Manager (tag-driven, schedules, retention rules, cross-Region copy support). Step up to AWS BACKUP when the requirement spans multiple services (RDS, DynamoDB, EFS...), needs central vaults, compliance locks, or cross-account backup. Tag discipline is the prerequisite for both. 'Custom Lambda/cron' options are the decoys when a managed service exists."
+    }
+  ]
+}

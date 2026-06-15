@@ -1,0 +1,647 @@
+{
+  "setId": "d4a7e3c8-6f25-4b91-8a7e-1c9d5f3b6e28",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Quick Practice Exam 4",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A security team is tightening permissions toward least privilege. For a specific IAM role, they need to identify which AWS services the role's policies ALLOW but which the role has NOT actually used recently, so unused permissions can be removed. Which tool provides this directly?",
+      "options": {
+        "A": "IAM Access Advisor (service last accessed information) on the role",
+        "B": "The IAM credentials report for the account",
+        "C": "The IAM Policy Simulator",
+        "D": "Amazon Inspector"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Access Advisor shows, per identity, the list of services its policies grant access to alongside the timestamp each service was last accessed.",
+          "reason": "Correct - 'allowed but unused services for a specific identity' is exactly what Access Advisor surfaces, making it the standard tool for right-sizing permissions toward least privilege."
+        },
+        "B": {
+          "description": "An account-wide CSV describing the state of every user's password, access keys, and MFA.",
+          "reason": "Incorrect - the credentials report covers credential hygiene for USERS across the account; it says nothing about which services a role's permissions allow or when they were used."
+        },
+        "C": {
+          "description": "A tool that tests whether a given action would be allowed or denied under a set of policies.",
+          "reason": "Incorrect - the Policy Simulator answers hypothetical 'would this call succeed?' questions. It does not report historical usage of services."
+        },
+        "D": {
+          "description": "A vulnerability management service that scans EC2 instances and container images.",
+          "reason": "Incorrect - Inspector finds software vulnerabilities and unintended network exposure; it is unrelated to IAM permission usage analysis."
+        }
+      },
+      "Tips": "Match the IAM tool to the question: 'allowed vs actually USED services for one identity' = Access Advisor; 'credential status (passwords/keys/MFA) for ALL users' = Credentials Report; 'would this action be allowed?' = Policy Simulator. The phrase 'least privilege' plus 'remove unused permissions' almost always points to Access Advisor."
+    },
+    {
+      "id": 2,
+      "questionText": "A startup has been using its AWS account root user for day-to-day administration, and the root user has active access keys checked into a wiki. Which set of actions aligns with AWS best practices for the root user?",
+      "options": {
+        "A": "Delete the root user entirely and rely on IAM users from then on",
+        "B": "Enable MFA on the root user, delete the root access keys, create an IAM user/role with admin permissions for daily work, and reserve root for the few tasks that require it",
+        "C": "Keep using root but rotate its access keys every 90 days",
+        "D": "Restrict the root user with an IAM policy that limits it to billing actions only"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Removing the root identity from the account.",
+          "reason": "Incorrect - the root user cannot be deleted or disabled. It is permanently tied to the account; the goal is to lock it down and stop using it routinely."
+        },
+        "B": {
+          "description": "Hardening root (strong password + MFA, no access keys) and shifting daily administration to IAM identities, keeping root only for root-only tasks such as changing the account email, closing the account, or certain billing/support settings.",
+          "reason": "Correct - this is the canonical AWS guidance: protect root with MFA, eliminate its long-term programmatic credentials, and use least-privilege IAM identities for everyday operations."
+        },
+        "C": {
+          "description": "Continuing routine root usage with periodic key rotation.",
+          "reason": "Incorrect - best practice is to DELETE root access keys, not rotate them. Root should not be used for daily work at all, rotated keys or not."
+        },
+        "D": {
+          "description": "Constraining root with an attached IAM policy.",
+          "reason": "Incorrect - IAM policies cannot restrict the root user; root always retains full account access. Only an SCP from a parent AWS Organization can constrain what root can do, and even that has limits."
+        }
+      },
+      "Tips": "Root user exam facts: cannot be deleted, cannot be limited by IAM policies, should have MFA enabled, should have NO access keys, and is needed only for a short list of root-only tasks (change account email/root password, close account, some billing/tax/support changes). Any answer that 'keeps using root daily' or 'deletes root' is wrong on sight."
+    },
+    {
+      "id": 3,
+      "questionText": "A batch-processing fleet runs on Spot Instances. The engineering team wants the application to checkpoint its work when AWS decides to reclaim capacity. How much warning does a Spot Instance receive before interruption, and how can the application detect it?",
+      "options": {
+        "A": "A 2-minute interruption notice, observable via the instance metadata endpoint and as an EventBridge event",
+        "B": "A 24-hour notice delivered by email to the account's root address",
+        "C": "No warning at all; Spot Instances are terminated instantly without notice",
+        "D": "A 15-minute notice available only through AWS Support"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The standard Spot interruption flow: AWS publishes a two-minute warning to the instance metadata path (spot/instance-action) and emits an EC2 Spot Instance Interruption Warning event to EventBridge.",
+          "reason": "Correct - applications poll the metadata endpoint or subscribe to the EventBridge event and use the 2-minute window to checkpoint state, drain work, and deregister gracefully. An earlier 'rebalance recommendation' signal may also arrive before the formal notice."
+        },
+        "B": {
+          "description": "A long email-based notification period.",
+          "reason": "Incorrect - Spot interruptions are programmatic and short-fused; no 24-hour email notice exists."
+        },
+        "C": {
+          "description": "Immediate termination with zero signal.",
+          "reason": "Incorrect - AWS does provide a warning: the documented 2-minute notice. Architectures should still tolerate abrupt loss, but 'no warning' is factually wrong."
+        },
+        "D": {
+          "description": "A notice retrievable via support tickets.",
+          "reason": "Incorrect - the notice is 2 minutes, not 15, and it is surfaced through metadata/EventBridge automatically, never through AWS Support."
+        }
+      },
+      "Tips": "Spot facts to lock in: up to ~90% discount vs On-Demand; capacity can be reclaimed when the Spot price exceeds your max or capacity is needed; you get a 2-MINUTE interruption notice via instance metadata (spot/instance-action) and EventBridge; a rebalance recommendation may precede it. 'Workload must survive interruptions / checkpointable batch jobs' = Spot is fine; 'cannot tolerate interruption' = never Spot."
+    },
+    {
+      "id": 4,
+      "questionText": "A company has run a steady fleet of m5.xlarge instances 24/7 for two years and commits to the SAME instance type, OS, and Region for at least three more years. They want the MAXIMUM possible discount and can pay everything up front. Which purchasing option delivers the largest savings?",
+      "options": {
+        "A": "A 3-year Standard Reserved Instance with All Upfront payment",
+        "B": "A 3-year Convertible Reserved Instance with All Upfront payment",
+        "C": "A 1-year Standard Reserved Instance with No Upfront payment",
+        "D": "An EC2 Instance Savings Plan with a 1-year term"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The most rigid commitment: fixed instance attributes, 3-year term, fully prepaid.",
+          "reason": "Correct - discounts scale with commitment. Standard beats Convertible, 3-year beats 1-year, and All Upfront beats Partial/No Upfront, yielding up to roughly 72% off On-Demand. Since the company guarantees no changes, the flexibility of Convertible is unnecessary."
+        },
+        "B": {
+          "description": "A 3-year prepaid reservation that allows exchanging instance family, OS, and tenancy during the term.",
+          "reason": "Incorrect - Convertible RIs trade discount for flexibility (up to ~66%). The scenario explicitly forfeits the need for changes, so paying for flexibility wastes savings."
+        },
+        "C": {
+          "description": "A short, unprepaid standard reservation.",
+          "reason": "Incorrect - both the 1-year term and the No Upfront payment option reduce the discount substantially compared to a 3-year All Upfront commitment."
+        },
+        "D": {
+          "description": "A flexible hourly-spend commitment over one year.",
+          "reason": "Incorrect - a 1-year term cannot match 3-year All Upfront pricing. Savings Plans are excellent for flexibility, but the question asks for MAXIMUM discount with zero need for change."
+        }
+      },
+      "Tips": "The discount ladder: longer term (3 yr > 1 yr) + more upfront (All > Partial > No) + less flexibility (Standard > Convertible) = bigger discount, topping out around 72% for 3-yr Standard All Upfront (Convertible ~66%, Spot up to ~90% but interruptible). Keywords 'steady-state, no changes, maximum savings' = Standard RI 3-yr All Upfront; 'might change family/OS' = Convertible; 'flexible across families/Regions' = Savings Plans."
+    },
+    {
+      "id": 5,
+      "questionText": "A virtual network appliance on EC2 must process public traffic on an interface in a public subnet while administrators manage it through a SEPARATE interface in a private management subnet, each governed by different Security Groups. Both subnets are in the same Availability Zone. How should this be designed?",
+      "options": {
+        "A": "Attach a secondary ENI in the management subnet to the instance, applying a distinct Security Group to each ENI",
+        "B": "Apply two Security Groups to the instance's single primary ENI, one for public rules and one for management rules",
+        "C": "Associate an Elastic IP with the instance to create the management path",
+        "D": "Launch the instance with two primary ENIs in different VPCs"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Dual-homing: the primary ENI sits in the public subnet for data traffic, and a secondary ENI in the private management subnet carries admin traffic; Security Groups attach per-ENI, so each interface gets its own rule set.",
+          "reason": "Correct - ENIs are the unit of subnet placement AND Security Group attachment. A secondary ENI in the management subnet (same AZ requirement satisfied) cleanly separates the traffic planes with independent security policies - the classic network-appliance pattern."
+        },
+        "B": {
+          "description": "Stacking multiple Security Groups on one interface.",
+          "reason": "Incorrect - multiple SGs on a single ENI simply MERGE into one combined allow list for that interface. This cannot place the instance in two subnets or separate the traffic paths."
+        },
+        "C": {
+          "description": "Adding a static public IPv4 address to the instance.",
+          "reason": "Incorrect - an Elastic IP changes how the existing interface is reached from the internet; it does not create a second interface, a second subnet presence, or a separate security boundary."
+        },
+        "D": {
+          "description": "Two primary interfaces spanning different VPCs.",
+          "reason": "Incorrect - an instance has exactly ONE primary ENI, and all of an instance's ENIs must live in the same VPC and the same AZ. Cross-VPC dual-homing on one instance is not possible."
+        }
+      },
+      "Tips": "ENI rules that decide these questions: Security Groups bind to ENIs (multiple SGs on one ENI merge); secondary ENIs enable dual-homed designs (different subnets, different SGs) but every ENI must be in the SAME AZ as the instance; a secondary ENI can be detached and moved to another instance to fail over a fixed private IP/MAC. 'Separate management network / appliance with two networks' = secondary ENI."
+    },
+    {
+      "id": 6,
+      "questionText": "A latency-sensitive OLTP database needs a SINGLE EBS volume delivering a consistent 50,000 IOPS with sub-millisecond latency and 99.999% durability. Which volume type meets all three requirements?",
+      "options": {
+        "A": "gp3 with maximum provisioned IOPS",
+        "B": "io2 (Block Express) Provisioned IOPS SSD",
+        "C": "st1 Throughput Optimized HDD",
+        "D": "gp2 sized at its maximum capacity"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "General purpose SSD with IOPS provisioned to its ceiling.",
+          "reason": "Incorrect - gp3 tops out at 16,000 IOPS per volume and offers ~99.8-99.9% durability, missing both the 50,000 IOPS and the 99.999% durability requirements."
+        },
+        "B": {
+          "description": "The highest-end Provisioned IOPS class: io2 Block Express scales to 256,000 IOPS per volume with sub-millisecond latency and 99.999% durability.",
+          "reason": "Correct - io2 is the only EBS family combining five-nines durability with the ability to provision 50,000+ IOPS on a single volume, purpose-built for critical low-latency databases."
+        },
+        "C": {
+          "description": "A throughput-oriented hard-disk volume.",
+          "reason": "Incorrect - st1 is measured in MB/s for sequential workloads, supports only hundreds of IOPS, has higher latency, and cannot serve a random-I/O OLTP database."
+        },
+        "D": {
+          "description": "The previous-generation general purpose SSD at maximum size.",
+          "reason": "Incorrect - gp2 caps at 16,000 IOPS (at ~5,334 GB) with ~99.8-99.9% durability, far below both requirements."
+        }
+      },
+      "Tips": "Performance ceilings worth memorizing: gp2/gp3 = 16,000 IOPS max, ~99.8-99.9% durable; io2 Block Express = up to 256,000 IOPS, 99.999% durable, sub-ms latency. Any requirement above 16,000 IOPS on ONE volume, or any mention of '99.999% durability' or 'highest-performance database volume', forces io2. HDD types (st1/sc1) are throughput-only and can never boot or serve OLTP."
+    },
+    {
+      "id": 7,
+      "questionText": "An application writes scratch files to the NVMe instance store of an i3 instance. An engineer STOPS the instance to change its instance type and starts it again. What happened to the scratch files?",
+      "options": {
+        "A": "They are intact because instance store data survives a stop/start cycle",
+        "B": "They are gone: stopping the instance releases the underlying host, and instance store volumes are wiped",
+        "C": "They were automatically snapshotted to S3 before the stop and restored on start",
+        "D": "They are recoverable for 24 hours via the EC2 console's volume recovery feature"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating instance store like EBS, persisting across instance lifecycle changes.",
+          "reason": "Incorrect - instance store is physically attached to the host. A stop releases that host, and on start the instance lands on a different host with fresh, empty drives. Only a REBOOT keeps the same host and preserves the data."
+        },
+        "B": {
+          "description": "Instance store is ephemeral block storage on the host hardware; stop, hibernate, termination, or host failure all destroy its contents.",
+          "reason": "Correct - the files are unrecoverable. This is the fundamental trade-off of instance store: extremely high local IOPS and no extra cost, but zero persistence beyond the host. It must hold only data that is disposable or replicated elsewhere (caches, buffers, scratch space)."
+        },
+        "C": {
+          "description": "An automatic backup of ephemeral drives to S3.",
+          "reason": "Incorrect - no such automatic mechanism exists. Anything worth keeping from instance store must be copied off by the application before a stop."
+        },
+        "D": {
+          "description": "A grace-period recovery option for wiped ephemeral volumes.",
+          "reason": "Incorrect - there is no recovery feature for instance store. Once the host is released, the blocks are gone (and are cryptographically wiped before reuse)."
+        }
+      },
+      "Tips": "Instance store survival table: REBOOT = data survives (same host); STOP / HIBERNATE / TERMINATE / host failure = data lost. You cannot snapshot instance store, cannot detach it, and you trade persistence for millions of local IOPS. Exam phrasing 'temporary/scratch/cache/buffer + highest local I/O' = instance store is right; 'data must persist' = EBS/EFS, never instance store."
+    },
+    {
+      "id": 8,
+      "questionText": "A team takes daily EBS snapshots of a 500 GB volume on which roughly 5 GB of data changes per day. After 30 days a manager worries they are paying for 30 x 500 GB = 15 TB of snapshot storage. Which statement correctly describes EBS snapshot behavior and cost?",
+      "options": {
+        "A": "Each snapshot is a full 500 GB copy, so storage really does grow by 500 GB per day",
+        "B": "Snapshots are incremental: after the first full snapshot, each one stores only the blocks changed since the previous snapshot, yet every snapshot can restore the full volume independently",
+        "C": "Only the most recent snapshot is kept; older ones are automatically overwritten",
+        "D": "Deleting any older snapshot breaks the ability to restore from newer snapshots"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Full-copy snapshots accumulating linearly with volume size.",
+          "reason": "Incorrect - only the FIRST snapshot copies all used blocks. Subsequent dailies store ~5 GB of changed blocks each, so 30 days costs roughly 500 GB + 29 x 5 GB, nowhere near 15 TB."
+        },
+        "B": {
+          "description": "Incremental, block-level snapshots stored in AWS-managed S3, where AWS maintains references so any single snapshot can rebuild the entire volume.",
+          "reason": "Correct - this is exactly how EBS snapshots work: incremental capture of changed blocks, with reference chains managed by AWS so each snapshot remains independently restorable and deletions are safe."
+        },
+        "C": {
+          "description": "A rolling single-snapshot model.",
+          "reason": "Incorrect - snapshots accumulate until you (or a lifecycle policy such as Data Lifecycle Manager) delete them; nothing is overwritten automatically."
+        },
+        "D": {
+          "description": "Fragile dependency chains where removing an old increment corrupts later ones.",
+          "reason": "Incorrect - when a snapshot is deleted, AWS transparently preserves any blocks still needed by other snapshots. Every remaining snapshot stays fully restorable."
+        }
+      },
+      "Tips": "Snapshot facts: incremental (changed blocks only), stored in S3 you do not see, each one independently restorable, deletions are safe. Cost levers: delete unneeded snapshots, move snapshots older than X to the EBS Snapshots Archive tier (~75% cheaper, 24-72h restore), and use Recycle Bin to protect against accidental deletion. 'Why is snapshot storage smaller than volume x count?' = incremental."
+    },
+    {
+      "id": 9,
+      "questionText": "An engineer creates a brand-new custom Security Group in a VPC and attaches it to an EC2 instance WITHOUT adding or removing any rules. Which statement describes the instance's traffic posture?",
+      "options": {
+        "A": "All inbound traffic is denied and all outbound traffic is allowed",
+        "B": "All inbound and outbound traffic is allowed",
+        "C": "All inbound and outbound traffic is denied",
+        "D": "Inbound traffic is allowed only from other resources in the same Security Group"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The default state of a NEW custom Security Group: zero inbound rules (so nothing is allowed in) and one outbound rule permitting all traffic.",
+          "reason": "Correct - Security Groups are implicit-deny, allow-list systems. A new custom SG ships with no inbound rules, blocking all inbound, and an allow-all outbound rule, permitting all instance-initiated traffic."
+        },
+        "B": {
+          "description": "A fully open posture in both directions.",
+          "reason": "Incorrect - inbound is closed until rules are added. (Only the outbound side defaults to open.)"
+        },
+        "C": {
+          "description": "A fully closed posture in both directions.",
+          "reason": "Incorrect - outbound defaults to allow-all; the engineer would have to delete the default outbound rule to block instance-initiated traffic."
+        },
+        "D": {
+          "description": "Self-referencing inbound permission among members of the group.",
+          "reason": "Incorrect - that behavior belongs to the DEFAULT Security Group automatically created with each VPC, which allows inbound from itself. A NEW custom SG has no inbound rules at all."
+        }
+      },
+      "Tips": "Defaults to memorize: NEW custom SG = inbound deny-all, outbound allow-all. The VPC's DEFAULT SG = inbound allowed from members of the same SG, outbound allow-all. NACL defaults: the VPC's default NACL allows everything both ways; a NEW custom NACL denies everything both ways. Exams love swapping these four cases - keep the matrix straight."
+    },
+    {
+      "id": 10,
+      "questionText": "An application on an EC2 instance uses an attached IAM role. A developer SSHs in and wants to see the temporary security credentials the AWS SDK is using. Where do these credentials come from on the instance?",
+      "options": {
+        "A": "From the instance metadata service at http://169.254.169.254/latest/meta-data/iam/security-credentials/<role-name>, retrieved with an IMDSv2 session token",
+        "B": "From the file ~/.aws/credentials, which AWS writes automatically when a role is attached",
+        "C": "From the instance's user data, where the role's access keys are injected at launch",
+        "D": "From AWS Secrets Manager, which every instance queries by default"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The instance metadata service (IMDS) exposes auto-rotated temporary credentials (access key, secret key, session token) for the attached role; with IMDSv2 the caller first obtains a session token via a PUT to /latest/api/token and presents it as a header.",
+          "reason": "Correct - SDKs and the CLI resolve role credentials by querying IMDS in the credential provider chain. The credentials are short-lived and rotated automatically, which is why roles beat static keys on EC2. IMDSv2's token requirement also blunts SSRF-style credential theft."
+        },
+        "B": {
+          "description": "The local shared credentials file used for manually configured profiles.",
+          "reason": "Incorrect - attaching a role writes NOTHING to disk. ~/.aws/credentials only contains keys a human ran 'aws configure' to store; role credentials live behind the metadata endpoint."
+        },
+        "C": {
+          "description": "Launch-time user data carrying the role's keys.",
+          "reason": "Incorrect - roles do not have long-term keys to inject, and user data is readable via metadata, so placing any secrets there is an anti-pattern. User data is for bootstrap scripts, not credentials."
+        },
+        "D": {
+          "description": "A default integration where instances pull their own credentials from Secrets Manager.",
+          "reason": "Incorrect - Secrets Manager stores application secrets you explicitly put there (DB passwords, API keys); it plays no role in delivering an instance's IAM role credentials."
+        }
+      },
+      "Tips": "Memorize the magic IP 169.254.169.254: /latest/meta-data/... serves instance info and role credentials (iam/security-credentials/<role-name>); /latest/user-data serves the launch script. IMDSv2 = session-oriented: PUT /latest/api/token, then pass X-aws-ec2-metadata-token - require it to harden against SSRF. Role credentials are temporary, auto-rotated, and never written to ~/.aws/credentials."
+    },
+    {
+      "id": 11,
+      "questionText": "A security engineer finds the AWS managed policy ReadOnlyAccess too broad for the company's auditors. They need a tailored read-only permission set that will be reused across 12 different roles, kept under version control with the ability to roll back changes. What should they create?",
+      "options": {
+        "A": "Edit the AWS managed ReadOnlyAccess policy to remove the unwanted services",
+        "B": "An identical inline policy embedded in each of the 12 roles",
+        "C": "A customer managed policy attached to all 12 roles",
+        "D": "A Service Control Policy attached to the account"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Modifying a policy maintained by AWS.",
+          "reason": "Incorrect - AWS managed policies are read-only to customers; they cannot be edited (AWS updates them centrally for everyone)."
+        },
+        "B": {
+          "description": "Twelve embedded copies of the same JSON.",
+          "reason": "Incorrect - inline policies are bound 1:1 to a single identity: no reuse, no shared updates, no version history. Every change means editing 12 places."
+        },
+        "C": {
+          "description": "A standalone policy the customer authors and controls: attachable to many identities, supports up to 5 stored versions with rollback, and updates propagate to every attached role at once.",
+          "reason": "Correct - reuse across roles + controlled customization + versioning/rollback is the exact feature set of customer managed policies, making them the best practice for shared permission sets."
+        },
+        "D": {
+          "description": "An organization-level guardrail.",
+          "reason": "Incorrect - SCPs set the MAXIMUM permissions for accounts in an Organization; they grant nothing and are not a tool for crafting a reusable read-only permission set for specific roles."
+        }
+      },
+      "Tips": "Policy type triage: AWS managed = quick start, maintained by AWS, NOT editable. Customer managed = your JSON, reusable across identities, up to 5 versions with rollback - the best-practice default. Inline = embedded 1:1, use only when a policy must live and die with a single identity. 'Reused + customized + version control' = customer managed."
+    },
+    {
+      "id": 12,
+      "questionText": "An application on EC2 uses an instance role that grants S3 access. The app now also needs DynamoDB access. An engineer tries to associate a SECOND IAM role with the running instance and the operation fails. What should they do instead?",
+      "options": {
+        "A": "Retry with an instance profile containing both roles, since profiles may hold multiple roles",
+        "B": "Attach an additional policy granting the DynamoDB permissions to the EXISTING role; the new permissions apply almost immediately without restarting the instance",
+        "C": "Terminate and relaunch the instance, selecting both roles at launch time",
+        "D": "Embed DynamoDB access keys in the application's configuration file"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A multi-role instance profile.",
+          "reason": "Incorrect - an instance profile contains exactly ONE role, and an instance can have exactly one instance profile associated at a time."
+        },
+        "B": {
+          "description": "Expanding the single role: a role can carry many policies (multiple managed policies plus inline ones), and policy changes flow through to the temporary credentials the instance already vends.",
+          "reason": "Correct - the one-role-per-instance limit is bypassed legitimately by enriching that role. No relaunch, no new credentials to deploy - permissions update in place, which is precisely why roles are the recommended mechanism."
+        },
+        "C": {
+          "description": "Rebuilding the instance to select two roles.",
+          "reason": "Incorrect - the launch wizard also accepts only one role; relaunching cannot circumvent the platform constraint, and it is pointless downtime."
+        },
+        "D": {
+          "description": "Falling back to static credentials for the second service.",
+          "reason": "Incorrect - long-term keys on an instance reintroduce the exact risk roles eliminate; never mix stored keys with role-based design."
+        }
+      },
+      "Tips": "Cardinality facts: 1 instance <-> 1 instance profile <-> 1 role, but 1 role -> MANY policies (managed policy attach quota defaults to 10, raisable to 20). Need more permissions? Modify or add policies on the existing role - changes apply within seconds, no restart. A role can also be associated/replaced on a RUNNING instance; you never need to relaunch for IAM changes."
+    },
+    {
+      "id": 13,
+      "questionText": "Before a production change, an engineer wants to verify from the CLI that a role's permissions actually allow launching an instance - WITHOUT creating any resources or incurring charges. What is the QUICKEST way?",
+      "options": {
+        "A": "Read through the role's policy JSON and infer the result",
+        "B": "Launch a real instance and terminate it within the first minute",
+        "C": "Permission checks are only possible in the console's Policy Simulator",
+        "D": "Run 'aws ec2 run-instances ... --dry-run' and interpret the response: DryRunOperation means allowed, UnauthorizedOperation means denied"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Manual static analysis of the policy documents.",
+          "reason": "Incorrect - real evaluation involves multiple policies, boundaries, SCPs, and conditions; eyeballing JSON is slow and error-prone compared to asking the service directly."
+        },
+        "B": {
+          "description": "A live test with real resources.",
+          "reason": "Incorrect - it creates billable resources and side effects (ENIs, volumes, logs) precisely when the goal is to avoid them."
+        },
+        "C": {
+          "description": "Restricting authorization testing to a console tool.",
+          "reason": "Incorrect - the Policy Simulator is a valid tool, but it is not the only one and is not the CLI-quick path the question asks for."
+        },
+        "D": {
+          "description": "The DryRun flag supported by many EC2 API actions: the request is authorized end-to-end but NOT executed, returning an error code that encodes the authorization verdict.",
+          "reason": "Correct - '--dry-run' performs a real permission evaluation with zero side effects. Counterintuitively, the 'error' DryRunOperation is the SUCCESS signal (you would have been allowed); UnauthorizedOperation means the call would be denied."
+        }
+      },
+      "Tips": "Two permission-testing tools: CLI '--dry-run' (many EC2 actions) = live authorization check, no resources created - remember DryRunOperation = ALLOWED, UnauthorizedOperation = DENIED. IAM Policy Simulator = console/API what-if analysis across services. Also pair with 'aws sts get-caller-identity' to confirm WHICH identity you are testing as."
+    },
+    {
+      "id": 14,
+      "questionText": "A media company runs a video transcoding farm: the workload keeps every vCPU pinned at high utilization for hours, while memory usage stays modest. Which instance family is the BEST fit?",
+      "options": {
+        "A": "R family (memory optimized)",
+        "B": "C family (compute optimized)",
+        "C": "T family (burstable general purpose)",
+        "D": "I family (storage optimized)"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "High RAM-to-vCPU instances for in-memory data.",
+          "reason": "Incorrect - the workload's memory needs are modest; paying for large RAM the encoder will not use wastes budget."
+        },
+        "B": {
+          "description": "Compute optimized instances with the highest sustained CPU performance per dollar, built for batch processing, media transcoding, HPC, and game/ad servers.",
+          "reason": "Correct - 'CPU-bound, sustained high utilization, modest memory' is the textbook C-family profile; media transcoding is literally one of AWS's listed C-family use cases."
+        },
+        "C": {
+          "description": "Credit-based instances meant for low baseline usage with occasional spikes.",
+          "reason": "Incorrect - hours of pinned CPU would drain credits and throttle to baseline (or rack up Unlimited-mode surcharges); sustained load is the anti-pattern for T."
+        },
+        "D": {
+          "description": "Instances built around massive local NVMe storage I/O.",
+          "reason": "Incorrect - the bottleneck stated is CPU, not local disk IOPS; I family optimizes the wrong resource."
+        }
+      },
+      "Tips": "Match the stated BOTTLENECK to the family letter: sustained CPU = C (transcoding, batch, HPC); memory/in-memory data = R; balanced/unknown = M; small spiky = T (never for sustained load); local NVMe IOPS = I; GPU/ML = G/P. Exam questions usually hand you the bottleneck word ('compute-intensive', 'memory-bound') - the letter follows directly."
+    },
+    {
+      "id": 15,
+      "questionText": "A development EC2 instance (EBS-backed) sits idle every night and weekend. The team wants to eliminate unnecessary cost during idle hours but keep the instance's disk state. If they STOP the instance during those windows, what is true about billing and state?",
+      "options": {
+        "A": "They must terminate instead; stopped instances bill the same as running ones",
+        "B": "Stopping is free in every respect: neither compute nor storage is billed",
+        "C": "While stopped, no instance compute charges accrue, but the EBS volumes (and any allocated Elastic IP) continue to be billed; disk data persists, RAM is lost, and the auto-assigned public IP may change on start",
+        "D": "Stopping bills compute at a 50% idle rate"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Equating stopped and running billing.",
+          "reason": "Incorrect - the entire point of stopping is that per-second instance (compute) charges cease; termination would destroy the disk state they want to keep."
+        },
+        "B": {
+          "description": "A fully free stopped state.",
+          "reason": "Incorrect - EBS volumes are billed for provisioned storage regardless of instance state, and idle public IPv4 addresses also carry charges."
+        },
+        "C": {
+          "description": "The accurate stop semantics: compute billing pauses, storage billing continues, EBS data persists, memory contents are discarded, and the ephemeral public IP is released.",
+          "reason": "Correct - stop/start on a schedule (e.g., via EventBridge Scheduler or Instance Scheduler) is the standard pattern for cutting dev/test cost while preserving the machine. Knowing exactly WHAT you still pay for - storage and addresses - is the tested nuance."
+        },
+        "D": {
+          "description": "A discounted idle compute rate.",
+          "reason": "Incorrect - no 50% idle tier exists; stopped instances simply stop accruing compute charges entirely."
+        }
+      },
+      "Tips": "State-to-billing map: RUNNING = compute + storage; STOPPED = storage (+ public IPv4/EIP) only, RAM lost, public IP may change; HIBERNATED = storage only but RAM image saved to the root volume; TERMINATED = nothing further (beware kept volumes/snapshots still bill). 'Idle nights and weekends' = stop on a schedule - automate it rather than relying on humans."
+    },
+    {
+      "id": 16,
+      "questionText": "A network appliance vendor asks whether their secondary network interface can be added to a customer's PRODUCTION EC2 instance without any downtime. Which statement about ENI attachment is correct?",
+      "options": {
+        "A": "ENIs can only be attached while an instance is stopped",
+        "B": "Yes - a secondary ENI can be HOT attached to a running instance (warm attach = while stopped, cold attach = at launch); only the primary interface (eth0) can never be detached",
+        "C": "ENIs can only be specified at launch time",
+        "D": "Attaching an ENI requires an instance reboot to take effect"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A stopped-only attachment model.",
+          "reason": "Incorrect - stopped attachment ('warm') is one option, not the only one; running instances accept ENIs too."
+        },
+        "B": {
+          "description": "The three attachment modes - hot (running), warm (stopped), cold (launch) - plus the invariant that the primary eth0 interface is permanent for the instance's life.",
+          "reason": "Correct - hot attach delivers exactly the zero-downtime addition the vendor needs (the OS sees a new interface immediately, though it may need configuration). The non-detachable primary ENI is the companion fact exams pair with this."
+        },
+        "C": {
+          "description": "Launch-time-only interfaces.",
+          "reason": "Incorrect - that describes only cold attach; ENIs are designed to be added and moved throughout an instance's life."
+        },
+        "D": {
+          "description": "A reboot requirement for attachment.",
+          "reason": "Incorrect - no reboot is needed; the device appears live (OS-level network config may follow, but the attachment itself is immediate)."
+        }
+      },
+      "Tips": "ENI attachment vocabulary: HOT = attach to a running instance, WARM = attach to a stopped instance, COLD = attach at launch. Invariants: eth0 (primary ENI) can never be detached; all of an instance's ENIs live in the same AZ; the number of ENIs (and IPs per ENI) scales with instance size. Movable secondary ENIs = portable MAC/private IP/SG identity."
+    },
+    {
+      "id": 17,
+      "questionText": "An engineer terminates a set of Spot Instances, but minutes later identical Spot Instances appear again and keep accruing charges. Nothing in the account uses an Auto Scaling group. What is the MOST likely cause and the fix?",
+      "options": {
+        "A": "An AWS billing error; open a support case",
+        "B": "Spot Instances cannot be terminated manually, only interrupted by AWS",
+        "C": "An AMI auto-launch setting is re-creating the instances; deregister the AMI",
+        "D": "The Spot request is PERSISTENT and still open, so it re-launches replacements; cancel the Spot request FIRST, then terminate the instances"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Attributing the relaunches to a billing malfunction.",
+          "reason": "Incorrect - the instances are genuinely launching; this is documented Spot request behavior, not a billing artifact."
+        },
+        "B": {
+          "description": "A restriction on terminating Spot capacity.",
+          "reason": "Incorrect - users can terminate Spot Instances at any time; termination itself is not the problem here."
+        },
+        "C": {
+          "description": "An image-level relaunch mechanism.",
+          "reason": "Incorrect - AMIs are passive templates; no AMI setting launches instances by itself."
+        },
+        "D": {
+          "description": "Persistent Spot request semantics: the request remains active until cancelled or expired, and whenever its instances are interrupted OR terminated, it requests replacements to maintain the target.",
+          "reason": "Correct - the classic teardown-order gotcha. Correct order: cancel the Spot request (so it stops re-requesting), THEN terminate the running instances. Cancelling alone does not terminate already-running instances either - both steps are needed."
+        }
+      },
+      "Tips": "Spot request types: ONE-TIME = launch once, request closes after fulfillment; PERSISTENT = keeps the target capacity alive, re-launching after interruptions AND manual terminations while the request is open. Teardown choreography (memorize the order): 1) cancel the Spot request, 2) terminate the instances. Reversing the order = whack-a-mole respawns and surprise bills."
+    },
+    {
+      "id": 18,
+      "questionText": "Compliance requires that EBS backups exist in a SECOND Region, encrypted with a KMS key that resides in that destination Region. What is the correct approach?",
+      "options": {
+        "A": "Nothing extra is needed; EBS snapshots are globally accessible from every Region",
+        "B": "Detach the volumes and re-attach them to instances in the second Region monthly",
+        "C": "Copy the snapshots to the destination Region, selecting the destination-Region KMS key during the copy (automatable with DLM cross-Region copy rules)",
+        "D": "Sync the volumes' files to an S3 bucket in the second Region with a cron job"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating snapshots as global resources.",
+          "reason": "Incorrect - snapshots are REGIONAL; a snapshot in the source Region is unusable for recovery elsewhere until copied."
+        },
+        "B": {
+          "description": "Physically moving volumes between Regions.",
+          "reason": "Incorrect - EBS volumes are bound to a single AZ; they can never be attached across Regions (or even across AZs). The mechanism for crossing boundaries is snapshots."
+        },
+        "C": {
+          "description": "Cross-Region snapshot copy: the copy operation targets any Region and lets you set the encryption key from the DESTINATION Region (re-encrypting in flight); Data Lifecycle Manager policies can perform these copies on a schedule.",
+          "reason": "Correct - this satisfies both requirements in one supported operation: geographic separation and destination-local KMS encryption, with DLM removing the manual effort. (KMS keys themselves are regional, which is why the copy step selects a destination key.)"
+        },
+        "D": {
+          "description": "File-level replication scripted to object storage.",
+          "reason": "Incorrect - file sync is not a block-level, point-in-time EBS backup: it misses consistency guarantees, restore tooling, and incremental efficiency, while adding operational burden."
+        }
+      },
+      "Tips": "Snapshot copy = the cross-boundary Swiss army knife: cross-Region (DR/compliance), cross-account (sharing), and add-or-rekey ENCRYPTION during the copy (KMS keys are regional - destination copies need a destination-Region key). Automate with DLM cross-Region copy rules or AWS Backup. Volume mobility chain: volume (AZ-locked) -> snapshot (regional) -> copy (any Region) -> new volume."
+    },
+    {
+      "id": 19,
+      "questionText": "A content platform needs shared storage mounted by a fleet of Linux instances. Growth is unpredictable - anywhere from 1 TB to 20 TB within a year - and the operations team refuses to do capacity planning, resizing, or pre-provisioning. Which storage choice fits?",
+      "options": {
+        "A": "A large pre-provisioned EBS volume on a file-server instance, resized by scripts as it fills",
+        "B": "Amazon EFS, which grows and shrinks automatically with the data and bills only for what is stored",
+        "C": "Instance store volumes pooled across the fleet",
+        "D": "A RAID 0 array of EBS volumes expanded quarterly"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A self-managed NFS server on provisioned block storage.",
+          "reason": "Incorrect - this recreates exactly the chores the team refused (capacity monitoring, Elastic Volumes resizes, file system growth) plus a single-instance bottleneck/failure point."
+        },
+        "B": {
+          "description": "A fully managed, elastic NFS file system: no provisioning, petabyte-scale automatic growth/shrink, thousands of concurrent connections, pay-per-GB-stored.",
+          "reason": "Correct - 'unpredictable growth + zero capacity management + shared by many Linux instances' is the EFS value proposition verbatim. Pair with lifecycle-to-IA to keep the per-GB premium in check."
+        },
+        "C": {
+          "description": "Ephemeral host-local disks treated as a durable pool.",
+          "reason": "Incorrect - instance store is not shared between instances and evaporates on stop/termination; it is disqualified twice over."
+        },
+        "D": {
+          "description": "Striped block storage expanded on a schedule.",
+          "reason": "Incorrect - RAID 0 still is not shareable storage (one instance attaches it), still needs the forbidden capacity planning, and adds fragility (any member volume failure kills the array)."
+        }
+      },
+      "Tips": "Provisioning model contrast the exam tests: EBS = you PROVISION a size and pay for it whether used (resize = your job); EFS = ELASTIC, no size to manage, pay only for bytes stored, mounted concurrently by many instances across AZs. EFS costs more per GB - justified by sharing + elasticity; offset with EFS-IA lifecycle. 'No capacity planning, shared, Linux' = EFS."
+    },
+    {
+      "id": 20,
+      "questionText": "An organization mandates that every NEW EBS volume created in its account must be encrypted, but developers keep forgetting the encryption checkbox when launching instances. What is the LEAST-effort way to make encryption automatic going forward?",
+      "options": {
+        "A": "Enable the setting and it will also retroactively encrypt all existing unencrypted volumes",
+        "B": "Run a nightly script that finds unencrypted volumes and rebuilds them encrypted",
+        "C": "Send a policy reminder email and trust developers to comply",
+        "D": "Turn on 'EBS encryption by default' in the account's EC2 settings for each Region (optionally choosing the default KMS key); all newly created volumes are then encrypted automatically"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A retroactive interpretation of the default-encryption setting.",
+          "reason": "Incorrect - the setting is forward-looking ONLY: existing unencrypted volumes stay unencrypted until manually migrated via the snapshot-copy-encrypt workflow."
+        },
+        "B": {
+          "description": "Detect-and-remediate automation after the fact.",
+          "reason": "Incorrect - rebuilding volumes nightly is disruptive, complex, and unnecessary when a one-time account setting prevents the problem at creation."
+        },
+        "C": {
+          "description": "Process-by-memo enforcement.",
+          "reason": "Incorrect - the scenario already proves human compliance fails; a technical control is required."
+        },
+        "D": {
+          "description": "The account-level, per-Region EBS default encryption switch: every volume created thereafter (including from launches and snapshot copies) is encrypted with the chosen default key without anyone selecting anything.",
+          "reason": "Correct - one setting per Region permanently removes the human factor for all NEW volumes - the definition of least effort. Pair it with an IAM/SCP guardrail if a hard deny on unencrypted creation is also desired."
+        }
+      },
+      "Tips": "'EBS encryption by default' = account-level setting, configured PER REGION, affects NEW volumes and snapshot copies only - never retroactive. Existing unencrypted volumes still need the snapshot -> encrypted copy -> new volume dance. For hard enforcement, layer an SCP/IAM condition denying CreateVolume without encryption. Exam keywords 'all future volumes encrypted automatically' = this setting."
+    }
+  ]
+}

@@ -1,0 +1,807 @@
+{
+  "setId": "f2c9a4e6-7b81-4d35-9c2a-6e8f1b5d3a07",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Exam Day Challenge",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "An IAM user has an identity-based policy granting full EC2 and full S3 access. Security then attaches a permissions boundary whose policy allows ONLY S3 actions. Separately, a Service Control Policy on the account allows ONLY EC2 and CloudWatch actions. There are no explicit Deny statements anywhere. What can the user effectively do?",
+      "options": {
+        "A": "Full EC2 and S3, because the identity-based policy is the user's actual permission set",
+        "B": "Nothing at all, because effective permissions are the INTERSECTION of the identity policy, the permissions boundary, and the SCP, and that intersection is empty",
+        "C": "EC2 and CloudWatch only, because the SCP defines what the account is allowed to do",
+        "D": "S3 only, because the permissions boundary is the most restrictive layer and therefore wins"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Taking the identity-based policy as the final word.",
+          "reason": "Incorrect - identity policies are only one input. Both the permissions boundary and the SCP further filter the result, so the identity policy alone never determines effective access when those layers exist."
+        },
+        "B": {
+          "description": "Multi-layer evaluation: an action is allowed only if the identity policy AND the permissions boundary AND every applicable SCP all permit it (intersection), with any explicit Deny overriding everything.",
+          "reason": "Correct - identity (EC2+S3) intersected with boundary (S3) intersected with SCP (EC2+CloudWatch) leaves no action permitted by all three: S3 survives the boundary but is blocked by the SCP, and EC2 survives the SCP but is blocked by the boundary. The result is zero effective permissions."
+        },
+        "C": {
+          "description": "Treating the SCP as the controlling layer.",
+          "reason": "Incorrect - the SCP caps the account, but its allowances must still intersect the boundary and identity policy. EC2 passes the SCP yet fails the S3-only boundary, so it is not usable."
+        },
+        "D": {
+          "description": "Treating the boundary as a simple 'most restrictive wins' rule.",
+          "reason": "Incorrect - the boundary does narrow things to S3, but the SCP independently removes S3. No single layer 'wins'; ALL must agree, and here they share nothing."
+        }
+      },
+      "Tips": "The big intersection trap: identity policies are a UNION among themselves, but permissions boundaries and SCPs are INTERSECTION filters layered on top. Effective = identity AND boundary AND SCP (then any explicit Deny removes more). If two filters allow disjoint action sets, the overlap can be empty even though each layer looks permissive. None of these constructs ever GRANTS access by itself."
+    },
+    {
+      "id": 2,
+      "questionText": "An administrator signed in with a highly privileged IAM user (AdministratorAccess) assumes a role that has ONLY read-only S3 permissions, in order to perform a scoped task. While operating with the assumed role's temporary credentials, can the administrator also terminate EC2 instances using the privileges of their original admin user?",
+      "options": {
+        "A": "No, while using the role's temporary credentials only the ROLE's permissions are in effect; the original user's permissions do not apply",
+        "B": "Yes, because an administrator's privileges always persist regardless of role assumption",
+        "C": "Yes, the role's permissions are ADDED to the user's existing admin permissions for the duration of the session",
+        "D": "No, unless the role's trust policy explicitly lists the EC2 service as a principal"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Identity substitution: STS issues temporary credentials that carry only the assumed role's permissions, and the caller's original identity permissions are set aside for that session.",
+          "reason": "Correct - operating under the role's credentials limits you to the role's read-only S3 access; terminating EC2 instances is not permitted because the admin user's permissions are not active in the role session."
+        },
+        "B": {
+          "description": "A belief that administrator status is sticky across identities.",
+          "reason": "Incorrect - there is no permanent 'admin' attribute. Once you use the role's temporary credentials, you have exactly the role's permissions, nothing more."
+        },
+        "C": {
+          "description": "An additive model where assuming a role unions the role's and the user's permissions.",
+          "reason": "Incorrect - role assumption is not additive like group membership. Switching to a role's credentials means you act AS the role, not as yourself plus the role."
+        },
+        "D": {
+          "description": "Confusing the trust policy's principals with the role's permissions.",
+          "reason": "Incorrect - the trust policy controls WHO may assume the role (here, the user), not what the role can do; listing EC2 as a principal would be nonsensical and would not grant the session EC2 actions anyway."
+        }
+      },
+      "Tips": "Key distinction: GROUP membership is additive (union of all group policies), but ASSUMING A ROLE replaces your permissions with the role's for that session. Trust policy = who can assume (authentication side); permissions policy = what the role can do (authorization side). 'I assumed a weaker role but expected to keep my admin rights' is the classic misconception this tests."
+    },
+    {
+      "id": 3,
+      "questionText": "A central logging S3 bucket must be writable by hundreds of accounts in the company's AWS Organization, and new accounts are onboarded weekly. Maintaining an explicit list of account IDs in the bucket policy is unsustainable. Which approach scales with the LEAST ongoing maintenance?",
+      "options": {
+        "A": "Add a bucket policy condition on aws:PrincipalOrgID matching the organization's ID, so any principal in the organization is authorized automatically",
+        "B": "List every member account's ID in the bucket policy Principal and update the policy each time an account joins",
+        "C": "Make the bucket public so that all accounts (and everyone else) can write to it",
+        "D": "Create an IAM user in the logging account for each member account and distribute access keys"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Using the aws:PrincipalOrgID global condition key, which evaluates whether the calling principal belongs to the specified AWS Organization.",
+          "reason": "Correct - one condition covers every current and future account in the organization with no per-account edits, exactly satisfying 'scales with least maintenance'. New accounts are automatically in scope the moment they join the org."
+        },
+        "B": {
+          "description": "Enumerating account IDs explicitly in the policy.",
+          "reason": "Incorrect - this works but requires editing the bucket policy on every onboarding, which is precisely the unsustainable maintenance the scenario wants to avoid (and policies have size limits)."
+        },
+        "C": {
+          "description": "Opening the bucket to anonymous public access.",
+          "reason": "Incorrect - public write is a severe security exposure (anyone on the internet could write or overwrite logs) and is not how cross-account org access should be granted."
+        },
+        "D": {
+          "description": "Provisioning long-term IAM users and keys per account.",
+          "reason": "Incorrect - this multiplies long-term credentials and management overhead and is the opposite of low maintenance; cross-account access should use policies/roles, not distributed keys."
+        }
+      },
+      "Tips": "For org-wide resource sharing, reach for the condition keys: aws:PrincipalOrgID (any principal in the org) and aws:PrincipalOrgPaths (specific OUs). They let one resource policy cover all accounts without listing IDs and auto-include new accounts. Pair with aws:SourceArn / aws:SourceAccount where appropriate. Enumerating account IDs is the maintenance-heavy distractor."
+    },
+    {
+      "id": 4,
+      "questionText": "An engineer runs 'aws ec2 describe-instances' in a Region containing 5,000 instances but needs ONLY the instances tagged Env=prod, while minimizing the amount of data the API returns and the load on the service. Which option is BEST?",
+      "options": {
+        "A": "Download all 5,000 instances and grep for 'prod' on the local machine",
+        "B": "Use --max-items 5000 to page through every instance and discard the non-prod ones client-side",
+        "C": "Use --query with a JMESPath expression selecting Env=prod, because --query reduces the data the API returns",
+        "D": "Use --filters 'Name=tag:Env,Values=prod', which filters server-side so the API returns only the matching instances"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Retrieving everything and filtering with local text tools.",
+          "reason": "Incorrect - this transfers the full result set (maximum data and API load) and then filters, the opposite of the requirement."
+        },
+        "B": {
+          "description": "Paging through all results and discarding non-matches locally.",
+          "reason": "Incorrect - --max-items only controls pagination size; you still retrieve all instances and filter client-side, so nothing is saved on transfer or service load."
+        },
+        "C": {
+          "description": "Applying a JMESPath --query expression to the response.",
+          "reason": "Incorrect - this is the subtle trap: --query runs CLIENT-side after the full response has already been returned by the API. It tidies your output but does not reduce what the API sends or processes."
+        },
+        "D": {
+          "description": "Server-side --filters, which the EC2 API applies before returning results so only matching resources are sent back.",
+          "reason": "Correct - server-side filtering minimizes both the data returned and the work the service does, making --filters the right tool when you want to constrain results at the source."
+        }
+      },
+      "Tips": "CLI filtering vs querying: --filters = SERVER-side (the service narrows results before sending; fewer bytes, less load; syntax varies per API). --query = CLIENT-side JMESPath applied to the already-returned response (great for shaping output, useless for reducing transfer). 'Minimize data returned / API load' = --filters; 'reformat or extract fields from output' = --query."
+    },
+    {
+      "id": 5,
+      "questionText": "A team enforces IMDSv2 (token required) on an instance and leaves the metadata response hop limit at the default of 1. A containerized application running on that instance can no longer retrieve the instance role's credentials, although a process on the host itself still can. What is the cause and the correct fix WITHOUT weakening security?",
+      "options": {
+        "A": "IMDSv2 is incompatible with containers; revert the instance to IMDSv1",
+        "B": "The PUT token request from inside the container crosses an additional network hop, so increase the metadata hop limit to 2 (or higher)",
+        "C": "The container must have its own IAM role attached directly to it instead of using the instance role",
+        "D": "The instance profile must be detached and re-created after IMDSv2 is enabled"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating IMDSv2 as fundamentally incompatible with containers.",
+          "reason": "Incorrect - IMDSv2 works with containers; reverting to IMDSv1 would weaken security (the very thing IMDSv2 hardens against SSRF) and is unnecessary."
+        },
+        "B": {
+          "description": "Hop-limit mechanics: IMDSv2 enforces a TTL/hop limit on the token response; the default of 1 blocks requests that traverse the container's extra network hop to reach 169.254.169.254.",
+          "reason": "Correct - raising the hop limit to 2 lets the token (and thus the credentials) reach processes one network hop away, such as containers, while keeping IMDSv2's protections intact. This is the documented fix for containerized workloads."
+        },
+        "C": {
+          "description": "Attaching an IAM role directly to a container.",
+          "reason": "Incorrect - on plain EC2 you cannot attach an IAM role to an individual container; the instance role is delivered via IMDS. (Per-container roles are an ECS/EKS concept, not relevant to fixing IMDS hop limits here.)"
+        },
+        "D": {
+          "description": "Re-creating the instance profile.",
+          "reason": "Incorrect - enabling IMDSv2 does not invalidate the instance profile; the credentials are reachable from the host, proving the profile is fine. The issue is purely the hop limit."
+        }
+      },
+      "Tips": "IMDSv2 hardens metadata access (PUT to /latest/api/token, then send the token header) to block SSRF. The metadata HOP LIMIT defaults to 1; containerized apps sit one hop further, so they need hop limit 2. Symptom 'host can read credentials but containers get denied after enabling IMDSv2' = raise the hop limit, never disable IMDSv2."
+    },
+    {
+      "id": 6,
+      "questionText": "An IAM user has NO identity-based permissions for Amazon S3 whatsoever. An S3 bucket in the SAME AWS account has a bucket policy (a resource-based policy) that explicitly allows that user to perform s3:GetObject. There are no Deny statements anywhere. Can the user read objects from the bucket?",
+      "options": {
+        "A": "No, the user must have an identity-based policy; a bucket policy cannot grant access to a principal on its own",
+        "B": "No, because access requires BOTH an identity-based Allow and a resource-based Allow in all cases",
+        "C": "Only if the bucket is configured for public access",
+        "D": "Yes, within the same account an Allow in the resource-based (bucket) policy is sufficient even with no identity-based permission, as long as nothing explicitly denies it"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A belief that only identity policies can grant access.",
+          "reason": "Incorrect - within a single account, a resource-based policy can independently grant access; an identity policy is not strictly required when the bucket policy allows the action."
+        },
+        "B": {
+          "description": "Applying the cross-account 'both must allow' rule universally.",
+          "reason": "Incorrect - the requirement for BOTH an identity Allow and a resource Allow applies to CROSS-account access. Same-account access is a UNION: either an identity policy or a resource policy allowing the action is enough."
+        },
+        "C": {
+          "description": "Conflating an explicit per-principal grant with public access.",
+          "reason": "Incorrect - the bucket policy targets a specific principal in the same account; no public access setting is needed, and making the bucket public would be an unrelated security change."
+        },
+        "D": {
+          "description": "Same-account evaluation: a request is allowed if EITHER the identity-based or the resource-based policy allows it and no policy denies it.",
+          "reason": "Correct - because the user and bucket are in the same account, the bucket policy's Allow alone authorizes s3:GetObject. Absent any Deny, the user can read objects despite having no identity-based S3 permissions."
+        }
+      },
+      "Tips": "Same-account vs cross-account is a frequent trap: SAME account = UNION (identity policy OR resource policy can grant, any explicit Deny still wins). CROSS account = the resource's policy AND an identity policy in the caller's account must BOTH allow (plus role trust where relevant). 'No identity permissions but bucket policy allows, same account' = access granted."
+    },
+    {
+      "id": 7,
+      "questionText": "A consumer mobile app must obtain temporary AWS credentials for end users who authenticate through the company's existing SAML identity provider, with each user's access scoped by IAM, and absolutely no long-term AWS keys embedded in the distributed app. What is the correct approach?",
+      "options": {
+        "A": "Use AWS STS federation (for example AssumeRoleWithSAML, or AssumeRoleWithWebIdentity via Amazon Cognito) so that, after the IdP authenticates the user, the app receives short-lived role credentials",
+        "B": "Create one IAM user per end user and ship their access keys to the device",
+        "C": "Embed an IAM user's access keys in the app and obfuscate them in the binary",
+        "D": "Use the backend EC2 server's instance role credentials directly inside the mobile app"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Identity federation with STS: the trusted IdP authenticates the user, and STS issues temporary, automatically-expiring credentials for an IAM role, scoped per user/identity.",
+          "reason": "Correct - federation via AssumeRoleWithSAML (or web identity federation through Cognito) is the standard pattern for granting external/end users temporary AWS access without any long-term keys on the device."
+        },
+        "B": {
+          "description": "Minting an IAM user per end user.",
+          "reason": "Incorrect - IAM users are not designed to scale to large or unbounded end-user populations, and distributing their keys to devices reintroduces long-term credentials on untrusted clients."
+        },
+        "C": {
+          "description": "Hiding long-term keys inside the application package.",
+          "reason": "Incorrect - obfuscation is not security; embedded long-term keys can be extracted from any distributed app, which is exactly what the requirement forbids."
+        },
+        "D": {
+          "description": "Reusing the server's instance role credentials on the client.",
+          "reason": "Incorrect - instance role credentials belong on the EC2 instance only; extracting them to a mobile client both leaks them and grants every user the server's full permissions, with no per-user scoping."
+        }
+      },
+      "Tips": "External or end-user access without long-term keys = STS federation: SAML (AssumeRoleWithSAML) for corporate IdPs, web identity / Cognito (AssumeRoleWithWebIdentity) for social or app logins. The pattern always yields TEMPORARY role credentials. Any answer that embeds, ships, or reuses long-term keys on a client device is the distractor."
+    },
+    {
+      "id": 8,
+      "questionText": "A company purchased a REGIONAL Standard Reserved Instance for a WINDOWS instance (license included), size m5.xlarge. They later run m5.2xlarge Windows instances in the same Region and family. Will the regional RI automatically provide partial discount coverage to the larger instances through instance size flexibility?",
+      "options": {
+        "A": "Yes, regional Reserved Instances always provide instance size flexibility within the same family",
+        "B": "Yes, but only if the RI was purchased with the All Upfront payment option",
+        "C": "No, because Standard Reserved Instances never offer size flexibility - only Convertible RIs do",
+        "D": "No, instance size flexibility applies only to Linux/Unix shared-tenancy RIs; Windows and other premium-OS (or dedicated-tenancy) RIs are size-specific"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Assuming size flexibility is universal for regional RIs.",
+          "reason": "Incorrect - it is conditional. Size flexibility (normalization across sizes in a family) requires Linux/Unix, default shared tenancy, and no separately-billed OS license."
+        },
+        "B": {
+          "description": "Tying size flexibility to a payment option.",
+          "reason": "Incorrect - the payment option (All/Partial/No Upfront) affects the discount magnitude, not whether size flexibility applies."
+        },
+        "C": {
+          "description": "Claiming Standard RIs lack size flexibility entirely.",
+          "reason": "Incorrect - regional STANDARD RIs DO offer size flexibility for eligible (Linux/Unix, shared-tenancy) instances. The Standard-vs-Convertible difference is about exchange/sale rights, not size normalization."
+        },
+        "D": {
+          "description": "The eligibility rule: instance size flexibility applies to regional Linux/Unix RIs with default tenancy and no premium OS charge; Windows, RHEL/SLES (with charges), and dedicated tenancy are excluded.",
+          "reason": "Correct - because this RI is Windows (premium OS), it is size-specific. The m5.xlarge RI does not automatically apply partial coverage to m5.2xlarge instances; you would need RIs matching the exact size."
+        }
+      },
+      "Tips": "Regional RI instance size flexibility (normalization) is real but conditional: Linux/Unix + DEFAULT (shared) tenancy + no separately-billed OS license. Windows, RHEL/SLES-with-license, and Dedicated tenancy are size-specific - no automatic cross-size coverage. Don't confuse size flexibility (a regional-RI billing feature) with Convertible RIs (exchange rights). Zonal RIs add a capacity reservation but no size flexibility."
+    },
+    {
+      "id": 9,
+      "questionText": "A team creates an On-Demand Capacity Reservation for 50 instances of a specific type in one AZ ahead of a product launch, but off-peak utilization runs around 30%. Finance flags unexpectedly high cost. Which statement is accurate?",
+      "options": {
+        "A": "You are billed only for the instances actually running within the reservation, so 30% utilization means 30% cost",
+        "B": "Capacity Reservations bill all 50 instance slots at On-Demand rates whether or not they are used; applying a Savings Plan or RI lowers the effective rate, and genuinely unused capacity should be reduced or released",
+        "C": "Capacity Reservations are free of charge; only the instances that run incur cost",
+        "D": "Switching the reservation itself to Spot pricing will cut the cost while keeping the capacity guarantee"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Assuming reservations bill only for running usage.",
+          "reason": "Incorrect - a Capacity Reservation holds capacity for you, so you pay for the full reserved quantity at On-Demand rates regardless of how many instances you actually launch into it."
+        },
+        "B": {
+          "description": "Reservation billing reality plus the discount mechanism: the reservation guarantees capacity (billed in full), while Savings Plans or Reserved Instances are what reduce the per-hour RATE; right-sizing or releasing unused capacity cuts waste.",
+          "reason": "Correct - this captures both halves: unused reserved slots still cost money, and the fix is to cover the reservation with a discount commitment and/or shrink it. The reservation and the discount are separate concerns."
+        },
+        "C": {
+          "description": "Believing reservations carry no charge.",
+          "reason": "Incorrect - reserving capacity is not free; otherwise everyone would reserve unlimited capacity. You pay for the reserved slots."
+        },
+        "D": {
+          "description": "Converting the reservation to Spot.",
+          "reason": "Incorrect - On-Demand Capacity Reservations are an On-Demand construct; there is no 'Spot capacity reservation' that both guarantees capacity and gives Spot prices. Spot offers no capacity guarantee at all."
+        }
+      },
+      "Tips": "On-Demand Capacity Reservation = GUARANTEED capacity in a specific AZ, no term commitment, but billed at On-Demand rates for the full reservation EVEN IF idle. It is not itself a discount: layer a Savings Plan or RI on top to lower the rate. Release the reservation when the event ends. 'Reserved but underused and still paying' is by design - cancel or cover it."
+    },
+    {
+      "id": 10,
+      "questionText": "A t3.large web server runs a moderate but sustained workload. It is NOT being throttled, yet the monthly bill is higher than expected and itemizes 'surplus credit' charges. What is the explanation?",
+      "options": {
+        "A": "T3 instances launch in Unlimited mode by default, so under sustained load they keep performance by charging for surplus CPU credits; switch to Standard mode (which throttles instead) or move to a fixed-performance family",
+        "B": "The extra charges come from EBS I/O, not from CPU credits",
+        "C": "The instance is being CPU-throttled and the surplus charges are a billing error to dispute",
+        "D": "T3 instances cannot run sustained workloads at all and must be replaced immediately"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "T-family credit modes: T3 (and T3a/T4g) default to UNLIMITED, sustaining performance by spending surplus credits you pay for; T2 defaults to Standard, which throttles to baseline when credits run out.",
+          "reason": "Correct - the absence of throttling combined with surplus credit charges is the signature of Unlimited mode. To stop the charges, either set the instance to Standard mode (accepting throttling) or move a truly sustained workload to a fixed-performance M or C instance."
+        },
+        "B": {
+          "description": "Attributing the cost to storage I/O.",
+          "reason": "Incorrect - 'surplus credit' charges are specific to burstable CPU credits, not EBS. EBS charges appear as separate storage/IOPS/throughput line items."
+        },
+        "C": {
+          "description": "Assuming throttling plus a billing mistake.",
+          "reason": "Incorrect - the instance is explicitly NOT throttled, and surplus credit charges are a documented, legitimate billing line for burstable instances in Unlimited mode, not an error."
+        },
+        "D": {
+          "description": "Claiming T3 cannot handle sustained load.",
+          "reason": "Incorrect - in Unlimited mode T3 sustains load fine; it simply costs more. The decision is economic (credits vs fixed performance), not an absolute incapability."
+        }
+      },
+      "Tips": "Crucial default difference: T3/T3a/T4g default to UNLIMITED mode (never throttles, but you PAY for surplus credits under sustained load); T2 defaults to STANDARD (throttles to baseline when credits are exhausted, no surplus charge). Symptom 'not throttled but surplus credit charges' = Unlimited mode. For genuinely sustained CPU, a fixed-performance family (M/C) is usually cheaper than paying surplus credits."
+    },
+    {
+      "id": 11,
+      "questionText": "An architect must deploy 18 critical instances in one Region, each on isolated hardware, and the team specifically requires PER-INSTANCE hardware isolation (not partition-level grouping). A single spread placement group launch fails after 7 instances. What is the correct way to place all 18 while preserving per-instance isolation?",
+      "options": {
+        "A": "Switch to a partition placement group, because a spread placement group can never exceed 7 instances",
+        "B": "Distribute the instances across a spread placement group that spans 3 Availability Zones (7 per AZ allows up to 21), keeping each instance on isolated hardware",
+        "C": "Request a service quota increase to allow more than 7 instances per spread placement group per Availability Zone",
+        "D": "Use a cluster placement group, which supports far higher instance counts than spread"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating 7 as an absolute per-group cap and switching isolation models.",
+          "reason": "Incorrect - the limit is 7 instances PER AZ per spread group, not 7 total. Partition groups also change the isolation model to per-partition, which the team explicitly rejected."
+        },
+        "B": {
+          "description": "Spanning the spread group across multiple AZs: each AZ permits 7 instances on distinct hardware, so three AZs accommodate up to 21 while retaining per-instance isolation.",
+          "reason": "Correct - distributing 18 instances as roughly 7 + 7 + 4 across three AZs in one spread placement group satisfies both the count and the per-instance hardware isolation requirement without resorting to partition placement."
+        },
+        "C": {
+          "description": "Trying to raise the spread per-AZ limit via Service Quotas.",
+          "reason": "Incorrect - the 7-instances-per-AZ spread limit is a fixed architectural constraint and is not adjustable through quota requests."
+        },
+        "D": {
+          "description": "Using cluster placement for the higher count.",
+          "reason": "Incorrect - cluster placement packs instances onto shared, co-located hardware for low latency, which provides the OPPOSITE of hardware isolation."
+        }
+      },
+      "Tips": "Know the exact spread limit: 7 RUNNING instances per AZ PER GROUP - and a spread group can span multiple AZs, so 3 AZs allow up to 21 instances while keeping per-instance isolation. The trap answer assumes spread caps at 7 total and jumps to partition placement. Partition isolation is BETWEEN partitions (rack groups), not per-instance; choose it only when per-partition grouping is what you want."
+    },
+    {
+      "id": 12,
+      "questionText": "A team wants to use EC2 Hibernate on an r5.8xlarge instance (256 GB of RAM) to preserve a large in-memory cache overnight. They launched it with hibernation enabled and an encrypted EBS root volume, yet hibernation is unavailable for this instance. Why?",
+      "options": {
+        "A": "The root volume must be an instance store volume for hibernation to work",
+        "B": "Hibernation is only supported on burstable T-family instances",
+        "C": "Hibernation must be enabled AFTER launch, not at launch time",
+        "D": "Hibernation is not supported because the instance's RAM (256 GB) exceeds the supported limit (instance RAM must be under ~150 GB)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring instance store as the root for hibernation.",
+          "reason": "Incorrect - hibernation requires an ENCRYPTED EBS root (which the team already has); instance store cannot persist the RAM image and instance-store-backed instances cannot hibernate."
+        },
+        "B": {
+          "description": "Restricting hibernation to T-family burstable instances.",
+          "reason": "Incorrect - hibernation is supported across a range of families (and OSes), not limited to T instances; family alone is not the blocker here."
+        },
+        "C": {
+          "description": "Claiming hibernation is enabled post-launch.",
+          "reason": "Incorrect - it is the reverse: hibernation must be enabled AT LAUNCH and cannot be turned on later. The team did this correctly, so it is not the cause."
+        },
+        "D": {
+          "description": "The RAM ceiling: hibernation requires instance memory below roughly 150 GB because the entire RAM contents must be written to the root volume.",
+          "reason": "Correct - at 256 GB of RAM the r5.8xlarge exceeds the hibernation memory limit, so hibernation is simply not available for that instance size regardless of the (correct) encrypted-root and enable-at-launch settings."
+        }
+      },
+      "Tips": "Hibernate prerequisites to memorize: instance RAM < ~150 GB, ENCRYPTED EBS root sized to hold RAM, enabled AT LAUNCH only, supported family/OS, max 60 days hibernated. The sharp trap here is RAM size - large memory-optimized instances (256 GB+) are disqualified by the memory ceiling even when every other requirement is met. Instance-store root and 'enable later' are also classic wrong answers."
+    },
+    {
+      "id": 13,
+      "questionText": "A team enables EBS Multi-Attach on an io2 volume, attaches it to four instances in the same Availability Zone, formats it with ext4, and mounts it read/write on all four. They observe file system corruption. What is the cause?",
+      "options": {
+        "A": "io2 Multi-Attach supports at most 2 instances, so attaching 4 caused the corruption",
+        "B": "ext4 is not a cluster-aware file system; Multi-Attach requires a clustered/shared-disk file system or application-level write coordination, otherwise concurrent writers corrupt the data",
+        "C": "Multi-Attach requires the attached instances to be in DIFFERENT Availability Zones",
+        "D": "Multi-Attach is only supported on gp3 volumes, so io2 is the problem"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Citing a 2-instance Multi-Attach limit.",
+          "reason": "Incorrect - Multi-Attach supports up to 16 Nitro instances in the same AZ; four is well within the limit and is not the cause."
+        },
+        "B": {
+          "description": "The cluster-aware file system requirement: standard file systems like ext4/XFS assume a single writer; mounting them read/write on multiple instances over a shared block device leads to corruption unless a clustered file system or the application coordinates writes.",
+          "reason": "Correct - Multi-Attach provides shared BLOCK access but does not arbitrate writes. You must use a cluster-aware file system (e.g., GFS2, OCFS2) or have the application manage concurrency. Plain ext4 mounted RW on all four is exactly what corrupts."
+        },
+        "C": {
+          "description": "Requiring different AZs.",
+          "reason": "Incorrect - it is the opposite: all Multi-Attach instances must be in the SAME AZ (the volume is AZ-bound). Different AZs are impossible, not required."
+        },
+        "D": {
+          "description": "Restricting Multi-Attach to gp3.",
+          "reason": "Incorrect - Multi-Attach is supported on Provisioned IOPS io1/io2 volumes, NOT gp3. The io2 choice is correct; the file system is the problem."
+        }
+      },
+      "Tips": "Multi-Attach facts: io1/io2 only, up to 16 Nitro instances, all in ONE AZ, NOT for boot volumes - and crucially it needs a CLUSTER-AWARE file system (or app-level coordination) because EBS does not coordinate writes. Mounting ext4/XFS read/write on multiple instances = corruption. If you just need shared FILE storage without clustering complexity, EFS is the simpler answer."
+    },
+    {
+      "id": 14,
+      "questionText": "A network appliance uses a secondary ENI that carries its licensed MAC address and a fixed private IP. For disaster recovery, the team wants to detach that ENI from the primary instance and attach it to a standby instance located in a DIFFERENT Availability Zone during failover. Will this work?",
+      "options": {
+        "A": "Yes, an ENI can be detached and attached to an instance in any Availability Zone within the Region",
+        "B": "Yes, as long as both Availability Zones belong to the same VPC",
+        "C": "No, an ENI is bound to a single subnet and therefore a single Availability Zone; it can only be attached to instances in that same AZ",
+        "D": "Yes, but only the primary ENI (eth0) can be moved across Availability Zones"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Believing ENIs are Region-wide movable objects.",
+          "reason": "Incorrect - ENIs are not Region-scoped for attachment; they live in one subnet/AZ and cannot attach to instances in another AZ."
+        },
+        "B": {
+          "description": "Assuming same-VPC is sufficient for cross-AZ ENI moves.",
+          "reason": "Incorrect - a VPC spans AZs, but each ENI exists in a specific subnet within a specific AZ. Same VPC does not let an ENI cross AZ boundaries."
+        },
+        "C": {
+          "description": "AZ binding: an ENI is created in one subnet, which exists in exactly one AZ, so it can only be attached to instances in that AZ.",
+          "reason": "Correct - cross-AZ ENI movement is impossible. For cross-AZ failover you need another mechanism (a standby with its own interface in that AZ's subnet, DNS failover, or an Elastic IP remap), not ENI migration."
+        },
+        "D": {
+          "description": "Suggesting the primary ENI can move across AZs.",
+          "reason": "Incorrect - the primary ENI (eth0) cannot even be detached from its instance, let alone moved to another AZ. No ENI crosses AZs."
+        }
+      },
+      "Tips": "ENIs are AZ/subnet-bound: a secondary ENI can move between instances ONLY within the same AZ (great for same-AZ failover of a fixed private IP/MAC/SG set), and the primary eth0 cannot be detached at all. The trap is extending the 'movable ENI' idea across AZs. Cross-AZ resilience needs DNS, Elastic IP remapping, or per-AZ standby interfaces instead."
+    },
+    {
+      "id": 15,
+      "questionText": "A workload needs a sustained 900 MB/s of throughput on a SINGLE gp3 volume. The team provisions throughput to 900 MB/s but leaves IOPS at the 3,000 baseline, and the volume will not deliver more than about 750 MB/s. Why, and what is the fix?",
+      "options": {
+        "A": "gp3 volumes cannot exceed 750 MB/s under any configuration",
+        "B": "The volume must be made larger, because gp3 throughput scales with capacity",
+        "C": "gp3 throughput is capped at 0.25 MB/s per provisioned IOPS, so 3,000 IOPS allows only 750 MB/s; raise IOPS to at least 3,600 to support 900 MB/s",
+        "D": "Switch to gp2, which provides higher maximum throughput than gp3"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming a hard 750 MB/s ceiling for gp3.",
+          "reason": "Incorrect - gp3's maximum throughput is 1,000 MB/s; 750 MB/s is merely the limit imposed by the current 3,000 IOPS setting, not the volume type's ceiling."
+        },
+        "B": {
+          "description": "Relating gp3 throughput to volume size.",
+          "reason": "Incorrect - gp3 performance is independent of capacity; growing the volume changes nothing about throughput. (Size-linked throughput is an HDD/gp2 behavior, not gp3.)"
+        },
+        "C": {
+          "description": "The throughput-to-IOPS ratio: gp3 allows up to 0.25 MB/s of throughput per provisioned IOPS, so reaching 900 MB/s requires at least 900 / 0.25 = 3,600 IOPS.",
+          "reason": "Correct - the bottleneck is the IOPS-linked throughput cap, not the throughput setting itself. Provisioning 3,600+ IOPS unlocks 900 MB/s (and 4,000 IOPS unlocks the 1,000 MB/s maximum)."
+        },
+        "D": {
+          "description": "Recommending gp2 for higher throughput.",
+          "reason": "Incorrect - gp2 maxes out around 250 MB/s, far below gp3, so it is the wrong direction entirely."
+        }
+      },
+      "Tips": "gp3 throughput rule the exam loves: max throughput = 0.25 MB/s per PROVISIONED IOPS (so 3,000 IOPS -> 750 MB/s, 4,000 IOPS -> the 1,000 MB/s ceiling). Throughput is independent of volume size. If gp3 throughput plateaus below your setting, raise IOPS to support it. gp3 caps: 16,000 IOPS / 1,000 MB/s; gp2 ~250 MB/s; st1 500 MB/s."
+    },
+    {
+      "id": 16,
+      "questionText": "A throughput-bound, frequently accessed, sequential workload needs a sustained 700 MB/s on a single volume at the LOWEST cost that actually meets the requirement. Which volume type should be selected?",
+      "options": {
+        "A": "st1 Throughput Optimized HDD, since it is the cheapest throughput-oriented volume",
+        "B": "sc1 Cold HDD, the lowest-cost EBS volume overall",
+        "C": "gp3 with throughput provisioned to 700 MB/s (and IOPS raised to at least 2,800 to support that throughput)",
+        "D": "gp2 sized at its maximum capacity for higher throughput"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Reaching for the throughput HDD by reflex.",
+          "reason": "Incorrect - this is the trap. st1's maximum throughput is 500 MB/s per volume, so it physically cannot sustain 700 MB/s regardless of price."
+        },
+        "B": {
+          "description": "Choosing the cheapest HDD class.",
+          "reason": "Incorrect - sc1 is for INFREQUENTLY accessed cold data and tops out around 250 MB/s; it fails both the access-frequency and the throughput requirement."
+        },
+        "C": {
+          "description": "gp3 with provisioned throughput: gp3 supports up to 1,000 MB/s and decouples throughput from size, needing about 2,800 IOPS (700 / 0.25) to back 700 MB/s.",
+          "reason": "Correct - among the options that can actually deliver 700 MB/s, gp3 with provisioned throughput is the lowest-cost choice (cheaper than io2 for this low-IOPS, throughput-driven need). st1/sc1 cannot reach 700 MB/s, so 'cheap HDD' is disqualified on capability."
+        },
+        "D": {
+          "description": "Maxing out gp2 capacity for throughput.",
+          "reason": "Incorrect - gp2 throughput caps near 250 MB/s no matter the size, so it cannot meet 700 MB/s; oversizing it only wastes money."
+        }
+      },
+      "Tips": "Don't reflexively map 'high sequential throughput' to st1 - st1 caps at 500 MB/s and sc1 near 250 MB/s. When the target exceeds the HDD ceiling, gp3 (up to 1,000 MB/s, provision IOPS at 0.25 MB/s per IOPS to back it) is usually the lowest-cost option that MEETS the spec, with io2 reserved for very high IOPS or five-nines durability. Always test the candidate against the actual number before picking on price."
+    },
+    {
+      "id": 17,
+      "questionText": "A team tries to share an ENCRYPTED EBS snapshot with another AWS account, but the target account cannot use it. The snapshot was encrypted with the default AWS-managed key (aws/ebs). What is the correct fix?",
+      "options": {
+        "A": "Encrypted snapshots can never be shared, so create and send an unencrypted copy instead",
+        "B": "Copy the snapshot while re-encrypting it with a CUSTOMER-MANAGED KMS key, share the copy, and grant the target account permission to use that customer-managed key",
+        "C": "Simply add the target account ID to the snapshot's create-volume permissions; the default aws/ebs key is shareable",
+        "D": "Make the encrypted snapshot public to bypass the key restriction"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming encrypted snapshots are entirely unshareable.",
+          "reason": "Incorrect - encrypted snapshots CAN be shared when encrypted with a customer-managed key; falling back to an unencrypted copy needlessly drops encryption (and may violate policy)."
+        },
+        "B": {
+          "description": "Re-encrypt-then-share: copy the snapshot specifying a customer-managed CMK, share the snapshot with the account, and grant that account kms permissions (Decrypt/DescribeKey/CreateGrant) on the CMK.",
+          "reason": "Correct - the default aws/ebs key cannot be shared, so you re-encrypt with a customer-managed key during a snapshot copy and then share both the snapshot and access to the CMK. This is the standard cross-account encrypted-snapshot workflow."
+        },
+        "C": {
+          "description": "Sharing while keeping the default key.",
+          "reason": "Incorrect - snapshots encrypted with the AWS-managed aws/ebs key cannot be shared with other accounts at all; adding the account ID is not sufficient when the default key is in use."
+        },
+        "D": {
+          "description": "Making the encrypted snapshot public.",
+          "reason": "Incorrect - encrypted snapshots cannot be made public, and public sharing would be an inappropriate, insecure 'solution' even if it were possible."
+        }
+      },
+      "Tips": "KMS sharing gotcha: snapshots/AMIs encrypted with the DEFAULT aws/ebs key are NOT shareable. The fix is always: copy + re-encrypt with a CUSTOMER-MANAGED key, share the resource, then grant the other account use of that key (kms:Decrypt, DescribeKey, CreateGrant). Encrypted snapshots can be shared privately but never made public. Sharing changes WHO can use it; copying lets you change Region and/or key."
+    },
+    {
+      "id": 18,
+      "questionText": "To cut storage costs, a team moved its disaster-recovery EBS snapshots into the EBS Snapshots Archive tier. During a DR test they need a volume online within 30 minutes and discover they cannot meet that. What is the explanation and the right balance?",
+      "options": {
+        "A": "Archived snapshots restore instantly, so the delay must be an unrelated bug",
+        "B": "Archived snapshots can only be restored by opening an AWS Support case",
+        "C": "Snapshot Archive restores take roughly 24 to 72 hours, so it is unsuitable for fast DR; keep DR snapshots in the standard tier (optionally with Fast Snapshot Restore) and use Archive only for rarely-needed long-term retention",
+        "D": "The volume was simply too large to restore from the Archive tier within 30 minutes"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Assuming instant archive restores.",
+          "reason": "Incorrect - the Archive tier explicitly trades restore speed for lower storage cost; slow restores are expected behavior, not a bug."
+        },
+        "B": {
+          "description": "Requiring a support case to restore.",
+          "reason": "Incorrect - archived snapshots are restored through normal API/console actions; the constraint is the multi-hour restore time, not a manual support process."
+        },
+        "C": {
+          "description": "Archive restore latency: moving a snapshot back from Archive takes about 24-72 hours, making the tier appropriate only for cold, infrequently-needed retention rather than time-sensitive recovery.",
+          "reason": "Correct - for a 30-minute RTO, DR snapshots must stay in the standard tier (and Fast Snapshot Restore can give instant volume performance). Archive is for compliance/long-term copies where slow restore is acceptable, balancing cost against recovery speed."
+        },
+        "D": {
+          "description": "Blaming volume size for the delay.",
+          "reason": "Incorrect - the 24-72 hour window is inherent to the Archive tier's restore process, not a function of volume size."
+        }
+      },
+      "Tips": "EBS Snapshot Archive: ~75% cheaper storage but restore takes 24-72 HOURS - strictly for long-term, rarely-accessed retention, never for fast DR. Match the tier to the RTO: tight RTO = standard snapshots (plus Fast Snapshot Restore for instant volume performance); cold compliance copies = Archive. 'Cheaper, so archive everything' ignores recovery-time requirements."
+    },
+    {
+      "id": 19,
+      "questionText": "A team enables Fast Snapshot Restore (FSR) on a snapshot in us-east-1a, but volumes restored from that same snapshot in us-east-1b are still slow on first access. Why?",
+      "options": {
+        "A": "FSR applies to the entire Region once enabled, so the slowness in us-east-1b is unrelated to FSR",
+        "B": "FSR only works for io2 volumes, so the restored volume type is the problem",
+        "C": "The snapshot must be copied to a new snapshot before FSR takes effect anywhere",
+        "D": "FSR is enabled PER snapshot PER Availability Zone, so it must also be enabled for the snapshot in us-east-1b (and each AZ enrollment incurs an hourly charge)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating FSR as Region-wide.",
+          "reason": "Incorrect - FSR is scoped to specific Availability Zones, not the whole Region; enabling it in one AZ does nothing for another."
+        },
+        "B": {
+          "description": "Restricting FSR to io2.",
+          "reason": "Incorrect - FSR works with snapshots regardless of the restored volume type; the volume type is not the cause of the cross-AZ slowness."
+        },
+        "C": {
+          "description": "Requiring a snapshot copy first.",
+          "reason": "Incorrect - FSR is enabled directly on the existing snapshot for chosen AZs; no copy is needed, and copying would not address the per-AZ enablement requirement."
+        },
+        "D": {
+          "description": "FSR scoping: you enable FSR on a given snapshot for each AZ where you want fully-initialized restores, and AWS bills hourly per snapshot per enabled AZ.",
+          "reason": "Correct - because FSR was enabled only in us-east-1a, restores in us-east-1b still lazy-load. Enabling FSR for the snapshot in us-east-1b gives instant-performance volumes there too, at an additional hourly cost."
+        }
+      },
+      "Tips": "Fast Snapshot Restore is granular: PER SNAPSHOT, PER AZ, billed hourly while enabled (and there is a soft limit on concurrent FSR-enabled snapshots per Region). Enable it in every AZ where you need instant volume performance from that snapshot. Don't assume it is Region-wide. FSR is the alternative to manually pre-warming (reading every block) restored volumes."
+    },
+    {
+      "id": 20,
+      "questionText": "A mixed environment needs shared storage. The Windows file servers require SMB shares with Active Directory integration and NTFS ACLs, while a separate Linux analytics fleet needs POSIX-compliant NFS access. An architect proposes a SINGLE Amazon EFS file system to serve both. What is the correct guidance?",
+      "options": {
+        "A": "Use one EFS file system for both, since EFS natively supports SMB and NFS protocols",
+        "B": "Use EFS for the Windows servers and Amazon FSx for Windows File Server for the Linux fleet",
+        "C": "Use Amazon FSx for Windows File Server for the Windows workload (SMB, Active Directory, NTFS ACLs) and Amazon EFS for the Linux workload (NFS/POSIX)",
+        "D": "Mount Amazon S3 as a network drive on both the Windows and Linux machines"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Assuming EFS speaks both SMB and NFS.",
+          "reason": "Incorrect - EFS is an NFS, POSIX file system for Linux only; it does not provide SMB, Active Directory integration, or NTFS ACLs for Windows clients."
+        },
+        "B": {
+          "description": "Mapping the services to the wrong operating systems.",
+          "reason": "Incorrect - this reverses the correct pairing. FSx for Windows File Server is for Windows/SMB, and EFS is for Linux/NFS, not the other way around."
+        },
+        "C": {
+          "description": "Protocol-appropriate services: FSx for Windows File Server delivers SMB with AD and NTFS ACLs for the Windows servers, while EFS delivers NFS/POSIX for the Linux fleet.",
+          "reason": "Correct - no single service covers both protocol stacks here, so each workload gets the storage built for its protocol. Selecting shared storage by client OS/protocol is a recurring design decision."
+        },
+        "D": {
+          "description": "Using S3 as a mounted network drive for both.",
+          "reason": "Incorrect - S3 is object storage accessed by API, not a POSIX/NFS or SMB file share; it does not satisfy either the Windows SMB/NTFS or the Linux POSIX requirement as a mounted file system."
+        }
+      },
+      "Tips": "Shared-storage protocol map: EFS = NFS + POSIX, LINUX only; FSx for Windows File Server = SMB + Active Directory + NTFS ACLs, WINDOWS; FSx for Lustre = high-performance/HPC/ML. The OS and protocol in the question pick the service. Watch for reversed-pairing distractors (EFS-for-Windows). One file system rarely serves both Windows and Linux file-sharing needs."
+    },
+    {
+      "id": 21,
+      "questionText": "An instance launched from an INSTANCE STORE-backed AMI is 'stopped' overnight to save money. The next day it will not start and its data is gone. What happened, and what should have been done?",
+      "options": {
+        "A": "Stopping was fine; the data loss is a bug to report to AWS",
+        "B": "Stopping is allowed but hibernation must be enabled first to preserve the data",
+        "C": "The AMI should have been made public before stopping the instance",
+        "D": "Instance store-backed instances do not support the stopped state (only reboot or terminate), and instance store data is ephemeral; to stop/start with persistence, use an EBS-backed instance"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Assuming a stop was performed normally with a faulty result.",
+          "reason": "Incorrect - instance store-backed instances cannot enter the stopped state at all, so there was no valid 'stop' and no bug; the data loss follows from the storage model."
+        },
+        "B": {
+          "description": "Proposing hibernation to preserve instance store data.",
+          "reason": "Incorrect - hibernation requires an EBS root volume and does not apply to instance store-backed instances; it cannot rescue ephemeral instance store data."
+        },
+        "C": {
+          "description": "Tying data persistence to AMI visibility.",
+          "reason": "Incorrect - making an AMI public concerns sharing, not data durability; it has nothing to do with whether instance store data survives."
+        },
+        "D": {
+          "description": "Lifecycle and durability facts: an instance store-backed instance supports only reboot or terminate (no stop), and its local storage is wiped when the instance is not simply rebooting.",
+          "reason": "Correct - because there is no stop state, attempting to 'stop' such an instance effectively loses it and its ephemeral data. To stop/start and keep data, the workload should run on an EBS-backed instance."
+        }
+      },
+      "Tips": "Two instance-store facts converge here: (1) instance store-backed instances have NO stopped state - only reboot or terminate; (2) instance store data is ephemeral (survives reboot only). EBS-backed instances are the ones that can be stopped/started with disk state preserved. 'Stopped an instance-store instance to save money' is a trap - it cannot be stopped, and the data does not persist."
+    },
+    {
+      "id": 22,
+      "questionText": "After increasing a gp3 volume from 100 GB to 200 GB with Elastic Volumes, a team immediately tries to change its type to io2 and receives an error. They also ask how to later reduce the volume to 150 GB. Which statement is correct?",
+      "options": {
+        "A": "A modified volume must wait through a cooldown (about 6 hours) before the next modification, and EBS volumes can be increased but never decreased in size",
+        "B": "A volume can be modified any number of times back-to-back, and EBS volumes can be shrunk in place when needed",
+        "C": "Changing volume type requires detaching the volume first, and size can be reduced after a reboot",
+        "D": "A gp3 volume cannot be changed to io2 under any circumstances"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Two real constraints: a mandatory wait (about 6 hours) between successive modifications of the same volume, and the rule that EBS volumes can grow but not shrink.",
+          "reason": "Correct - the immediate second change fails because of the modification cooldown; waiting and retrying allows the gp3-to-io2 change. To get a smaller volume you must create a new smaller volume and migrate the data, since EBS volumes cannot be reduced in size."
+        },
+        "B": {
+          "description": "Claiming unlimited rapid modifications and in-place shrink.",
+          "reason": "Incorrect - both halves are wrong: there is a cooldown between modifications, and EBS volumes can never be shrunk in place."
+        },
+        "C": {
+          "description": "Requiring detach for type change and reboot-based shrinking.",
+          "reason": "Incorrect - Elastic Volumes modifications (including type changes) happen online with no detach, and no reboot can shrink a volume; shrinking is simply not supported."
+        },
+        "D": {
+          "description": "Stating gp3 can never become io2.",
+          "reason": "Incorrect - gp3 CAN be changed to io2 via Elastic Volumes; the only reason it failed here is the cooldown from the just-completed size change."
+        }
+      },
+      "Tips": "Elastic Volumes nuances: modifications (size, type, IOPS, throughput) are ONLINE (no detach), but there is a cooldown of roughly 6 hours before the next modification of the same volume. Direction matters: EBS volumes can only INCREASE in size - shrinking requires creating a smaller volume and copying data. gp2<->gp3 and gp3->io2 type changes are supported; the trap answers deny these or invent a detach/reboot requirement."
+    },
+    {
+      "id": 23,
+      "questionText": "An instance's IAM role is replaced (via the instance profile association) with a new role that has additional permissions, but the application running on the instance still gets AccessDenied for the new actions for a while. The application caches credentials. What explains this, and what is the cleanest remedy?",
+      "options": {
+        "A": "Replacing a role requires terminating and relaunching the instance, so the old behavior persists until you do",
+        "B": "IAM roles cannot be replaced on a running instance, so the change never actually took effect",
+        "C": "The application is still using cached TEMPORARY credentials issued under the previous role; the new permissions apply once those credentials refresh (or after restarting the app to force a re-fetch from the metadata service)",
+        "D": "The delay means the new role's trust policy is misconfigured"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming a relaunch is required for role changes.",
+          "reason": "Incorrect - the instance profile association can be changed on a running instance; no termination/relaunch is needed, so this misdiagnoses the delay."
+        },
+        "B": {
+          "description": "Asserting roles cannot be swapped on a running instance.",
+          "reason": "Incorrect - you can associate, replace, or disassociate an instance profile/role on a running instance; the change does take effect, just not instantly for cached credentials."
+        },
+        "C": {
+          "description": "Credential caching: SDKs retrieve temporary role credentials from IMDS and cache them until near expiry; until a refresh occurs, the app keeps using the OLD role's credentials and permissions.",
+          "reason": "Correct - the AccessDenied persists only until the cached credentials refresh (SDKs refresh automatically before expiry). Restarting the application forces an immediate re-fetch of the new role's credentials. No relaunch is necessary."
+        },
+        "D": {
+          "description": "Blaming the trust policy.",
+          "reason": "Incorrect - a misconfigured trust policy would prevent the role from being assumed/used at all, not cause a temporary delay that resolves on credential refresh."
+        }
+      },
+      "Tips": "You CAN replace an instance's role on a running instance (replace-iam-instance-profile-association). The catch is credential CACHING: SDKs hold the prior role's temporary credentials until they refresh near expiry, so new permissions lag briefly. Force it by restarting the app (re-fetches from IMDS). Relaunching the instance is the over-kill distractor; trust-policy errors cause total failure, not transient delay."
+    },
+    {
+      "id": 24,
+      "questionText": "An engineer must choose among m6i.large, m6a.large, and m6g.large for a cost-sensitive Linux service that has been COMPILED FOR ARM. Which instance is appropriate, and what do the suffix letters mean?",
+      "options": {
+        "A": "m6i.large, because Intel processors are required for all Linux workloads",
+        "B": "m6a.large, because the 'a' suffix denotes ARM processors",
+        "C": "Any of the three, because the processor suffix is cosmetic and does not affect compatibility",
+        "D": "m6g.large, because the 'g' suffix denotes AWS Graviton (ARM) processors, matching the ARM-compiled service and typically offering the best price/performance"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming Intel is mandatory for Linux.",
+          "reason": "Incorrect - Linux runs on Intel, AMD, and Graviton (ARM) instances alike; there is no Intel requirement, and the service is built for ARM anyway."
+        },
+        "B": {
+          "description": "Reading the 'a' suffix as ARM.",
+          "reason": "Incorrect - this is the sharp trap: the 'a' suffix means AMD (x86), not ARM. An ARM-compiled binary would not run on an AMD x86 instance."
+        },
+        "C": {
+          "description": "Treating the suffix as cosmetic.",
+          "reason": "Incorrect - the processor suffix is meaningful: it determines the CPU architecture and vendor, which directly affects whether an ARM-compiled binary will even run."
+        },
+        "D": {
+          "description": "Suffix decoding: 'i' = Intel, 'a' = AMD, 'g' = AWS Graviton (ARM); the ARM-built service matches the Graviton instance, which also tends to deliver better price/performance.",
+          "reason": "Correct - m6g.large runs on Graviton (ARM), so the ARM-compiled service is compatible and benefits from Graviton's typically lower cost per performance, satisfying the cost-sensitive requirement."
+        }
+      },
+      "Tips": "Instance type suffix letters: 'i' = Intel, 'a' = AMD (both x86), 'g' = AWS Graviton (ARM); other suffixes include 'd' (local NVMe instance store), 'n' (enhanced networking), 'b' (block/EBS-optimized boost). The classic trap is reading 'a' as ARM - it is AMD. ARM-compiled workloads need Graviton ('g'); mismatched architecture means the binary will not run."
+    },
+    {
+      "id": 25,
+      "questionText": "An engineer wants the AWS CLI to AUTOMATICALLY assume a cross-account role for a group of commands, using their base credentials, without manually running 'aws sts assume-role' each time. What is the cleanest configuration?",
+      "options": {
+        "A": "Define a named profile in the AWS config file with role_arn and source_profile (and mfa_serial if required), then run commands with --profile that-profile; the CLI assumes the role automatically and caches the temporary credentials",
+        "B": "Hardcode the role's temporary credentials in ~/.aws/credentials and refresh them by hand every hour",
+        "C": "Store the role's long-term access keys as environment variables on the machine",
+        "D": "Roles cannot be assumed by the CLI directly, so create an IAM user in the target account and use its keys instead"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A role-assuming named profile: role_arn points at the target role, source_profile supplies the base credentials used to assume it, and the CLI transparently calls STS and caches the result.",
+          "reason": "Correct - this is the intended, cleanest mechanism. With the profile configured, simply adding --profile (or setting AWS_PROFILE) makes the CLI assume the role automatically for every command, with optional MFA via mfa_serial and credential caching handled for you."
+        },
+        "B": {
+          "description": "Pasting temporary credentials into the credentials file and refreshing manually.",
+          "reason": "Incorrect - temporary credentials expire (typically within an hour), making manual refresh tedious and error-prone; the CLI's role_arn/source_profile mechanism automates exactly this."
+        },
+        "C": {
+          "description": "Putting role 'access keys' in environment variables.",
+          "reason": "Incorrect - roles do not have long-term access keys; they yield temporary STS credentials. Stashing static keys in env vars is both inaccurate and a poor practice for role-based access."
+        },
+        "D": {
+          "description": "Claiming the CLI cannot assume roles.",
+          "reason": "Incorrect - the CLI assumes roles natively through profile configuration (role_arn + source_profile), so reverting to a long-term IAM user in the target account is unnecessary and less secure."
+        }
+      },
+      "Tips": "For automatic CLI role assumption, configure a named profile with role_arn + source_profile (add mfa_serial for MFA, external_id for third-party roles) in ~/.aws/config, then use --profile or AWS_PROFILE. The CLI calls STS and caches temporary credentials for you. Manual assume-role, hardcoded temp creds, and 'role access keys' are all anti-patterns or impossibilities the distractors rely on."
+    }
+  ]
+}

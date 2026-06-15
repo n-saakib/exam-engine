@@ -1,0 +1,647 @@
+{
+  "setId": "e8b5f1d7-2c63-4a48-9f1b-5d8e3a7c2f94",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Quick Practice Exam 5",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company onboards 40 developers who all need an identical set of AWS permissions. The permission set will evolve over time and must stay consistent for every developer with minimal administrative effort. What is the BEST way to manage this?",
+      "options": {
+        "A": "Create one IAM group, attach a customer managed policy to it, and add all 40 developers to the group",
+        "B": "Attach an identical inline policy to each of the 40 IAM users",
+        "C": "Create a nested hierarchy of IAM groups, one per team, inside a parent Developers group",
+        "D": "Create one IAM role and have all developers share its long-term access keys"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A single group as the permission attachment point: policy changes made once on the group instantly apply to every member.",
+          "reason": "Correct - groups exist precisely for this: manage permissions for many users in one place. A customer managed policy on the group means one edit updates all 40 developers consistently."
+        },
+        "B": {
+          "description": "Duplicating the same inline policy 40 times, once per user.",
+          "reason": "Incorrect - every future change must be repeated on 40 separate identities, guaranteeing drift and administrative pain. Inline policies also cannot be reused or versioned like managed policies."
+        },
+        "C": {
+          "description": "Groups nested inside other groups.",
+          "reason": "Incorrect - IAM groups CANNOT be nested. Groups contain users only - no groups inside groups, and a group is not a principal you can reference in policies."
+        },
+        "D": {
+          "description": "A shared role accessed through common long-term keys.",
+          "reason": "Incorrect - roles do not have long-term access keys at all (they issue temporary credentials), and credential sharing destroys accountability. This option misunderstands what a role is."
+        }
+      },
+      "Tips": "IAM group facts the exam tests: groups contain USERS only (no nesting, no groups-in-groups), a user can belong to multiple groups (limit 10), and groups are NOT principals (you cannot put a group in a trust or resource policy). 'Many users, same permissions, easy updates' = group + managed policy. Prefer customer managed policies over inline for reuse and versioning."
+    },
+    {
+      "id": 2,
+      "questionText": "A physical server in a company's own data center runs a script that uses the AWS CLI to upload backups to Amazon S3 every night. The server cannot be migrated to AWS yet. Following standard IAM practice, how should the script authenticate?",
+      "options": {
+        "A": "Create a dedicated IAM user with a least-privilege policy for the target bucket, generate access keys for it, store them on the server, and rotate them regularly",
+        "B": "Attach an IAM role to the on-premises server the same way roles are attached to EC2 instances",
+        "C": "Use the AWS account root user's access keys, since backups are critical",
+        "D": "Borrow the access keys of a DevOps engineer's personal IAM user"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A purpose-built IAM user whose only permissions cover the backup bucket, with long-term keys configured on the server (via aws configure) and a rotation schedule.",
+          "reason": "Correct - on-premises machines have no native instance profile mechanism, so a dedicated least-privilege IAM user with rotated access keys is the standard, exam-correct answer for this scenario."
+        },
+        "B": {
+          "description": "Treating the physical server like an EC2 instance with an instance profile.",
+          "reason": "Incorrect - instance profiles only exist for EC2. You cannot directly 'attach' an IAM role to hardware outside AWS. (Advanced services like IAM Roles Anywhere address this, but the classic SAA-level answer for a simple CLI workload is the dedicated IAM user.)"
+        },
+        "C": {
+          "description": "Embedding root credentials in an automated job.",
+          "reason": "Incorrect - root access keys should not even exist, let alone sit on an external server. Root has unrestricted account access and is never used for workloads."
+        },
+        "D": {
+          "description": "Reusing a human's personal credentials for a machine process.",
+          "reason": "Incorrect - this entangles a person's identity with automation: when the engineer leaves or rotates keys, backups silently break, and audit trails become misleading. Machine workloads get their own identity."
+        }
+      },
+      "Tips": "Credential decision rule: workload ON EC2 = IAM Role + instance profile (never store keys). Workload OUTSIDE AWS (on-prem server, developer laptop) = dedicated IAM user + access keys, least privilege, rotated. Never root keys, never shared/personal keys. If the question offers 'attach a role to an on-prem server' as a plain option, it is the trap."
+    },
+    {
+      "id": 3,
+      "questionText": "A genomics startup runs an in-memory analytics engine that loads a 400 GB dataset entirely into RAM. CPU usage stays moderate, but the application is constrained by available memory. Which EC2 instance family is the MOST appropriate?",
+      "options": {
+        "A": "C family (compute optimized)",
+        "B": "R family (memory optimized)",
+        "C": "T family (burstable general purpose)",
+        "D": "I family (storage optimized)"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Instances with the highest CPU-to-memory ratio, built for compute-bound work like batch processing, encoding, and HPC.",
+          "reason": "Incorrect - the scenario says CPU is moderate and memory is the bottleneck; compute optimized instances would starve the workload of RAM."
+        },
+        "B": {
+          "description": "Memory optimized instances offering large RAM-to-vCPU ratios, designed for in-memory databases, caches, and real-time big-data analytics.",
+          "reason": "Correct - 'entire dataset in RAM' + 'memory constrained' is the textbook R-family use case (with X/High Memory families for the most extreme needs)."
+        },
+        "C": {
+          "description": "Burstable instances that accumulate CPU credits for occasional spikes.",
+          "reason": "Incorrect - T family targets small, spiky workloads (dev boxes, low-traffic sites) and offers modest RAM; a sustained 400 GB in-memory engine is far outside its envelope."
+        },
+        "D": {
+          "description": "Instances with massive local NVMe disks for high-IOPS storage workloads.",
+          "reason": "Incorrect - the I family optimizes local DISK I/O (NoSQL stores, data warehousing), not RAM capacity. 'Storage' in the name is the decoy when the question is about memory."
+        }
+      },
+      "Tips": "Instance family letter map: C = Compute (CPU-bound), R = RAM (in-memory DBs/caches/analytics), M = Medium/balanced, T = Tiny/burstable (credit-based), I = local NVMe storage I/O, G/P = GPU. Match the stated BOTTLENECK to the letter: 'memory-bound / in-memory' = R; 'high local disk IOPS' = I; 'sustained CPU' = C; 'low-cost spiky' = T."
+    },
+    {
+      "id": 4,
+      "questionText": "A broadcaster must GUARANTEE that 200 c5.large instances can launch in one specific Availability Zone during a two-week sporting event. They refuse any 1-year or 3-year commitment. Which option secures the capacity?",
+      "options": {
+        "A": "Create an On-Demand Capacity Reservation for 200 c5.large in that AZ for the event window",
+        "B": "Buy 200 zonal Standard Reserved Instances",
+        "C": "Request 200 Spot Instances with a high maximum price",
+        "D": "Create a cluster placement group, which reserves the needed capacity"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "On-Demand Capacity Reservations reserve compute capacity for a specific instance type in a specific AZ, with no term commitment - create when needed, cancel when done.",
+          "reason": "Correct - this is the only mechanism that GUARANTEES capacity without a 1/3-year contract. Note the reservation is billed at On-Demand rates whether or not the instances run, so cancel it right after the event (it can be combined with Savings Plans/RIs for discounts)."
+        },
+        "B": {
+          "description": "Zonal Reserved Instances, which do include a capacity reservation in their AZ.",
+          "reason": "Incorrect - RIs require a 1-year or 3-year term, which the broadcaster explicitly refuses for a two-week need."
+        },
+        "C": {
+          "description": "Bidding for spare capacity at a discount.",
+          "reason": "Incorrect - Spot provides NO guarantee: requests can go unfulfilled and running instances can be reclaimed with 2 minutes' notice. A high max price does not reserve anything."
+        },
+        "D": {
+          "description": "A placement group, which controls WHERE instances land relative to each other.",
+          "reason": "Incorrect - placement groups influence physical placement topology; they reserve zero capacity. A launch into a placement group can still fail with insufficient-capacity errors."
+        }
+      },
+      "Tips": "'Guaranteed capacity + specific AZ + NO long-term commitment' = On-Demand Capacity Reservation. Billing gotcha: you pay the On-Demand rate while the reservation exists EVEN IF idle - so cancel promptly. RIs/Savings Plans = billing discounts with 1/3-yr terms (zonal RIs also reserve capacity); Spot = cheap but never guaranteed; placement groups = topology, not capacity."
+    },
+    {
+      "id": 5,
+      "questionText": "An architect tries to launch a 30-node distributed database into a SPREAD placement group within a single Availability Zone, and the launch fails once the group reaches its limit. The design still requires hardware-failure isolation between defined sets of nodes in that AZ. What should the architect do?",
+      "options": {
+        "A": "Use a partition placement group instead, distributing the 30 nodes across up to 7 partitions in the AZ",
+        "B": "Request a service quota increase to allow 30 instances in the spread placement group",
+        "C": "Switch to a cluster placement group, which supports more instances",
+        "D": "Create five separate spread placement groups of 6 instances each and treat them as one cluster"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Partition placement groups divide instances into logical partitions (up to 7 per AZ) where each partition occupies racks not shared with other partitions, scaling to hundreds of instances.",
+          "reason": "Correct - the spread group failed because spread placement is hard-limited to 7 RUNNING instances per AZ per group. For 30 nodes needing rack-level fault isolation between groups of nodes, partition placement is the designed solution (and it exposes partition topology via instance metadata)."
+        },
+        "B": {
+          "description": "Raising the 7-instance spread limit through Service Quotas.",
+          "reason": "Incorrect - the 7-instances-per-AZ limit for spread placement groups is a fixed design constraint, not an adjustable quota."
+        },
+        "C": {
+          "description": "Cluster placement, which co-locates instances on shared low-latency hardware.",
+          "reason": "Incorrect - cluster groups maximize network performance by PACKING instances together, removing the hardware isolation the database needs."
+        },
+        "D": {
+          "description": "Stitching multiple small spread groups together manually.",
+          "reason": "Incorrect - instances in different placement groups have no isolation guarantees relative to EACH OTHER; nodes from two different spread groups could share the same rack. This hack provides no end-to-end assurance."
+        }
+      },
+      "Tips": "Know 'the 7s' cold: SPREAD = max 7 INSTANCES per AZ per group (each instance on distinct hardware) - small critical fleets. PARTITION = up to 7 PARTITIONS per AZ (hundreds of instances; isolation BETWEEN partitions, not within) - Kafka/Hadoop/Cassandra scale. A spread-group launch failing around 7 instances is the exam's hint to move to partition placement."
+    },
+    {
+      "id": 6,
+      "questionText": "A rendering farm will mount one Amazon EFS file system from THOUSANDS of EC2 instances simultaneously. The priority is the highest possible aggregate throughput and IOPS across all clients, and the team accepts slightly higher per-operation latency. Which EFS setting addresses this, and when must it be chosen?",
+      "options": {
+        "A": "General Purpose performance mode, changeable at any time",
+        "B": "Max I/O performance mode, selected at file system creation",
+        "C": "Provisioned Throughput mode, adjustable whenever needed",
+        "D": "Bursting Throughput mode, selected at creation"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The default performance mode optimizing for low latency, suited to most general workloads.",
+          "reason": "Incorrect - General Purpose favors latency over massive parallel scale, and performance mode is NOT changeable later; it is fixed at creation."
+        },
+        "B": {
+          "description": "Max I/O performance mode scales a file system to higher aggregate throughput and operations per second for highly parallel workloads, trading a bit of per-operation latency; it can only be set when the file system is created.",
+          "reason": "Correct - 'thousands of concurrent clients, aggregate throughput over latency' is the definition of the Max I/O use case (big data, media processing, rendering). Because the mode is immutable after creation, it must be chosen up front."
+        },
+        "C": {
+          "description": "A THROUGHPUT mode where you pay for a fixed MB/s level independent of stored data.",
+          "reason": "Incorrect - this is the wrong dial: throughput modes (Bursting/Elastic/Provisioned) govern bandwidth economics, not the parallel-scale optimization the question describes. Performance mode is the relevant setting."
+        },
+        "D": {
+          "description": "A THROUGHPUT mode where bandwidth scales with the amount of data stored.",
+          "reason": "Incorrect - again a throughput mode, not a performance mode, so it does not answer the highly-parallel optimization requirement."
+        }
+      },
+      "Tips": "EFS has two INDEPENDENT dials - do not mix them: Performance mode (set at creation, immutable): General Purpose = low latency (default) vs Max I/O = massive parallelism/aggregate throughput. Throughput mode (changeable): Bursting (scales with size) / Elastic (auto, recommended default) / Provisioned (fixed paid MB/s). 'Thousands of clients, aggregate > latency' = Max I/O; any 'Provisioned/Bursting' option is answering the wrong dial."
+    },
+    {
+      "id": 7,
+      "questionText": "A security team must TERMINATE a compromised EC2 instance but preserve its root EBS volume for forensic analysis. The instance is still running. By default the root volume would be deleted at termination. What should they do?",
+      "options": {
+        "A": "Detach the root volume while the instance is running, then terminate",
+        "B": "Set the root volume's DeleteOnTermination attribute to false on the running instance (e.g., via modify-instance-attribute), then terminate it",
+        "C": "Simply terminate; AWS automatically takes a final snapshot of all volumes",
+        "D": "Stop the instance first, because stopping converts the root volume to a permanent volume"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Pulling the root device out from under a live operating system.",
+          "reason": "Incorrect - the root volume cannot be detached while the instance is running; the OS is running from it. (Non-root data volumes can be detached live, ideally after unmounting.)"
+        },
+        "B": {
+          "description": "DeleteOnTermination is a per-volume flag in the instance's block device mapping; it can be changed on a RUNNING instance with the CLI/API, and setting it to false makes the volume survive termination.",
+          "reason": "Correct - flipping DeleteOnTermination to false (and optionally snapshotting first for good measure) preserves the root volume after the instance is terminated, exactly what forensics requires."
+        },
+        "C": {
+          "description": "An assumed automatic final backup at termination.",
+          "reason": "Incorrect - EC2 takes no automatic snapshots at termination. Without intervention, a root volume flagged delete-on-termination (the default) is destroyed."
+        },
+        "D": {
+          "description": "Using a stop to change volume persistence semantics.",
+          "reason": "Incorrect - stopping does not alter the DeleteOnTermination attribute; the volume would still be deleted when the instance is eventually terminated."
+        }
+      },
+      "Tips": "DeleteOnTermination defaults: ROOT volume = true (deleted at termination); additional DATA volumes = false (preserved). The flag is set at launch but CAN be modified on a running instance via modify-instance-attribute. Forensics/preserve-evidence questions = set DeleteOnTermination=false (and/or snapshot before terminating). Remember: no automatic final snapshot exists, and a running root volume cannot be detached."
+    },
+    {
+      "id": 8,
+      "questionText": "A disaster-recovery runbook creates new EBS volumes from snapshots in a recovery AZ. Testing shows the restored volumes respond slowly at first because blocks are pulled from S3 on first access (lazy loading). The RTO demands FULL provisioned performance the moment volumes are created. What should the team enable?",
+      "options": {
+        "A": "Fast Snapshot Restore (FSR) on the relevant snapshots in the recovery Availability Zone",
+        "B": "A larger volume size, since bigger volumes skip initialization",
+        "C": "io2 volumes, which are never subject to lazy loading",
+        "D": "EBS encryption, which forces full hydration at creation time"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "FSR pre-initializes snapshots per Availability Zone so volumes created from them deliver full performance instantly, for an hourly fee per snapshot per AZ.",
+          "reason": "Correct - Fast Snapshot Restore exists precisely to eliminate the first-touch latency of lazy loading. Enabling it on the DR snapshots in the recovery AZ guarantees fully-initialized volumes at creation, meeting the RTO."
+        },
+        "B": {
+          "description": "Scaling capacity in hopes of changing initialization behavior.",
+          "reason": "Incorrect - volume size has no effect on lazy loading; every restored volume, large or small, hydrates blocks from S3 on first access unless FSR (or manual pre-warming) is used."
+        },
+        "C": {
+          "description": "Choosing a premium volume type to bypass initialization.",
+          "reason": "Incorrect - lazy restoration applies to ALL volume types created from snapshots, including io2. Volume class changes IOPS ceilings, not hydration behavior."
+        },
+        "D": {
+          "description": "Using encryption as a side-channel to force full block copies.",
+          "reason": "Incorrect - encryption protects data at rest; encrypted volumes restored from snapshots are lazy-loaded just the same."
+        }
+      },
+      "Tips": "'Volume restored from snapshot is slow until blocks are first read' = lazy loading/initialization. Fixes: Fast Snapshot Restore (enabled PER SNAPSHOT, PER AZ, hourly cost - instant full performance) or manually pre-warming by reading every block (dd/fio - free but slow and manual). Neither volume size, type, nor encryption avoids lazy loading. 'Strict RTO from snapshots' = FSR."
+    },
+    {
+      "id": 9,
+      "questionText": "Account 111111111111 owns a private EBS-backed AMI in eu-central-1. A partner team in account 222222222222 must launch instances from this AMI in the SAME Region. What is the correct way to enable this?",
+      "options": {
+        "A": "Modify the AMI's launch permissions to add account 222222222222 (and, if the AMI is encrypted, share the customer managed KMS key as well)",
+        "B": "Send the partner the AMI ID; knowing the ID is sufficient to launch a private AMI",
+        "C": "Copy the AMI to another Region, since AMIs can only be shared cross-Region",
+        "D": "Make the AMI public, as private AMIs cannot be shared with individual accounts"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Adding the target account ID to the AMI's launch permission list, which grants that specific account the ability to launch instances from the private AMI; encrypted AMIs additionally require granting the partner access to the KMS key that encrypts the snapshots.",
+          "reason": "Correct - per-account launch permissions are the standard sharing mechanism, keeping the AMI private to everyone else. The KMS caveat matters: snapshots encrypted with the DEFAULT AWS-managed key cannot be shared - re-encrypt with a customer managed key first."
+        },
+        "B": {
+          "description": "Relying on AMI-ID secrecy as the access mechanism.",
+          "reason": "Incorrect - the AMI ID is an identifier, not a credential. Without launch permissions, account 222222222222 cannot see or use the private AMI regardless of knowing its ID."
+        },
+        "C": {
+          "description": "Treating cross-Region copy as a prerequisite for sharing.",
+          "reason": "Incorrect - sharing works within a Region via launch permissions. Copying is only needed when the AMI must be USED in a different Region (the partner needs it in the same Region here)."
+        },
+        "D": {
+          "description": "Public visibility as the only sharing option.",
+          "reason": "Incorrect - private AMIs absolutely can be shared with specific account IDs. Making it public would expose the image to every AWS customer, an unnecessary security risk."
+        }
+      },
+      "Tips": "AMI sharing rules: share privately by adding ACCOUNT IDs to launch permissions; making public is all-or-nothing. Encrypted AMI gotcha: also share the CUSTOMER MANAGED KMS key (kms:DescribeKey/Decrypt/CreateGrant); the default aws/ebs AWS-managed key can NEVER be shared, so re-encrypt first. Sharing changes WHO can launch; copying changes WHERE it exists. Cross-account + cross-Region = share, then the partner copies."
+    },
+    {
+      "id": 10,
+      "questionText": "A 1 TB gp3 volume backs a sequential-heavy ETL job. The volume still has its default settings and monitoring shows it pinned at 125 MBps of throughput, while the job needs roughly 600 MBps. IOPS usage is low. What is the MOST efficient fix?",
+      "options": {
+        "A": "Grow the volume to 5 TB so that gp3 throughput scales up with size",
+        "B": "Use Elastic Volumes to modify the gp3 volume and provision 600 MBps of throughput, with no downtime",
+        "C": "Migrate the data to an st1 Throughput Optimized HDD volume",
+        "D": "Recreate the volume as gp2 at maximum size for higher throughput"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Relying on capacity growth to raise performance, as was necessary on gp2.",
+          "reason": "Incorrect - gp3 performance is INDEPENDENT of size: every gp3 volume starts at 3,000 IOPS and 125 MBps regardless of capacity. Adding 4 TB buys storage you do not need and zero extra throughput."
+        },
+        "B": {
+          "description": "gp3 lets you provision throughput (up to 1,000 MBps) and IOPS (up to 16,000) as separate dials; Elastic Volumes applies the change online to the live volume.",
+          "reason": "Correct - simply provision 600 MBps on the existing volume. The baseline 3,000 IOPS already supports it (gp3 allows up to 0.25 MBps per provisioned IOPS, so 3,000 IOPS supports up to 750 MBps), and the modification happens with no downtime or data migration."
+        },
+        "C": {
+          "description": "Switching to the sequential-throughput HDD class.",
+          "reason": "Incorrect - st1 throughput scales with size and BURSTS only up to 500 MBps maximum, below the 600 MBps requirement, and a volume-type migration is far more disruptive than an online gp3 modification."
+        },
+        "D": {
+          "description": "Falling back to the previous-generation general purpose SSD.",
+          "reason": "Incorrect - gp2 tops out around 250 MBps of throughput regardless of size, cannot reach 600 MBps, and recreating a volume is unnecessary downtime."
+        }
+      },
+      "Tips": "gp3 numbers to memorize: baseline 3,000 IOPS + 125 MBps at ANY size; provision independently up to 16,000 IOPS and 1,000 MBps; throughput limited to 0.25 MBps per provisioned IOPS (so max throughput needs 4,000+ IOPS). Elastic Volumes = modify size/type/performance ONLINE, no detach. Comparison ceilings: gp2 ~250 MBps, st1 burst 500 MBps. 'gp3 stuck at 125 MBps' = just provision more throughput."
+    },
+    {
+      "id": 11,
+      "questionText": "A company runs an EC2-based application that calls Amazon S3 and Amazon DynamoDB. Currently the application uses an IAM user's access keys stored in a config file. A security review flags this. What is the recommended change with the LEAST long-term maintenance?",
+      "options": {
+        "A": "Move the access keys into an environment variable instead of a file",
+        "B": "Create an IAM role with the required S3 and DynamoDB permissions, attach it to the instance via an instance profile, and remove the stored keys",
+        "C": "Rotate the access keys every 7 days with a scheduled job",
+        "D": "Encrypt the config file containing the access keys"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Relocating the same long-term keys to an environment variable.",
+          "reason": "Incorrect - the credentials are still long-term, still on the instance, and still your responsibility to rotate; the storage location is not the underlying problem."
+        },
+        "B": {
+          "description": "An IAM role attached through an instance profile, which delivers automatically-rotated temporary credentials to the application via the instance metadata service.",
+          "reason": "Correct - roles eliminate stored long-term keys entirely: nothing to rotate, nothing to leak from a file, and SDKs pick the credentials up automatically. This is the canonical fix for 'application on EC2 needs AWS access'."
+        },
+        "C": {
+          "description": "Frequent key rotation.",
+          "reason": "Incorrect - rotation reduces exposure window but is ongoing maintenance and still leaves long-term keys on the box; roles remove the need altogether."
+        },
+        "D": {
+          "description": "Encrypting the file that holds the keys.",
+          "reason": "Incorrect - the application must decrypt the keys to use them, so the secret still lives on the instance; this adds complexity without removing the core risk."
+        }
+      },
+      "Tips": "The single most-tested IAM pattern: workload ON EC2 needing AWS access = IAM Role + instance profile, never stored keys. Roles give temporary, auto-rotated credentials with no rotation chore. Any option that keeps long-term keys on the instance (move them, encrypt them, rotate them) is the distractor when a role is available."
+    },
+    {
+      "id": 12,
+      "questionText": "A startup wants centralized control so that even account administrators in its member AWS accounts CANNOT disable AWS CloudTrail or leave the organization, regardless of their IAM permissions. Which feature enforces this organization-wide guardrail?",
+      "options": {
+        "A": "An IAM permissions boundary applied in each member account",
+        "B": "A Service Control Policy (SCP) in AWS Organizations denying the relevant actions",
+        "C": "An IAM group policy attached to all administrators",
+        "D": "Enabling MFA for all administrators"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Permissions boundaries that cap an individual identity's permissions.",
+          "reason": "Incorrect - boundaries operate per identity WITHIN an account and an account admin could alter or remove them; they are not an org-level guardrail that overrides local admins."
+        },
+        "B": {
+          "description": "SCPs are AWS Organizations policies that set the MAXIMUM available permissions for entire accounts/OUs; an explicit Deny in an SCP applies to every principal in the account, including its root user and administrators.",
+          "reason": "Correct - only an SCP can place actions out of reach of an account's own admins. Denying cloudtrail:StopLogging/DeleteTrail and organizations:LeaveOrganization at the OU level enforces the guardrail no matter what IAM permissions exist below it."
+        },
+        "C": {
+          "description": "A group policy for administrators.",
+          "reason": "Incorrect - any sufficiently privileged admin could detach or edit a group policy; it provides no immovable ceiling."
+        },
+        "D": {
+          "description": "Multi-factor authentication.",
+          "reason": "Incorrect - MFA strengthens sign-in; it does nothing to prevent a permitted admin from disabling CloudTrail."
+        }
+      },
+      "Tips": "SCP essentials: AWS Organizations only; set MAX permissions for accounts/OUs (a filter, never a grant); affect ALL principals including root; effective permissions = SCP INTERSECT identity policies. Use them for org-wide guardrails ('no one can stop CloudTrail', 'deny actions outside approved Regions'). Per-identity cap WITHIN an account = permissions boundary; org-wide cap ACROSS accounts = SCP."
+    },
+    {
+      "id": 13,
+      "questionText": "A data science team needs GPU-backed EC2 instances for training deep-learning models. Which instance family should they select?",
+      "options": {
+        "A": "R family (memory optimized)",
+        "B": "C family (compute optimized)",
+        "C": "P family (accelerated computing / GPU)",
+        "D": "M family (general purpose)"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Instances optimized for large RAM-to-vCPU ratios.",
+          "reason": "Incorrect - memory optimized instances accelerate in-memory data workloads, not the massively parallel matrix math of model training, which needs GPUs."
+        },
+        "B": {
+          "description": "Instances optimized for high sustained CPU performance.",
+          "reason": "Incorrect - compute optimized provides fast CPUs but no GPUs; deep-learning training on CPUs is dramatically slower and not the intended fit."
+        },
+        "C": {
+          "description": "Accelerated-computing instances equipped with hardware accelerators - the P family carries NVIDIA GPUs aimed at ML training and HPC (the G family targets inference/graphics).",
+          "reason": "Correct - GPU-accelerated training maps to the P family (e.g., P3/P4/P5). For inference or graphics-heavy workloads the G family is the counterpart, but training points to P."
+        },
+        "D": {
+          "description": "Balanced general-purpose instances.",
+          "reason": "Incorrect - general purpose instances have neither GPUs nor the specialized throughput training requires."
+        }
+      },
+      "Tips": "Accelerated computing letters: P = powerful GPUs for ML TRAINING and HPC; G = GPUs for INFERENCE, graphics, and streaming; specialized chips also exist (Trainium/Inferentia families). Keyword map: 'train deep-learning / heavy GPU compute' = P; 'inference / graphics rendering' = G. CPU-bound = C, memory-bound = R, balanced = M, burstable = T, local-storage I/O = I."
+    },
+    {
+      "id": 14,
+      "questionText": "A batch analytics job runs nightly for about 3 hours. It checkpoints progress to S3 every few minutes and can resume cleanly if a worker is lost. Cost reduction is the top priority. Which EC2 purchasing option is BEST?",
+      "options": {
+        "A": "On-Demand Instances for guaranteed availability",
+        "B": "3-year Standard Reserved Instances",
+        "C": "Spot Instances, since the workload is interruption-tolerant and checkpointed",
+        "D": "Dedicated Hosts for predictable placement"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Full-price on-demand capacity.",
+          "reason": "Incorrect - On-Demand is the most expensive per-hour option and is wasted on a fault-tolerant workload that could run far cheaper on Spot."
+        },
+        "B": {
+          "description": "A 3-year reservation for steady-state usage.",
+          "reason": "Incorrect - RIs require a long commitment and suit always-on baseline load; a 3-hour nightly job would leave most of the reservation idle and is a poor financial match."
+        },
+        "C": {
+          "description": "Spare-capacity instances at up to ~90% off, reclaimable with a 2-minute notice - ideal when work is checkpointed and resumable.",
+          "reason": "Correct - the job's design (frequent checkpoints, clean resume, interruption tolerance) is the canonical Spot use case, delivering the lowest cost for the lowest risk."
+        },
+        "D": {
+          "description": "Whole-server tenancy for placement/licensing control.",
+          "reason": "Incorrect - Dedicated Hosts are the priciest tenancy option, used for BYOL/compliance placement - irrelevant to a cost-driven, interruption-tolerant batch job."
+        }
+      },
+      "Tips": "Spot decision rule: interruption-TOLERANT + checkpointed/stateless/retryable (batch, big-data, CI, rendering, fault-tolerant web tiers) = Spot for up to ~90% savings. Interruption-INTOLERANT (stateful single-node DBs, licensing-bound, must-not-fail) = never Spot. Steady 24/7 baseline = RIs/Savings Plans; spiky/short-lived unpredictable = On-Demand."
+    },
+    {
+      "id": 15,
+      "questionText": "An EC2 instance must reach the public internet to download OS updates, but it sits in a PRIVATE subnet and must NOT be reachable from the internet. Which design meets both requirements?",
+      "options": {
+        "A": "Attach an Elastic IP to the instance so it can reach the internet",
+        "B": "Route the private subnet's outbound internet traffic through a NAT gateway in a public subnet; do not give the instance a public IP",
+        "C": "Move the instance to a public subnet and rely on its Security Group to block inbound traffic",
+        "D": "Attach an internet gateway directly to the private subnet"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Giving the instance a static public IPv4 address.",
+          "reason": "Incorrect - an Elastic IP makes the instance publicly addressable and (with a route to an internet gateway) inbound-reachable, violating the 'not reachable from the internet' rule."
+        },
+        "B": {
+          "description": "A NAT gateway: deployed in a PUBLIC subnet, it lets instances in private subnets INITIATE outbound connections to the internet while preventing any unsolicited inbound connections.",
+          "reason": "Correct - this is the textbook private-subnet egress pattern. Outbound updates flow through the NAT gateway; because NAT only permits return traffic for connections the instance started, the internet cannot initiate connections to the instance."
+        },
+        "C": {
+          "description": "Relocating to a public subnet and filtering with the SG.",
+          "reason": "Incorrect - the requirement is to keep the instance in a private subnet with no internet exposure; placing it in a public subnet contradicts the design even if rules are tight."
+        },
+        "D": {
+          "description": "Attaching an internet gateway to the private subnet.",
+          "reason": "Incorrect - a subnet with a route to an internet gateway IS a public subnet by definition; this would expose the instance. IGWs are also attached to the VPC, not to subnets directly."
+        }
+      },
+      "Tips": "Egress patterns: outbound-only internet for private subnets = NAT gateway (managed, in a PUBLIC subnet, one per AZ for HA) or a self-managed NAT instance (cheaper, less robust). Internet gateway = two-way internet, defines a PUBLIC subnet. For reaching AWS services privately without any internet path, use VPC endpoints (Gateway endpoints for S3/DynamoDB, Interface endpoints for others). 'Private but needs updates' = NAT gateway."
+    },
+    {
+      "id": 16,
+      "questionText": "A high-frequency trading platform needs the lowest possible network latency and the highest packet-per-second performance between a tightly coupled cluster of EC2 instances in a single Availability Zone. Which combination is MOST appropriate?",
+      "options": {
+        "A": "A spread placement group with general-purpose instances",
+        "B": "A cluster placement group with instances that support Enhanced Networking / Elastic Fabric Adapter",
+        "C": "A partition placement group across three Availability Zones",
+        "D": "Instances in separate Availability Zones connected over the public internet"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Spread placement, which separates instances onto distinct hardware.",
+          "reason": "Incorrect - spread maximizes fault isolation by keeping instances APART, which increases inter-node latency - the opposite of what a low-latency cluster needs."
+        },
+        "B": {
+          "description": "A cluster placement group (packs instances onto the same high-bandwidth, low-latency hardware in one AZ) combined with Enhanced Networking (SR-IOV) or an Elastic Fabric Adapter for the highest packet rates and lowest latency.",
+          "reason": "Correct - cluster placement delivers the proximity, and Enhanced Networking/EFA delivers the per-instance network performance. Together they are the standard HPC/HFT recipe for tightly coupled, latency-sensitive clusters."
+        },
+        "C": {
+          "description": "Partition placement spanning multiple AZs.",
+          "reason": "Incorrect - partition placement targets large distributed systems needing rack isolation, and spreading across AZs adds cross-AZ latency, defeating the low-latency goal."
+        },
+        "D": {
+          "description": "Cross-AZ instances communicating over the public internet.",
+          "reason": "Incorrect - this introduces the highest latency and exposure of all the options; tightly coupled clusters must stay close and on private networking."
+        }
+      },
+      "Tips": "Lowest-latency cluster recipe: CLUSTER placement group (single AZ, instances packed together) + Enhanced Networking (ENA/SR-IOV) and, for HPC/MPI scale, an Elastic Fabric Adapter. Trade-off: cluster groups have a high blast radius (one AZ, shared hardware). Keywords 'HPC / tightly coupled / lowest latency / highest throughput between nodes' = cluster + EFA; 'fault isolation' would instead push you to spread/partition."
+    },
+    {
+      "id": 17,
+      "questionText": "A team wants a SINGLE managed file system that thousands of Linux EC2 instances across multiple Availability Zones can mount concurrently with read/write access. Which AWS service is designed for this?",
+      "options": {
+        "A": "An EBS io2 volume with Multi-Attach",
+        "B": "Amazon EFS",
+        "C": "An EC2 instance store shared over the network",
+        "D": "Amazon S3 mounted as a block device"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A single Provisioned IOPS volume attached to multiple instances.",
+          "reason": "Incorrect - Multi-Attach is limited to up to 16 instances, requires them to be in the SAME AZ, and provides BLOCK (not file) storage needing a cluster-aware file system - it cannot serve thousands of instances across AZs."
+        },
+        "B": {
+          "description": "A fully managed, elastic NFS file system that thousands of clients can mount simultaneously across multiple AZs in a Region, all with concurrent read/write access.",
+          "reason": "Correct - concurrent multi-AZ, many-client shared FILE storage for Linux is precisely what EFS provides, scaling automatically with no capacity management."
+        },
+        "C": {
+          "description": "Sharing ephemeral host disks over the network.",
+          "reason": "Incorrect - instance store is local, ephemeral, and not a shared service; it disappears on stop/termination and is unsuitable as durable shared storage."
+        },
+        "D": {
+          "description": "Treating S3 as a mounted block device.",
+          "reason": "Incorrect - S3 is OBJECT storage accessed via API, not a POSIX file system or block device; it is not mountable as a shared read/write file system for concurrent instance access in the way EFS is."
+        }
+      },
+      "Tips": "Storage-type triage: many Linux clients, multi-AZ, concurrent read/write FILE access = EFS. Single-instance (or up to 16 same-AZ with Multi-Attach) BLOCK volume = EBS. Massively scalable OBJECT storage via API = S3. Windows shared file storage (SMB) = FSx for Windows. The words 'shared', 'concurrent', 'multi-AZ', and 'Linux' together point straight at EFS."
+    },
+    {
+      "id": 18,
+      "questionText": "An administrator launches an instance and chooses an Amazon Linux 2 AMI. Later they need to launch IDENTICAL instances but cannot find that exact AMI in another AWS Region. Which statement explains the situation correctly?",
+      "options": {
+        "A": "AMIs are global; the administrator must be looking in the wrong console view",
+        "B": "AMIs are Regional resources, and even AWS-provided AMIs have DIFFERENT AMI IDs in each Region; use the equivalent AMI for the target Region (or copy a custom AMI across Regions)",
+        "C": "AMIs expire after 30 days, so the original is gone",
+        "D": "The AMI must be made public before it appears in other Regions"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating AMIs as global with a single identifier everywhere.",
+          "reason": "Incorrect - AMIs are Regional; the same logical image has a distinct AMI ID per Region, so an ID from one Region simply does not exist in another."
+        },
+        "B": {
+          "description": "Regional scope of AMIs: each Region has its own copy and its own AMI ID even for AWS-managed images like Amazon Linux 2; custom AMIs are made available elsewhere via cross-Region copy.",
+          "reason": "Correct - this is why automation often looks up AMI IDs dynamically (e.g., via SSM Parameter Store public parameters) per Region rather than hardcoding them, and why moving your own AMI to another Region requires CopyImage."
+        },
+        "C": {
+          "description": "Automatic AMI expiry.",
+          "reason": "Incorrect - AMIs do not expire; they persist until deregistered (their backing snapshots persist until deleted)."
+        },
+        "D": {
+          "description": "Public sharing as a cross-Region prerequisite.",
+          "reason": "Incorrect - making an AMI public changes WHO can use it, not the Region it exists in; visibility is an account-level concept, not a Region-level one."
+        }
+      },
+      "Tips": "AMIs are REGIONAL and AMI IDs differ per Region - never hardcode one ID across Regions (look them up via SSM public parameters for AWS AMIs). Move YOUR custom AMI to another Region with CopyImage. Reinforce the scope chain: IAM = global; AMIs/snapshots/Security Groups = Regional; EBS volumes/subnets = AZ-specific. Sharing changes accounts (WHO); copying changes Regions (WHERE)."
+    },
+    {
+      "id": 19,
+      "questionText": "An EC2 instance store-backed workload writes temporary scratch data that must deliver the absolute highest possible local I/O performance, and the data is fully disposable. Which statement about instance store is correct in this context?",
+      "options": {
+        "A": "Instance store cannot match EBS performance, so EBS io2 should always be used instead",
+        "B": "Instance store offers very high local IOPS/throughput because it is physically attached to the host, but the data is ephemeral and lost on stop/terminate/host failure - acceptable here because the data is disposable",
+        "C": "Instance store data persists across instance termination as long as DeleteOnTermination is false",
+        "D": "Instance store volumes can be snapshotted to S3 for durability"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A blanket claim that EBS is always faster and preferable.",
+          "reason": "Incorrect - for raw LOCAL performance, NVMe instance store can vastly exceed EBS (no network hop). EBS wins on persistence/features, not peak local throughput; for disposable scratch data, instance store is the better fit."
+        },
+        "B": {
+          "description": "The defining trade-off: host-attached ephemeral storage delivering extreme local IOPS/throughput, with no persistence beyond the instance's life on its current host.",
+          "reason": "Correct - the scenario's 'highest local I/O + fully disposable' is exactly when instance store shines: maximum performance at no extra cost, and the ephemerality is irrelevant because nothing needs to survive."
+        },
+        "C": {
+          "description": "Persistence governed by DeleteOnTermination.",
+          "reason": "Incorrect - DeleteOnTermination is an EBS volume attribute; it has no meaning for instance store, which is always lost on stop/terminate regardless of any flag."
+        },
+        "D": {
+          "description": "Snapshotting instance store to S3.",
+          "reason": "Incorrect - instance store cannot be snapshotted; only EBS volumes support snapshots. Anything to keep must be copied off by the application."
+        }
+      },
+      "Tips": "Instance store profile: physically on the host = highest LOCAL IOPS/throughput, included in instance price, but EPHEMERAL (survives reboot only; lost on stop/hibernate/terminate/host failure), cannot be detached or snapshotted. Use for caches, buffers, scratch, and replicated data. DeleteOnTermination and snapshots are EBS-only concepts - any answer applying them to instance store is wrong."
+    },
+    {
+      "id": 20,
+      "questionText": "A team needs a relational database on AWS but wants to avoid managing OS patching, database engine upgrades, backups, and replication themselves. They are currently running MySQL on a self-managed EC2 instance. From an architecture standpoint, what is the MORE appropriate service, and why is the EC2 approach considered undifferentiated heavy lifting?",
+      "options": {
+        "A": "Keep MySQL on EC2 but enable detailed CloudWatch monitoring; that removes the management burden",
+        "B": "Migrate to Amazon RDS (or Aurora), a managed relational database service that handles patching, automated backups, and replication, letting the team focus on the data and schema",
+        "C": "Move the database to an EC2 instance store volume for better performance",
+        "D": "Run MySQL inside a single container on the same EC2 instance to simplify operations"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Adding monitoring to the self-managed instance.",
+          "reason": "Incorrect - monitoring gives visibility but the team still performs OS patching, engine upgrades, backups, and failover setup themselves; the operational burden remains."
+        },
+        "B": {
+          "description": "Amazon RDS/Aurora: AWS manages the undifferentiated work - OS and engine patching, automated backups and point-in-time recovery, Multi-AZ failover, and read replicas - so the team owns only schema, queries, and data.",
+          "reason": "Correct - 'do not want to manage patching/backups/replication for a relational DB' is the defining RDS use case. Self-managing the same engine on EC2 means re-implementing all of that yourself, which adds no business value (undifferentiated heavy lifting)."
+        },
+        "C": {
+          "description": "Placing the database on ephemeral local storage.",
+          "reason": "Incorrect - instance store is ephemeral and disposable; hosting a database's data on it risks total data loss on stop/termination and does not reduce management effort."
+        },
+        "D": {
+          "description": "Containerizing on the same host.",
+          "reason": "Incorrect - a container on the same EC2 instance still leaves OS patching, backups, and HA to the team; it changes packaging, not the management model."
+        }
+      },
+      "Tips": "Managed-vs-self-managed reasoning the SAA exam rewards: choosing a managed service (RDS/Aurora, EFS, ELB, etc.) offloads 'undifferentiated heavy lifting' - patching, backups, HA/replication, scaling - so effort goes to the application, not the plumbing. Self-manage on EC2 only when you need control the managed service does not offer (unusual OS tuning, an unsupported engine/version, specific licensing). 'Don't want to manage a relational DB' = RDS/Aurora."
+    }
+  ]
+}

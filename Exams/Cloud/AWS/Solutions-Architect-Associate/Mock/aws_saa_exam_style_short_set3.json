@@ -1,0 +1,647 @@
+{
+  "setId": "c9d2f6b4-3a87-4e19-b5c3-8f6a2d9e7b41",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Quick Practice Exam 3",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A large enterprise delegates IAM user and role creation to team leads in each business unit. Security wants to guarantee that NO identity created by these team leads can ever exceed a defined maximum set of permissions, even if a lead attaches an overly broad policy. Which IAM feature enforces this ceiling?",
+      "options": {
+        "A": "Apply a permissions boundary to every user and role the team leads create",
+        "B": "Attach the AdministratorAccess policy to the team leads so they manage permissions responsibly",
+        "C": "Use inline policies instead of managed policies for all delegated identities",
+        "D": "Enable MFA on all identities created by team leads"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A permissions boundary is an advanced IAM feature where a managed policy defines the MAXIMUM permissions an identity can have; effective permissions are the intersection of the boundary and the identity's attached policies.",
+          "reason": "Correct - even if a team lead attaches a policy granting full access, the identity can only perform actions that are allowed by BOTH the attached policy AND the boundary. The boundary itself never grants permissions; it only caps them. This is the standard pattern for safely delegating IAM administration."
+        },
+        "B": {
+          "description": "Granting the team leads full administrative rights and trusting their judgment.",
+          "reason": "Incorrect - this enforces nothing. It actually widens the blast radius, because each lead could create identities with unlimited permissions."
+        },
+        "C": {
+          "description": "Choosing inline policies (embedded in a single identity) over managed policies (standalone, reusable).",
+          "reason": "Incorrect - inline vs managed is a packaging choice. Neither type imposes a ceiling on what permissions can be granted."
+        },
+        "D": {
+          "description": "Requiring multi-factor authentication on the delegated identities.",
+          "reason": "Incorrect - MFA strengthens authentication (proving who you are) but does nothing to limit authorization (what you can do)."
+        }
+      },
+      "Tips": "Keyword 'maximum permissions an identity can ever have' = permissions boundary (identity level) or Service Control Policy (account/OU level in AWS Organizations). Both work as filters: effective permissions = identity policies INTERSECT boundary/SCP. Neither grants anything by itself. 'Safely delegate IAM creation' is the classic permissions-boundary scenario."
+    },
+    {
+      "id": 2,
+      "questionText": "During a security review, an auditor asks for a single downloadable document listing ALL IAM users in the account along with the status of their passwords, access keys (including last used and last rotated), and MFA devices. Which IAM feature produces this with the LEAST effort?",
+      "options": {
+        "A": "Generate an IAM credentials report, which is a downloadable CSV covering all users and the state of their credentials",
+        "B": "Use IAM Access Advisor on each user to export their service permissions",
+        "C": "Enable CloudTrail and write an Athena query against 90 days of events",
+        "D": "Run the IAM Policy Simulator for every user in the account"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The IAM credentials report: an account-level, on-demand CSV listing every user with password enabled/last used/last changed, access key age and last used, and MFA status.",
+          "reason": "Correct - this is exactly the one-click artifact auditors ask for. It can be generated from the console or CLI (generate-credential-report) and is refreshed at most once every 4 hours."
+        },
+        "B": {
+          "description": "Access Advisor shows, for one identity at a time, which services its permissions allow and when each service was last accessed.",
+          "reason": "Incorrect - Access Advisor is per-identity and focuses on service last-accessed data for permission right-sizing, not on credential hygiene across the whole account."
+        },
+        "C": {
+          "description": "Mining API event history with CloudTrail and Athena.",
+          "reason": "Incorrect - this could approximate some of the data with significant engineering effort, but it is far from 'least effort' and does not directly report password age, key rotation, or MFA status."
+        },
+        "D": {
+          "description": "Testing whether specific actions would be allowed or denied for identities.",
+          "reason": "Incorrect - the Policy Simulator evaluates hypothetical authorization decisions; it produces no credential inventory."
+        }
+      },
+      "Tips": "Two audit tools, two scopes: Credentials Report = ACCOUNT-wide CSV about credential hygiene (passwords, keys, MFA). Access Advisor = per-IDENTITY view of service last-accessed for least-privilege cleanup. 'List all users and their credential status' = credentials report; 'find unused permissions to remove' = Access Advisor."
+    },
+    {
+      "id": 3,
+      "questionText": "A company must migrate a legacy application whose software license is bound to physical CPU sockets and cores. Compliance requires visibility into the underlying physical server and control over instance placement so the license stays tied to the same machine. Which EC2 purchasing option is required?",
+      "options": {
+        "A": "Dedicated Instances",
+        "B": "Dedicated Hosts",
+        "C": "On-Demand instances with a capacity reservation",
+        "D": "Spot Instances with a defined duration"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Dedicated Instances run on hardware not shared with other AWS customers, but AWS may move them between physical machines, and you get no visibility into sockets or cores.",
+          "reason": "Incorrect - this is the classic trap. Dedicated Instances give single-tenant hardware but NO socket/core visibility and NO placement control or host affinity, so BYOL per-socket licensing cannot be proven."
+        },
+        "B": {
+          "description": "Dedicated Hosts give you an entire physical server: you see sockets, cores, and host ID, can control instance placement on that host, and can keep instances pinned via host affinity.",
+          "reason": "Correct - per-socket/per-core BYOL licensing plus visibility and placement control is the textbook Dedicated Hosts use case. It is the most expensive option but the only one meeting these compliance demands."
+        },
+        "C": {
+          "description": "Reserving capacity for standard shared-tenancy On-Demand instances.",
+          "reason": "Incorrect - capacity reservations guarantee capacity in an AZ but the hardware is shared multi-tenant and exposes no physical-server details."
+        },
+        "D": {
+          "description": "Discounted interruptible capacity.",
+          "reason": "Incorrect - Spot can be reclaimed at any time and runs on shared hardware, which is incompatible with stable, license-bound placement."
+        }
+      },
+      "Tips": "Keyword mapping: 'BYOL per-socket/per-core', 'visibility into physical server', 'host affinity / placement control', 'compliance requires dedicated physical server you manage' = Dedicated HOSTS. 'Just no sharing with other customers, no visibility needed' = Dedicated INSTANCES. Hosts = you book the whole server; Instances = you only insist on single tenancy."
+    },
+    {
+      "id": 4,
+      "questionText": "An operations team wants each new EC2 instance to automatically install packages, register with a configuration server, and start its service at first boot - WITHOUT building and maintaining a custom AMI. Which mechanism should they use, and which statement about it is accurate?",
+      "options": {
+        "A": "EC2 user data: a script supplied at launch that runs once at the first boot, executing with root privileges",
+        "B": "EC2 instance metadata: a script uploaded to 169.254.169.254 that the instance executes at boot",
+        "C": "An Elastic Network Interface bootstrap profile attached at launch",
+        "D": "EC2 user data: a script that automatically re-runs at every reboot under the ec2-user account"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "User data is a script or cloud-init directive passed at launch; by default it executes exactly once at first boot, runs as root, and is limited to 16 KB.",
+          "reason": "Correct - user data is the standard bootstrapping mechanism that avoids baking a custom AMI. Default behavior: one-time execution at first boot with root privileges. Note it is retrievable through the instance metadata service, so it must never contain secrets."
+        },
+        "B": {
+          "description": "The instance metadata service at 169.254.169.254, which provides information ABOUT the instance (IDs, IPs, IAM credentials, and the user data itself).",
+          "reason": "Incorrect - metadata is a read-only information endpoint. You cannot upload executable scripts to it; it merely serves data, including the user data that was supplied at launch."
+        },
+        "C": {
+          "description": "A supposed bootstrapping feature of network interfaces.",
+          "reason": "Incorrect - ENIs are virtual network cards (IPs, MACs, Security Groups). No such 'bootstrap profile' exists."
+        },
+        "D": {
+          "description": "User data described as running on every reboot as a non-root user.",
+          "reason": "Incorrect - both details are wrong: by default user data runs ONCE (first boot only) and it runs as ROOT, not ec2-user. Re-running on every boot requires manual cloud-init configuration."
+        }
+      },
+      "Tips": "User data fact pack the exam loves: runs ONCE at first boot (by default), runs as ROOT, max 16 KB, base64-encoded by the tooling, and is readable via the metadata service - so never put secrets in it. 'Bootstrap without custom AMI' = user data. 'Information about the instance / temporary role credentials' = metadata at 169.254.169.254."
+    },
+    {
+      "id": 5,
+      "questionText": "A streaming platform is deploying a 60-broker Apache Kafka cluster on EC2 in one Region. The design requires brokers to be isolated into groups that do not share underlying racks, so a single rack failure only affects one group, and the application must be able to discover which group each instance belongs to via instance metadata. Which placement configuration is correct?",
+      "options": {
+        "A": "A spread placement group spanning three Availability Zones",
+        "B": "A cluster placement group per Availability Zone",
+        "C": "A partition placement group with up to 7 partitions per Availability Zone, with brokers distributed across partitions",
+        "D": "No placement group; rely on EC2 default placement to separate racks"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Spread placement, where every individual instance gets distinct hardware.",
+          "reason": "Incorrect - spread groups are capped at 7 RUNNING instances per AZ per group, so a 60-node cluster cannot fit. Spread is for a small number of critical instances, not large distributed systems."
+        },
+        "B": {
+          "description": "Cluster placement, which co-locates instances for maximum network performance.",
+          "reason": "Incorrect - cluster groups pack instances onto shared racks for low latency, which is the opposite of rack-failure isolation."
+        },
+        "C": {
+          "description": "Partition placement, which divides the group into logical partitions (up to 7 per AZ), each mapped to racks that are not shared with other partitions; the partition number is exposed in instance metadata.",
+          "reason": "Correct - partition placement groups are designed for large-scale distributed systems like Kafka, Hadoop, HDFS, and Cassandra. They scale to hundreds of instances, guarantee partitions do not share racks, and surface the topology (placement/partition-number) through instance metadata for rack-aware replication."
+        },
+        "D": {
+          "description": "Default placement with no grouping.",
+          "reason": "Incorrect - default placement makes no rack-isolation promises and provides no partition topology information to the application."
+        }
+      },
+      "Tips": "Big-data names (Kafka, Hadoop, Cassandra, HBase, HDFS) + 'rack-level isolation' + 'large number of instances' = PARTITION placement group. Limits to memorize: partition = up to 7 PARTITIONS per AZ (hundreds of instances total); spread = up to 7 INSTANCES per AZ. Only partition groups expose their topology via instance metadata."
+    },
+    {
+      "id": 6,
+      "questionText": "An EBS gp3 volume currently lives in Availability Zone us-east-1a. The team needs the data available on a new instance in us-east-1b. What is the correct way to accomplish this?",
+      "options": {
+        "A": "Detach the volume from the instance in us-east-1a and attach it to the instance in us-east-1b",
+        "B": "Create a snapshot of the volume, then create a new volume from that snapshot in us-east-1b and attach it",
+        "C": "Use the 'Change Availability Zone' action on the volume in the EC2 console",
+        "D": "Enable Multi-Attach so the volume can be attached in both Availability Zones simultaneously"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Directly re-attaching the existing volume to an instance in a different AZ.",
+          "reason": "Incorrect - EBS volumes are locked to the Availability Zone where they were created. A volume in us-east-1a can only attach to instances in us-east-1a."
+        },
+        "B": {
+          "description": "Snapshotting the volume (snapshots are Regional, stored in S3) and restoring it as a new volume in the target AZ.",
+          "reason": "Correct - the snapshot escapes the AZ boundary because snapshots are Regional. Creating a volume from the snapshot lets you choose any AZ in the Region (and copying the snapshot to another Region extends this further)."
+        },
+        "C": {
+          "description": "An in-console action that migrates a volume between AZs.",
+          "reason": "Incorrect - no such action exists. The AZ of a volume is immutable after creation."
+        },
+        "D": {
+          "description": "Multi-Attach as a cross-AZ sharing mechanism.",
+          "reason": "Incorrect - Multi-Attach (io1/io2 only) attaches one volume to multiple instances WITHIN THE SAME AZ. It never spans AZs."
+        }
+      },
+      "Tips": "Scope chain to memorize: EBS volume = single AZ; EBS snapshot = Regional; copied snapshot = any Region. 'Move volume to another AZ/Region' always = snapshot -> (copy if cross-Region) -> create new volume in target. Any option that re-attaches an existing volume across AZs, or uses Multi-Attach across AZs, is automatically wrong."
+    },
+    {
+      "id": 7,
+      "questionText": "A media company stores 30 TB on an Amazon EFS Standard file system mounted by a fleet of Linux instances. Analysis shows about 80% of files have not been read in over 30 days, but when a file IS requested it must open immediately from the same file path. How can storage costs be reduced with the LEAST operational change?",
+      "options": {
+        "A": "Enable an EFS lifecycle management policy to transition files not accessed for 30 days into the EFS Infrequent Access storage class",
+        "B": "Export the cold files to S3 Glacier Deep Archive and delete them from EFS",
+        "C": "Switch the file system to Max I/O performance mode to lower the per-GB price",
+        "D": "Recreate the file system as a smaller provisioned-throughput file system"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EFS lifecycle management automatically moves files that have not been accessed for a chosen period (e.g., 30 days) to the Infrequent Access class; files stay at the same path and move back transparently on access.",
+          "reason": "Correct - EFS-IA costs up to roughly 92% less per GB than EFS Standard, the transition is automatic and invisible to applications, and files remain instantly accessible at their original paths. This is the least-change cost lever for mostly-cold EFS data."
+        },
+        "B": {
+          "description": "Archiving cold data to Glacier Deep Archive outside the file system.",
+          "reason": "Incorrect - Deep Archive retrievals take hours and the files would no longer exist at their EFS paths, breaking the 'open immediately from the same path' requirement."
+        },
+        "C": {
+          "description": "Max I/O, one of the EFS performance modes for highly parallel workloads.",
+          "reason": "Incorrect - performance mode affects latency/parallelism characteristics, not price per GB. It is not a cost-reduction mechanism."
+        },
+        "D": {
+          "description": "Rebuilding the file system with provisioned throughput.",
+          "reason": "Incorrect - provisioned throughput typically ADDS cost (you pay for throughput regardless of size) and recreating the file system is a large operational change."
+        }
+      },
+      "Tips": "Pattern 'EFS + most files rarely accessed + must stay instantly available' = Lifecycle policy -> EFS Infrequent Access (up to ~92% cheaper, transparent, same paths). Glacier-class options break instant access. Keep EFS dials straight: storage classes (Standard / IA / Archive, One Zone variants) = cost; performance mode (General Purpose / Max I/O) = latency vs parallelism; throughput mode (Bursting / Elastic / Provisioned) = bandwidth."
+    },
+    {
+      "id": 8,
+      "questionText": "A database runs on a 3,500 GB gp2 volume. The team admits they sized the volume that large ONLY to obtain about 10,000 IOPS; the actual data is under 500 GB. Which change cuts cost the MOST while keeping at least 10,000 IOPS?",
+      "options": {
+        "A": "Migrate to a 500 GB gp3 volume and provision 10,000 IOPS on it",
+        "B": "Keep gp2 but enable bursting to reach the required IOPS on a smaller volume",
+        "C": "Move to a 3,500 GB io2 volume with 10,000 provisioned IOPS",
+        "D": "Split the data across two 1,750 GB gp2 volumes in RAID 0"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "gp3 decouples performance from size: any gp3 volume baselines at 3,000 IOPS and can provision up to 16,000 IOPS independently of capacity, at a per-GB price about 20% lower than gp2.",
+          "reason": "Correct - a 500 GB gp3 volume with 10,000 provisioned IOPS meets the performance need while eliminating 3,000 GB of unneeded capacity. The migration can even be done online with Elastic Volumes (modify volume type gp2 -> gp3)."
+        },
+        "B": {
+          "description": "Relying on gp2 burst credits on a smaller volume.",
+          "reason": "Incorrect - gp2 bursting (up to 3,000 IOPS) applies to volumes under 1 TB and is temporary, credit-based performance. It cannot sustain 10,000 IOPS; on gp2, sustained 10,000 IOPS REQUIRES ~3,334 GB at 3 IOPS per GB."
+        },
+        "C": {
+          "description": "Provisioned IOPS SSD at the same large size.",
+          "reason": "Incorrect - io2 charges premium rates per GB AND per provisioned IOPS, and keeping 3,500 GB retains the wasted capacity. This raises cost rather than lowering it."
+        },
+        "D": {
+          "description": "Striping two gp2 volumes to aggregate IOPS.",
+          "reason": "Incorrect - two 1,750 GB gp2 volumes still total 3,500 GB of paid capacity (around 5,250 IOPS combined at 3 IOPS/GB each), adds RAID management complexity, and is strictly worse than the gp3 option."
+        }
+      },
+      "Tips": "gp2 math: 3 IOPS per GB, burst to 3,000 for volumes under 1 TB, max 16,000 IOPS at ~5,334 GB - so people overprovision SIZE to buy IOPS. gp3 kills that pattern: baseline 3,000 IOPS / 125 MBps at ANY size, provision up to 16,000 IOPS / 1,000 MBps separately, ~20% cheaper per GB. 'Oversized gp2 just for IOPS' = migrate to right-sized gp3; the change is online via Elastic Volumes."
+    },
+    {
+      "id": 9,
+      "questionText": "Security policy states that ALL AWS API calls made by IAM identities in an account must originate from the corporate office range 203.0.113.0/24; any call from elsewhere must be denied even if other policies allow it. How is this enforced?",
+      "options": {
+        "A": "Attach an IAM policy with an explicit Deny on all actions, using a Condition with NotIpAddress on aws:SourceIp for 203.0.113.0/24",
+        "B": "Configure every Security Group to allow traffic only from 203.0.113.0/24",
+        "C": "Add Network ACL deny rules for all CIDRs except 203.0.113.0/24 on every subnet",
+        "D": "Enable AWS WAF on the account to filter API calls by source IP"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An identity-based policy with Effect Deny, Action *, and Condition NotIpAddress aws:SourceIp = 203.0.113.0/24 (often excluding calls made by AWS services on your behalf via aws:ViaAWSService).",
+          "reason": "Correct - the aws:SourceIp condition evaluates the caller's IP at the API/control-plane level, and an explicit Deny overrides every Allow. This is the canonical 'restrict API access to office IPs' pattern."
+        },
+        "B": {
+          "description": "Security Group rules restricting inbound traffic to instances.",
+          "reason": "Incorrect - Security Groups filter network traffic TO resources like EC2 instances. AWS API calls go to AWS service endpoints and never traverse your Security Groups."
+        },
+        "C": {
+          "description": "Subnet-level NACL rules blocking non-office CIDRs.",
+          "reason": "Incorrect - NACLs govern traffic entering/leaving subnets in your VPC. They have no effect on calls made to the AWS control plane (e.g., from a laptop to ec2.amazonaws.com)."
+        },
+        "D": {
+          "description": "AWS WAF filtering requests by IP.",
+          "reason": "Incorrect - WAF protects web applications behind CloudFront, ALB, API Gateway, or AppSync. It cannot be placed in front of AWS's own service APIs for IAM enforcement."
+        }
+      },
+      "Tips": "Keep the three 'firewalls' separate: IAM policy Conditions (aws:SourceIp) = WHO may call AWS APIs and from where; Security Groups = stateful traffic filter at the instance/ENI; NACLs = stateless filter at the subnet. 'Restrict API calls / console actions by IP' = explicit Deny + NotIpAddress condition. Remember explicit Deny always wins over any Allow."
+    },
+    {
+      "id": 10,
+      "questionText": "A financial-modeling application loads a 25-minute in-memory dataset at startup. Analysts use it only during business hours, and management wants to stop paying for compute overnight while ensuring the application is ready within a few minutes each morning WITH its in-memory state intact. What should the architect do?",
+      "options": {
+        "A": "Stop the instance every evening and start it in the morning",
+        "B": "Enable EC2 Hibernate on the instance, hibernate it overnight, and resume it in the morning",
+        "C": "Terminate the instance nightly and launch a new one from an AMI each morning",
+        "D": "Leave the instance running overnight on a smaller instance type"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A regular stop/start cycle, which shuts the OS down and releases the host.",
+          "reason": "Incorrect - a normal stop discards RAM contents, so each morning the application would repeat the 25-minute warm-up, violating the 'ready within a few minutes with state intact' requirement."
+        },
+        "B": {
+          "description": "Hibernate writes the RAM image to the encrypted EBS root volume at shutdown; on resume, the OS and application memory are restored exactly as they were.",
+          "reason": "Correct - hibernation preserves the in-memory dataset, so the morning resume skips the long warm-up. While hibernated, the company pays only for EBS storage (and any Elastic IPs), not compute - meeting both the cost and readiness goals."
+        },
+        "C": {
+          "description": "Nightly terminate-and-relaunch from an AMI.",
+          "reason": "Incorrect - a fresh launch starts with empty RAM; the dataset must be rebuilt for 25 minutes every morning. AMIs capture disk state, never memory."
+        },
+        "D": {
+          "description": "Downsizing but keeping the instance running 24/7.",
+          "reason": "Incorrect - this still pays for unused overnight compute, and resizing requires a stop anyway (losing RAM). It optimizes neither cost nor readiness as well as hibernation."
+        }
+      },
+      "Tips": "Trigger phrases for Hibernate: 'long warm-up / pre-loaded in-memory data / RAM state must survive stop'. Requirements recap: encrypted EBS root sized for RAM, under 150 GB RAM, enabled at LAUNCH, max 60 days hibernated. Billing while hibernated = storage only, no instance charges. Stop = RAM lost; Hibernate = RAM saved to EBS root."
+    },
+    {
+      "id": 11,
+      "questionText": "A security team must CONTINUOUSLY identify any IAM roles, S3 buckets, or KMS keys in the account that are accessible from OUTSIDE the organization (for example via overly broad trust or resource policies). Which service is purpose-built for this?",
+      "options": {
+        "A": "The IAM credentials report",
+        "B": "Manual weekly review of CloudTrail logs",
+        "C": "IAM Access Analyzer",
+        "D": "IAM Access Advisor"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An account-wide CSV about users' passwords, access keys, and MFA.",
+          "reason": "Incorrect - the credentials report covers credential hygiene; it never analyzes policies for external exposure."
+        },
+        "B": {
+          "description": "Searching API history for suspicious cross-account activity.",
+          "reason": "Incorrect - CloudTrail shows what HAS happened, after the fact and only if the access occurred; it does not proactively prove what COULD be accessed, and weekly manual review is not continuous."
+        },
+        "C": {
+          "description": "Access Analyzer uses automated reasoning to mathematically analyze resource policies (roles, S3, KMS, SQS, Lambda, etc.) and generates findings whenever a resource is shared with a principal outside your zone of trust (account or organization), monitoring continuously.",
+          "reason": "Correct - 'find resources accessible by external entities, continuously' is the literal definition of IAM Access Analyzer external-access findings. It also offers policy validation and unused-access analysis."
+        },
+        "D": {
+          "description": "Per-identity service last-accessed data.",
+          "reason": "Incorrect - Access Advisor helps trim unused permissions of one identity; it does not detect external exposure of resources."
+        }
+      },
+      "Tips": "Keep IAM's three 'A-tools' straight: Access ANALYZER = finds resources shared OUTSIDE the account/org (external access findings, continuous, automated reasoning). Access ADVISOR = per-identity 'services allowed vs last used' for least privilege. Credentials REPORT = account-wide credential hygiene CSV. The keyword 'external/cross-account exposure' always = Access Analyzer."
+    },
+    {
+      "id": 12,
+      "questionText": "Compliance requires that all IAM users' CONSOLE passwords be at least 14 characters, include symbols and numbers, never repeat the previous 5 passwords, and expire every 90 days. How is this enforced?",
+      "options": {
+        "A": "Attach a Service Control Policy defining password complexity",
+        "B": "Configure the account-level IAM password policy with these requirements",
+        "C": "Enable MFA, which automatically enforces password complexity",
+        "D": "Set an individual password policy on each IAM user"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Organization-level guardrails restricting which API actions accounts may perform.",
+          "reason": "Incorrect - SCPs limit permissions; they have no settings for password length, complexity, reuse, or expiration."
+        },
+        "B": {
+          "description": "IAM provides one account-wide password policy controlling minimum length, required character classes, password reuse prevention, maximum age/expiration, and whether users may change their own passwords.",
+          "reason": "Correct - all four stated requirements map directly to fields of the IAM account password policy, the single mechanism governing console passwords for the account's IAM users."
+        },
+        "C": {
+          "description": "Multi-factor authentication as a complexity enforcer.",
+          "reason": "Incorrect - MFA adds a second factor; it neither defines nor enforces any password composition rules."
+        },
+        "D": {
+          "description": "Per-user password policies.",
+          "reason": "Incorrect - IAM password policy exists only at the ACCOUNT level; there is no per-user variant."
+        }
+      },
+      "Tips": "IAM password policy = ONE policy per account governing console passwords: min length, character requirements, prevent reuse (remember N), expiration, allow/require self-change. It does NOT govern access keys (rotation is separate) and does NOT apply to the root user's password. 'Password complexity/expiry requirements' = account password policy - never SCP, never MFA."
+    },
+    {
+      "id": 13,
+      "questionText": "A data analyst occasionally needs to run a few AWS CLI commands. The security team refuses to issue long-term access keys, and the analyst cannot install software on their managed laptop. What is the SIMPLEST compliant way for the analyst to use the CLI?",
+      "options": {
+        "A": "Create access keys anyway and store them in a password manager",
+        "B": "SSH into a shared bastion EC2 instance that has admin keys configured",
+        "C": "Use the root user's CloudShell, which has no key requirements",
+        "D": "Use AWS CloudShell from the console: a browser-based shell, pre-authenticated as the signed-in identity, with the CLI pre-installed"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Issuing the long-term credentials the security team prohibited.",
+          "reason": "Incorrect - storing them safely does not change the fact that long-term keys were created, directly violating the stated policy."
+        },
+        "B": {
+          "description": "A shared jump host with embedded admin credentials.",
+          "reason": "Incorrect - shared credentials destroy accountability, the embedded keys are themselves long-term secrets, and running a bastion is far from simple."
+        },
+        "C": {
+          "description": "Working as the root user to dodge key management.",
+          "reason": "Incorrect - routine work as root violates the most basic IAM best practice regardless of the tool used."
+        },
+        "D": {
+          "description": "CloudShell launches in the browser from the console, inherits the permissions of the CURRENTLY signed-in IAM identity (no keys to create or store), includes the AWS CLI and common tools, and gives ~1 GB of persistent home storage per Region.",
+          "reason": "Correct - zero installation, zero long-term credentials, full audit attribution to the analyst's own identity: the simplest compliant path to occasional CLI usage."
+        }
+      },
+      "Tips": "'Needs CLI but must not create access keys / cannot install anything' = AWS CloudShell (browser-based, pre-authenticated with your console session's permissions, ~1 GB persistent storage per Region). It eliminates the entire key-management problem for ad-hoc CLI work. For automation on servers, the answer remains roles (in AWS) or dedicated rotated keys (on-prem) - CloudShell is for humans."
+    },
+    {
+      "id": 14,
+      "questionText": "An engineer cannot SSH to a newly launched EC2 instance: the connection attempt hangs and eventually reports a TIMEOUT. The instance is running, both status checks pass, and it has a public IP. What is the MOST likely cause?",
+      "options": {
+        "A": "The SSH daemon on the instance is stopped",
+        "B": "The Security Group (or NACL) does not allow inbound TCP 22 from the engineer's IP",
+        "C": "The engineer is using the wrong private key",
+        "D": "The instance's CPU utilization is too high to accept connections"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The service not listening on the port.",
+          "reason": "Incorrect - reaching a host where nothing listens produces a fast CONNECTION REFUSED (TCP reset), not a silent timeout."
+        },
+        "B": {
+          "description": "A network filter silently dropping the packets: Security Groups drop disallowed traffic without responding, which the client experiences as a hang followed by a timeout.",
+          "reason": "Correct - 'timeout' is the signature of filtered traffic - missing SG rule for port 22 from the source IP (or a NACL/routing issue). This is the number-one cause and the default exam answer for SSH timeouts."
+        },
+        "C": {
+          "description": "An authentication problem.",
+          "reason": "Incorrect - a wrong key produces 'Permission denied (publickey)' AFTER the TCP connection succeeds; the connection here never establishes."
+        },
+        "D": {
+          "description": "Resource exhaustion blocking the handshake.",
+          "reason": "Incorrect - status checks pass, and even loaded instances normally complete TCP handshakes; a clean timeout points at the network path, not CPU."
+        }
+      },
+      "Tips": "Connection triage table the exam loves: TIMEOUT = traffic filtered/never arrives -> Security Group, NACL, route table, or no public IP. CONNECTION REFUSED = packet arrived but no service listening -> daemon down / wrong port / host firewall reset. PERMISSION DENIED = network fine, auth wrong -> wrong key or username. Map the error message to the layer and the answer falls out."
+    },
+    {
+      "id": 15,
+      "questionText": "After re-platforming to containers, a company no longer needs its m5 fleet, but 18 months remain on its 3-year STANDARD Reserved Instances. How can the company recover some of the remaining value?",
+      "options": {
+        "A": "Request a pro-rated refund from AWS Support",
+        "B": "Exchange the Standard RIs for RIs of a different instance family",
+        "C": "List the remaining RI term for sale on the Reserved Instance Marketplace",
+        "D": "Convert the Reserved Instances into Spot credits"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Returning reservations for money back.",
+          "reason": "Incorrect - Reserved Instances are non-refundable commitments; AWS does not buy them back or pro-rate refunds."
+        },
+        "B": {
+          "description": "Swapping the reservation's attributes for different ones.",
+          "reason": "Incorrect - exchanging family/OS/tenancy is the defining feature of CONVERTIBLE RIs; Standard RIs permit only limited modifications (e.g., AZ/scope, size within family on Linux), never a family exchange."
+        },
+        "C": {
+          "description": "The RI Marketplace lets owners sell the remainder of STANDARD Reserved Instance terms to other AWS customers, recouping part of the sunk cost.",
+          "reason": "Correct - selling on the Reserved Instance Marketplace is the designed exit for unneeded Standard RIs. (Note the mirror-image rule: Convertible RIs can be exchanged but NOT sold on the Marketplace.)"
+        },
+        "D": {
+          "description": "Transforming reservations into a different pricing instrument.",
+          "reason": "Incorrect - no mechanism converts RIs into Spot (or any other) credits; Spot is a separate market with its own pricing."
+        }
+      },
+      "Tips": "The Standard-vs-Convertible mirror rule: STANDARD = bigger discount (~72%), CAN be sold on the RI Marketplace, CANNOT be exchanged. CONVERTIBLE = smaller discount (~66%), CAN be exchanged (family/OS/tenancy, equal-or-greater value), CANNOT be sold. No RI is refundable. 'Stuck with unneeded RIs' -> Standard = sell; Convertible = exchange."
+    },
+    {
+      "id": 16,
+      "questionText": "A media company runs long render jobs on a Spot Fleet spanning many instance pools. Management's priority is MINIMIZING Spot interruptions; cost is secondary. Which allocation strategy should the fleet use?",
+      "options": {
+        "A": "lowestPrice, to always launch in the cheapest pools",
+        "B": "capacityOptimized (or price-capacity-optimized), which launches into the pools with the deepest spare capacity",
+        "C": "Restrict the fleet to a single pool to keep behavior predictable",
+        "D": "diversified, which guarantees instances are never interrupted"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Chasing the lowest Spot price across pools.",
+          "reason": "Incorrect - the cheapest pools are often shallow or in high demand, giving the HIGHEST interruption likelihood; this strategy optimizes the secondary goal at the expense of the primary one."
+        },
+        "B": {
+          "description": "Capacity-aware allocation: AWS launches into pools currently holding the most spare capacity (price-capacity-optimized additionally weighs price among those pools).",
+          "reason": "Correct - deeper capacity means a lower probability of reclamation, making capacityOptimized / price-capacity-optimized the AWS-recommended strategies for interruption-sensitive workloads like long renders."
+        },
+        "C": {
+          "description": "Concentrating the whole fleet in one pool.",
+          "reason": "Incorrect - a single pool is a single point of failure: one capacity event interrupts the entire fleet. Spreading across pools is fundamental to Spot resilience."
+        },
+        "D": {
+          "description": "Even distribution across pools with an absolute no-interruption promise.",
+          "reason": "Incorrect - diversified does spread risk, but NOTHING eliminates Spot interruptions; any option claiming a guarantee is automatically false."
+        }
+      },
+      "Tips": "Spot allocation strategies: lowestPrice = max savings, max interruptions (short, flexible batch); capacityOptimized / price-capacity-optimized = fewest interruptions (recommended for longer or interruption-sensitive jobs); diversified = spread across pools. Two evergreen Spot truths: interruptions can NEVER be fully prevented, and you pay the current Spot price (capped by your max), not your bid."
+    },
+    {
+      "id": 17,
+      "questionText": "A legacy TCP service runs on one EC2 instance, and its clients connect to a hardcoded public IPv4 address that cannot be changed to a DNS name. The company keeps a warm standby instance in the same Region and needs failover in under a minute. What design satisfies this?",
+      "options": {
+        "A": "Put both instances behind an Application Load Balancer",
+        "B": "Create a Route 53 record with a 30-second TTL pointing at the active instance",
+        "C": "Let the standby launch with an auto-assigned public IP and inform clients of changes",
+        "D": "Associate an Elastic IP with the active instance and re-associate it to the standby during failover"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Fronting the service with a managed layer-7 load balancer.",
+          "reason": "Incorrect - clients target a fixed IP, and ALB endpoints are DNS names with changing addresses (and ALB is HTTP-oriented; a fixed-IP L4 design would be NLB territory anyway)."
+        },
+        "B": {
+          "description": "DNS-based failover with a short TTL.",
+          "reason": "Incorrect - the clients hardcode the IP and never resolve DNS, so no Route 53 record can redirect them."
+        },
+        "C": {
+          "description": "Relying on ephemeral public addressing plus client reconfiguration.",
+          "reason": "Incorrect - auto-assigned IPs differ per launch and change on stop/start; 'inform every client' is exactly the manual, slow process the requirement excludes."
+        },
+        "D": {
+          "description": "Elastic IP re-association: the static public IPv4 is detached from the failed instance and attached to the standby with one API call, taking effect in seconds.",
+          "reason": "Correct - EIP remapping moves the well-known address itself, so hardcoded clients reconnect to the standby with no changes on their side - the classic fast-failover trick for fixed-IP constraints."
+        }
+      },
+      "Tips": "Elastic IP = a static public IPv4 you own and can REMAP between instances/ENIs in seconds - the go-to answer when 'clients hardcode the IP' meets 'fast failover'. Quotas/billing: soft limit 5 EIPs per Region, and public IPv4 addresses incur an hourly charge (release what you do not use). Architecture note the exam rewards: prefer DNS names or load balancers over EIPs whenever clients allow it."
+    },
+    {
+      "id": 18,
+      "questionText": "To cut costs, an architect configures a new instance's ROOT volume as sc1 Cold HDD in the launch wizard, but the configuration is rejected. Which statement about EBS boot volumes is correct?",
+      "options": {
+        "A": "Any EBS volume type can serve as a root volume, so the error must be unrelated",
+        "B": "Only SSD-backed types (gp2, gp3, io1, io2) can be root/boot volumes; st1 and sc1 HDD volumes cannot",
+        "C": "Only io2 volumes are bootable",
+        "D": "HDD volumes become bootable once encryption is enabled on them"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Universal bootability across EBS types.",
+          "reason": "Incorrect - the HDD classes are explicitly excluded from boot duty; the wizard rejected sc1 precisely for this reason."
+        },
+        "B": {
+          "description": "The platform rule: General Purpose and Provisioned IOPS SSD volumes support being boot devices; Throughput Optimized (st1) and Cold (sc1) HDDs are data-volume-only.",
+          "reason": "Correct - st1/sc1 are engineered for large sequential workloads and cannot host the root file system. Boot from gp3 (the sensible default) and attach HDD volumes separately for bulk data if needed."
+        },
+        "C": {
+          "description": "Restricting boot to the premium tier.",
+          "reason": "Incorrect - gp2 and gp3 boot perfectly well (and are the default); io1/io2 are options, not requirements."
+        },
+        "D": {
+          "description": "Encryption changing a volume's boot capability.",
+          "reason": "Incorrect - encryption is orthogonal to bootability; an encrypted sc1 is still not bootable (encrypted gp3/io2 root volumes are fine and required for features like Hibernate)."
+        }
+      },
+      "Tips": "Boot-volume rule: SSD families (gp2/gp3/io1/io2) = bootable; HDD families (st1/sc1) = NEVER bootable, data volumes only, and measured in MB/s not IOPS. Typical pattern: small gp3 root + large st1/sc1 data volume for cheap bulk storage. Any answer offering an st1/sc1 ROOT volume is instantly eliminable."
+    },
+    {
+      "id": 19,
+      "questionText": "A company plans one shared network file system for a mixed fleet: Linux EC2 instances and Windows Server EC2 instances. They intend to mount a single Amazon EFS file system on all of them. What is the problem with this plan?",
+      "options": {
+        "A": "Nothing; EFS supports both Linux and Windows natively",
+        "B": "EFS only supports Windows, so the Linux fleet must change",
+        "C": "EFS is an NFS/POSIX file system supported on Linux only; the Windows instances need an SMB-based service such as Amazon FSx for Windows File Server",
+        "D": "EFS works for both as long as the One Zone storage class is selected"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating EFS as OS-agnostic shared storage.",
+          "reason": "Incorrect - Windows lacks supported NFS v4 client integration for EFS; AWS does not support mounting EFS on Windows instances."
+        },
+        "B": {
+          "description": "Reversing the compatibility.",
+          "reason": "Incorrect - it is exactly backwards: EFS is the LINUX-side solution."
+        },
+        "C": {
+          "description": "Protocol reality: EFS speaks NFS and exposes POSIX semantics for Linux clients; Windows file sharing uses SMB, served natively by FSx for Windows File Server (with AD integration, Windows ACLs).",
+          "reason": "Correct - the mixed fleet needs two services or a single SMB-based one for Windows: EFS for the Linux instances, FSx for Windows for the Windows instances. Choosing shared storage by client OS/protocol is a recurring exam decision."
+        },
+        "D": {
+          "description": "A storage class changing protocol support.",
+          "reason": "Incorrect - One Zone affects redundancy and price, not the NFS protocol or Windows compatibility."
+        }
+      },
+      "Tips": "Shared-storage protocol map: EFS = NFS, POSIX, LINUX only, elastic multi-AZ. FSx for Windows File Server = SMB + Active Directory + Windows ACLs, for WINDOWS. FSx for Lustre = high-performance computing / ML scratch. The OS named in the question selects the service: see 'Windows shared storage' -> FSx for Windows, never EFS."
+    },
+    {
+      "id": 20,
+      "questionText": "A DBA must back up a busy EBS data volume. They ask whether a snapshot can be taken while the volume is ATTACHED and IN USE, and what the consistency implications are. Which answer is accurate?",
+      "options": {
+        "A": "Snapshots require detaching the volume first",
+        "B": "Snapshots require stopping the instance in all cases",
+        "C": "Snapshots taken while in use also capture the instance's RAM for full consistency",
+        "D": "A snapshot can be taken online while attached and in use; it is a crash-consistent point-in-time copy, so for application-level consistency the application/OS should flush and pause I/O (or the instance be stopped) first"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A detach-first requirement.",
+          "reason": "Incorrect - detaching is never required; snapshots are taken from live, attached volumes routinely."
+        },
+        "B": {
+          "description": "A stop-the-instance prerequisite.",
+          "reason": "Incorrect - stopping (or pausing I/O) is only a RECOMMENDATION when application-consistent backups are needed; it is not a requirement for taking the snapshot."
+        },
+        "C": {
+          "description": "Snapshots that include memory state.",
+          "reason": "Incorrect - snapshots capture data written to the EBS volume only; anything still in RAM or unflushed caches is not included (memory capture is Hibernate's job, not snapshots')."
+        },
+        "D": {
+          "description": "Online snapshot semantics: the snapshot is point-in-time for blocks on the volume (crash-consistent); databases may need quiescing (flush/freeze I/O) or a stop to be application-consistent.",
+          "reason": "Correct - this states both halves the exam tests: yes, snapshots work on in-use volumes; and yes, consistency above crash-consistency requires coordinating with the application (or using multi-volume/instance snapshot tooling that quiesces)."
+        }
+      },
+      "Tips": "Snapshot consistency vocabulary: CRASH-consistent = default for an online snapshot (as if the power was cut - fine for most file systems, risky for mid-flight DB transactions); APPLICATION-consistent = flush/freeze I/O, stop the app/instance, or use coordinated multi-volume snapshots. Also recall: first snapshot = full, later ones incremental; snapshots never include RAM."
+    }
+  ]
+}
