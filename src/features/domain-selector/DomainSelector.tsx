@@ -169,6 +169,7 @@ function DomainSelectorInner({ settings }: { settings: Settings }) {
             quesPath={leafData.quesPath}
             remainingSets={leafData.remainingSets}
             exhausted={leafData.exhausted}
+            inProgressCount={leafData.inProgressCount}
           />
         </div>
       )}

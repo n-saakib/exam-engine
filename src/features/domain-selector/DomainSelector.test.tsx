@@ -102,10 +102,10 @@ const FIXTURE_TREE: ExamPathsResponse["tree"] = {
 };
 
 const FIXTURE_LEAVES: ExamPathsResponse["leaves"] = [
-  { quesPath: "Exams/Cloud/AWS/SAA/Easy",       domainLabel: "Cloud Exams / Amazon Web Services / AWS SAA / Easy",         icon: "cloud", safe: true, totalSets: 3, completedSets: 1, remainingSets: 2, exhausted: false },
-  { quesPath: "Exams/Cloud/AWS/SAA/Medium",     domainLabel: "Cloud Exams / Amazon Web Services / AWS SAA / Medium",       icon: "cloud", safe: true, totalSets: 2, completedSets: 0, remainingSets: 2, exhausted: false },
-  { quesPath: "Exams/Cloud/Azure/AZ-900/Easy",  domainLabel: "Cloud Exams / Microsoft Azure / AZ-900 Fundamentals / Easy", icon: "cloud", safe: true, totalSets: 1, completedSets: 0, remainingSets: 1, exhausted: false },
-  { quesPath: "Exams/DevOps/k8s/easy",          domainLabel: "DevOps / Kubernetes / Core Concepts / Easy",                 icon: "devops", safe: true, totalSets: 0, completedSets: 0, remainingSets: 0, exhausted: false },
+  { quesPath: "Exams/Cloud/AWS/SAA/Easy",       domainLabel: "Cloud Exams / Amazon Web Services / AWS SAA / Easy",         icon: "cloud", safe: true, totalSets: 3, completedSets: 1, remainingSets: 2, exhausted: false, inProgressCount: 0 },
+  { quesPath: "Exams/Cloud/AWS/SAA/Medium",     domainLabel: "Cloud Exams / Amazon Web Services / AWS SAA / Medium",       icon: "cloud", safe: true, totalSets: 2, completedSets: 0, remainingSets: 2, exhausted: false, inProgressCount: 0 },
+  { quesPath: "Exams/Cloud/Azure/AZ-900/Easy",  domainLabel: "Cloud Exams / Microsoft Azure / AZ-900 Fundamentals / Easy", icon: "cloud", safe: true, totalSets: 1, completedSets: 0, remainingSets: 1, exhausted: false, inProgressCount: 0 },
+  { quesPath: "Exams/DevOps/k8s/easy",          domainLabel: "DevOps / Kubernetes / Core Concepts / Easy",                 icon: "devops", safe: true, totalSets: 0, completedSets: 0, remainingSets: 0, exhausted: false, inProgressCount: 0 },
 ];
 
 const FIXTURE_RESPONSE: ExamPathsResponse = {
@@ -305,6 +305,50 @@ describe("<DomainSelector> — Start Exam button", () => {
     // Start button should exist but be disabled.
     const startBtn = screen.getByRole("button", { name: /start exam|all sets done/i });
     expect(startBtn).toBeDisabled();
+  });
+
+  it("Start Exam is gated when an in-progress (resume) session exists for the same path", async () => {
+    // Re-mock useExamPaths with a leaf that has inProgressCount = 1.
+    const { useExamPaths } = await import("@/hooks/useExamPaths");
+    vi.mocked(useExamPaths).mockReturnValue({
+      data: {
+        ...FIXTURE_RESPONSE,
+        leaves: FIXTURE_LEAVES.map((l) =>
+          l.quesPath === "Exams/Cloud/AWS/SAA/Easy"
+            ? { ...l, inProgressCount: 1 }
+            : l,
+        ),
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useExamPaths>);
+
+    const { DomainSelector } = await import("./DomainSelector");
+    render(<DomainSelector />, { wrapper: makeWrapper() });
+
+    // Navigate to cloud > aws > saa > easy.
+    const l0Select = screen.getByTestId("level-0").querySelector("select")!;
+    await act(async () => { fireEvent.change(l0Select, { target: { value: "cloud" } }); });
+    const l1Select = screen.getByTestId("level-1").querySelector("select")!;
+    await act(async () => { fireEvent.change(l1Select, { target: { value: "aws" } }); });
+    const l2Select = screen.getByTestId("level-2").querySelector("select")!;
+    await act(async () => { fireEvent.change(l2Select, { target: { value: "saa" } }); });
+    const l3Select = screen.getByTestId("level-3").querySelector("select")!;
+    await act(async () => { fireEvent.change(l3Select, { target: { value: "easy" } }); });
+
+    // The Start button should be disabled and labelled "Continue in Resume".
+    const startBtn = screen.getByRole("button", { name: /continue in resume/i });
+    expect(startBtn).toBeDisabled();
+
+    // Helper text should explain why.
+    expect(
+      screen.getByText(/you have a paused exam for this path/i),
+    ).toBeInTheDocument();
+
+    // Leaf summary should surface the in-progress chip.
+    expect(screen.getByText(/1 paused exam/i)).toBeInTheDocument();
   });
 });
 

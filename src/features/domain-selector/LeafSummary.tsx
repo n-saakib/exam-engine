@@ -17,6 +17,9 @@ export interface LeafSummaryProps {
  * When exhausted, offers a "Reset progress" affordance that calls
  * `POST /api/progress/reset { scope:'path', quesPath }`.
  *
+ * When a paused (in-progress) session exists for the same path, surfaces a
+ * "Paused exam" chip so the user understands why the Start button is gated.
+ *
  * F2-T9.
  */
 export function LeafSummary({ leaf, onReset }: LeafSummaryProps) {
@@ -55,6 +58,13 @@ export function LeafSummary({ leaf, onReset }: LeafSummaryProps) {
             <span className="text-xs text-muted">
               {leaf.completedSets} completed
               {leaf.exhausted ? " · All sets completed" : ""}
+            </span>
+          )}
+          {leaf.inProgressCount > 0 && (
+            <span className="text-xs text-warning">
+              {leaf.inProgressCount === 1
+                ? "1 paused exam — finish or discard it from Resume to start a new one"
+                : `${leaf.inProgressCount} paused exams — finish or discard them from Resume to start a new one`}
             </span>
           )}
         </div>
