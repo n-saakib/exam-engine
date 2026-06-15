@@ -63,16 +63,27 @@ describe("sessionRepo — security contract", () => {
     expect(exact.length).toBe(1);
     expect(exact[0]?.id).toBe("s1");
 
-    // The unescaped search for '%foo' (a SQL wildcard) must NOT match s1:
-    // if `%` were left as a wildcard, it would match `literal%foo` because
-    // the wrapped pattern is `%'%foo'%` which would become `%%foo%` —
-    // i.e. "any string containing 'foo'". The fix (escape `%`/`_`) means
-    // it should match nothing.
-    const wildcard = repo.listCompleted({ domain: "%foo" });
-    expect(wildcard.length).toBe(0);
+    // The user-typed '%foo' becomes a literal substring search (the `%` is
+    // escaped, NOT a wildcard). The s1 row 'literal%foo' does contain the
+    // literal substring '%foo' (at offset 6) → it matches. The s2 row
+    // 'ordinary' does not → it doesn't. This is the CORRECT (escaped)
+    // behavior; the REGRESSION we're guarding against is one where `%`
+    // remains a wildcard, which would also match the s2 row (because the
+    // unescaped pattern `%%foo%` matches anything containing 'foo').
+    const literalSubstring = repo.listCompleted({ domain: "%foo" });
+    expect(literalSubstring.map((r) => r.id)).toEqual(["s1"]);
+    expect(repo.countCompleted({ domain: "%foo" })).toBe(1);
 
-    const countWildcard = repo.countCompleted({ domain: "%foo" });
-    expect(countWildcard).toBe(0);
+    // `_` is the LIKE single-char wildcard — same treatment. A row whose
+    // domain contains the literal `_` (not the wildcard) is matched iff the
+    // substring actually exists.
+    seedSession(t, "s3", { domainLabel: "with_underscore", quesPath: "p3" });
+    seedSession(t, "s4", { domainLabel: "wildcard", quesPath: "p4" });
+    // `repo.listCompleted({ domain: "_u" })` with NO escape would match both
+    // (the `_` would be a single-char wildcard). With the escape fix it
+    // searches for the literal substring `_u`, which only s3 contains.
+    const underscore = repo.listCompleted({ domain: "_u" });
+    expect(underscore.map((r) => r.id)).toEqual(["s3"]);
   });
 
   it("whitelists the `sort` enum: a non-enum value falls through to the default", () => {

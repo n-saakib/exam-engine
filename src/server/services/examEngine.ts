@@ -170,6 +170,10 @@ export function createExamEngine(deps: ExamEngineDeps) {
 
       // Resolve the set: explicit setId ⇒ loadSet; else pick the next unattempted
       // (throws SETS_EXHAUSTED when all completed, PATH_NOT_FOUND when none exist).
+      // NOTE: the route handler is responsible for the path-traversal-shaped
+      // pre-check; the engine itself trusts its inputs to be a valid
+      // quesPath / setId (the deeper sandbox is enforced at the path resolver
+      // and `setCatalog.loadSet` layer).
       let set: QuestionSet;
       let setId: string;
       if (body.setId) {

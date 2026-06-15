@@ -55,10 +55,20 @@ interface ExportSessionEntry {
 
 function escapeCSV(value: unknown): string {
   const str = value === null || value === undefined ? "" : String(value);
-  if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-    return `"${str.replace(/"/g, '""')}"`;
+  // Formula-injection guard: a cell that starts with `=`, `+`, `-`, `@`, TAB
+  // (`\t`) or CR (`\r`) would be interpreted as a formula by Excel / Google
+  // Sheets / Numbers. Prefix with a single quote to force a text rendering.
+  // The single-quote prefix is the spec'd escape; a backslash would still be
+  // interpreted as a formula on import.
+  const DANGEROUS = /^[=+\-@\t\r]/;
+  let out = str;
+  if (DANGEROUS.test(out)) {
+    out = `'${out}`;
   }
-  return str;
+  if (out.includes(",") || out.includes('"') || out.includes("\n")) {
+    return `"${out.replace(/"/g, '""')}"`;
+  }
+  return out;
 }
 
 const CSV_HEADERS = [

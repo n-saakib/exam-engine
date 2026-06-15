@@ -116,6 +116,25 @@ function sortToColumn(sort: string): string {
   }
 }
 
+/** Map `order` filter value to the actual SQL keyword. */
+function orderToKeyword(order: string): "ASC" | "DESC" {
+  return order === "asc" ? "ASC" : "DESC";
+}
+
+/**
+ * Escape SQL LIKE wildcards (`%`, `_`) in a user-supplied substring so it is
+ * matched literally, then wrap it in `%…%` for the `LIKE` pattern. The `\` is
+ * the standard LIKE escape; we pair it with `LIKE ? ESCAPE '\'`.
+ */
+function escapeLike(input: string): string {
+  // Escape backslash FIRST, then the wildcards, so a literal `\` in the input
+  // doesn't get unescaped by a later wildcard substitution.
+  return input
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+}
+
 /**
  * Build the WHERE clause and positional params array for completed-session queries.
  * Always includes `status = 'completed'` and `completed_at IS NOT NULL`.
@@ -128,8 +147,8 @@ function buildCompletedWhere(filters: CompletedFilters): {
   const params: (string | number)[] = [];
 
   if (filters.domain) {
-    whereParts.push("domain_label LIKE ?");
-    params.push(`%${filters.domain}%`);
+    whereParts.push("domain_label LIKE ? ESCAPE '\\'");
+    params.push(`%${escapeLike(filters.domain)}%`);
   }
   if (filters.quesPath) {
     whereParts.push("ques_path = ?");
@@ -294,7 +313,7 @@ export function createSessionRepo(db: Database) {
     listCompleted(filters: CompletedFilters): CompletedRow[] {
       const { whereParts, params } = buildCompletedWhere(filters);
       const sortColumn = sortToColumn(filters.sort ?? "date");
-      const order = filters.order ?? "desc";
+      const order = orderToKeyword(filters.order ?? "desc");
       const limit = filters.limit ?? 50;
       const offset = filters.offset ?? 0;
 
@@ -306,7 +325,7 @@ export function createSessionRepo(db: Database) {
           is_bookmarked, note
         FROM exam_sessions
         ${where}
-        ORDER BY ${sortColumn} ${order.toUpperCase()}, completed_at DESC
+        ORDER BY ${sortColumn} ${order}, completed_at DESC
         LIMIT ? OFFSET ?
       `;
       return db.prepare(sql).all(...params, limit, offset) as CompletedRow[];

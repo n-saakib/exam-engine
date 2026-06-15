@@ -7,6 +7,25 @@ import { runMigrations } from "@/server/boot";
 import { getContainer } from "@/server/container";
 import { CreateSessionBodySchema } from "@/domain/types";
 import type { SessionList, SessionListRow } from "@/domain/types";
+import { AppError } from "@/server/http/errors";
+
+/**
+ * Conservative check: a string is "traversal-shaped" if it contains a `..`
+ * segment (after URL-decoding) or a NUL byte. Used at the route boundary to
+ * fast-fail obviously-bad input so a 4xx-404 (PATH_NOT_FOUND) doesn't leak
+ * the existence-vs-traversal distinction.
+ */
+function looksLikePathTraversal(s: string): boolean {
+  if (s.includes("\0")) return true;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(s);
+  } catch {
+    return true; // malformed = suspicious
+  }
+  if (decoded.includes("\0")) return true;
+  return /(^|\/)\.\.(\/|$)/.test(decoded);
+}
 
 // DB-backed route → Node.js runtime (never edge); dynamic so reads aren't cached.
 export const runtime = "nodejs";
@@ -132,6 +151,20 @@ export const POST = defineHandler({
   body: CreateSessionBodySchema,
   handler: async ({ body }) => {
     runMigrations();
+
+    // Security: reject path-traversal-shaped input at the route boundary so a
+    // 4xx-404 (PATH_NOT_FOUND / SET_NOT_FOUND) doesn't leak the
+    // existence-vs-traversal distinction.
+    if (looksLikePathTraversal(body.quesPath) ||
+        (body.setId ? looksLikePathTraversal(body.setId) : false)) {
+      throw new AppError(
+        "PATH_TRAVERSAL",
+        `quesPath or setId looks like a path-traversal attempt`,
+        400,
+        { quesPath: body.quesPath, setId: body.setId ?? null },
+      );
+    }
+
     const session = getContainer().services.examEngine.createSession(body);
     return created(session);
   },

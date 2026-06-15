@@ -86,6 +86,12 @@ type RouteHandler = (
 let POST_handler: RouteHandler;
 const ctx = { params: Promise.resolve({}) };
 
+// Lazy import — the container pulls in env-driven singletons that must be
+// set up AFTER `process.env` is seeded at the top of this file.
+async function getContainer() {
+  return (await import("@/server/container")).getContainer();
+}
+
 beforeAll(async () => {
   const { resetConfigCache } = await import("@/server/config");
   resetConfigCache();
@@ -163,7 +169,7 @@ describe("POST /api/sessions — security contract", () => {
     // Stronger pin: the DB row itself has no leaked keys. A regression that
     // filtered the response but wrote dirty values to the DB would pass the
     // response-shape assertion above; this one catches it.
-    const { repos } = getContainer();
+    const { repos } = await getContainer();
     const row = repos.session.getById(body.id) as Record<string, unknown> | null;
     expect(row).not.toBeNull();
     expect(row).not.toHaveProperty("isAdmin");
