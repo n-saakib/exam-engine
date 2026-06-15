@@ -121,23 +121,18 @@ export function SubmitOrGiveUpButton({
 
   const handle = async () => {
     if (qid === undefined || revealed) return;
-    const dialog = hasSelection
-      ? {
-          title: "Submit and reveal the answer?",
-          description:
-            "This commits your current selection, reveals the correct answer and explanations, and marks the question as revealed.",
-          confirmLabel: "Submit",
-          variant: "primary" as const,
-        }
-      : {
-          title: "Reveal the answer?",
-          description:
-            "This shows the correct answer and explanations, and marks the question as revealed (excluded from your score).",
-          confirmLabel: "Reveal",
-          variant: "primary" as const,
-        };
-    const ok = await confirm(dialog);
-    if (!ok) return;
+    // Submit (has selection) proceeds without confirmation; only Give up
+    // (no selection) asks for confirmation before revealing.
+    if (!hasSelection) {
+      const ok = await confirm({
+        title: "Reveal the answer?",
+        description:
+          "This shows the correct answer and explanations, and marks the question as revealed (excluded from your score).",
+        confirmLabel: "Reveal",
+        variant: "primary" as const,
+      });
+      if (!ok) return;
+    }
     setBusy(true);
     try {
       await reveal(qid);
