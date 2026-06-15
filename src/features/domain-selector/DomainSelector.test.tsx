@@ -372,3 +372,45 @@ describe("<DomainSelector> — error state (EXAM_PATHS_INVALID)", () => {
     expect(pathRefs.length).toBeGreaterThanOrEqual(1);
   });
 });
+
+// ────────────────────────────────────────────────────────────────────────────
+// Debounce-timer cleanup: if the component unmounts before the debounce
+// fires, the deferred PATCH must NOT run (no leaked mutation).
+// ────────────────────────────────────────────────────────────────────────────
+describe("<DomainSelector> — debounce cleanup on unmount", () => {
+  it("does not call updateSettings after unmount when the debounce window has not elapsed", async () => {
+    vi.useFakeTimers();
+
+    const { useUpdateSettings } = await import("@/hooks/useSettings");
+    const mockMutate = vi.fn();
+    vi.mocked(useUpdateSettings).mockReturnValue({
+      mutate: mockMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useUpdateSettings>);
+
+    const { DomainSelector } = await import("./DomainSelector");
+    const { unmount } = render(<DomainSelector />, { wrapper: makeWrapper() });
+
+    // The user selects a value in level-0, scheduling a 600ms debounce.
+    const l0Select = screen.getByTestId("level-0").querySelector("select")!;
+    await act(async () => {
+      fireEvent.change(l0Select, { target: { value: "cloud" } });
+    });
+
+    // Advance a tick but NOT past the 600ms debounce; then unmount.
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    unmount();
+
+    // Now jump well past the debounce window. If the cleanup is missing,
+    // the orphaned setTimeout will fire and call mutate.
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(mockMutate).not.toHaveBeenCalled();
+
+    vi.useRealTimers();
+  });
+});
