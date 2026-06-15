@@ -257,6 +257,12 @@ export const LeafSummarySchema = z.object({
   completedSets: z.number().int(),
   remainingSets: z.number().int(),
   exhausted: z.boolean(),
+  /**
+   * Count of in-progress (resume) sessions for this path. When > 0, the leaf
+   * is gated — the user must resume or discard the existing session from
+   * `/resume` rather than starting a new one from `/`.
+   */
+  inProgressCount: z.number().int(),
 });
 export type LeafSummary = z.infer<typeof LeafSummarySchema>;
 
