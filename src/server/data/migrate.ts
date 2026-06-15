@@ -12,9 +12,11 @@ import { MIGRATIONS, type Migration } from "@/server/data/migrations";
  *   tracer stays quiet. The `.sql` files remain the authored source of truth and
  *   a drift test keeps them in lockstep with the embedded SQL.
  * - A `schema_migrations(version, applied_at)` table tracks what has run.
- * - Each unapplied migration runs inside its OWN transaction; the version row is
- *   written ONLY on commit, so a failed migration leaves no partial version
- *   marker. Re-running is a no-op once everything is applied.
+ * - The full pending batch runs inside ONE transaction; either every migration
+ *   AND its version marker commit, or none do. This is the standard SQLite
+ *   pattern for DDL batches — better-sqlite3's `db.transaction()` exposes a
+ *   `BEGIN ... COMMIT/ROLLBACK` wrapper. Re-running is a no-op once everything
+ *   is applied.
  */
 
 function ensureMigrationsTable(db: Database): void {
@@ -62,14 +64,19 @@ export function migrate(
     "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
   );
 
-  for (const m of pending) {
-    // One transaction per migration: the DDL and the version row commit together.
-    const runOne = db.transaction(() => {
-      db.exec(m.sql);
-      insertVersion.run(m.version, new Date().toISOString());
+  // Run the entire pending batch inside ONE transaction: a DDL failure in any
+  // migration rolls back all earlier siblings and leaves no version marker, so
+  // re-running is safe and `schema_migrations` is always consistent with the
+  // DDL that actually executed.
+  if (pending.length > 0) {
+    const runBatch = db.transaction(() => {
+      for (const m of pending) {
+        db.exec(m.sql);
+        insertVersion.run(m.version, new Date().toISOString());
+      }
     });
-    runOne();
-    applied.push(m.version);
+    runBatch();
+    for (const m of pending) applied.push(m.version);
   }
 
   const currentVersion = db

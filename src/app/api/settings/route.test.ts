@@ -67,6 +67,15 @@ beforeAll(async () => {
   PATCH_handler = mod.PATCH as unknown as RouteHandler;
 });
 
+// `getContainer` is used by the mass-assignment DB-pin assertion. We grab it
+// lazily inside the test that needs it (the import side-effect is to register
+// the env-driven singleton, which is only safe AFTER `process.env.DB_PATH`
+// is set above and the config cache has been reset in `beforeAll`).
+async function getContainer() {
+  const mod = await import("@/server/container");
+  return mod.getContainer();
+}
+
 afterAll(async () => {
   const { closeDb } = await import("@/server/data/db");
   const { resetContainer } = await import("@/server/container");
@@ -107,8 +116,11 @@ describe("PATCH /api/settings — exams_root sandbox", () => {
   });
 
   it("rejects a non-existent path with VALIDATION_ERROR", async () => {
+    // Path is INSIDE the sandbox (so the security check passes) but the
+    // directory does not exist on disk → a clear user error, not a sandbox
+    // escape. We exercise the existence/must-be-directory check.
     const res = await PATCH_handler(
-      patchReq({ exams_root: "/this/path/does/not/exist/zzz" }),
+      patchReq({ exams_root: path.join(sandboxDir, "missing-subdir") }),
       ctx,
     );
     expect(res.status).toBe(400);
@@ -154,7 +166,7 @@ describe("PATCH /api/settings — schema-level guarantees", () => {
     // Stronger pin: the DB row itself has no leaked keys. A regression that
     // filtered the response but wrote dirty values to the settings table
     // would pass the response-shape assertion above; this one catches it.
-    const { repos } = getContainer();
+    const { repos } = await getContainer();
     const settings = repos.settings.getAll() as Record<string, unknown>;
     expect(settings).not.toHaveProperty("isAdmin");
     expect(settings).not.toHaveProperty("role");

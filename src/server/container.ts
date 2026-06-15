@@ -90,7 +90,14 @@ function build(): Container {
   const answerRepo = createAnswerRepo(db);
 
   // Services
-  const setCatalogService = createSetCatalogService(setCatalogRepo, completionRepo);
+  // `setCatalog` needs to read the current `exams_root` setting at scan time
+  // so a PATCH to that field takes effect on the next rescan (otherwise the
+  // scanner is locked to the env-derived `config.examsRoot`).
+  const setCatalogService = createSetCatalogService(
+    setCatalogRepo,
+    completionRepo,
+    () => getAllSettings(getDb()),
+  );
 
   // PathResolver — stateless (reads the file fresh each call); created here so
   // it participates in the container's lifetime and can be swapped in tests.

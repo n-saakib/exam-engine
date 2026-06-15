@@ -6,25 +6,27 @@ import type { Migration } from "@/server/data/migrations";
 /**
  * Atomicity tests for the migration runner.
  *
- * The migration runner wraps each migration in a `db.transaction(...)` so the
- * DDL and the `schema_migrations` row commit together. A failure inside the
- * transaction must leave the schema unchanged and no `schema_migrations` row
- * for the failed version.
+ * The migration runner wraps the ENTIRE pending batch in a single
+ * `db.transaction(...)` so that either every migration AND its
+ * `schema_migrations` row commit, or none of them do. A failure anywhere in
+ * the batch must leave the schema and `schema_migrations` exactly as they
+ * were before the call.
  *
  * NOTE: `migrate()` accepts an optional `migrations` argument (its second
  * parameter). The contract pinned by this file:
  *
  *   1. A multi-statement migration where statement 2 throws leaves NO version
  *      row inserted and the schema is unchanged.
- *   2. After a partial-failure scenario, `schema_migrations` is consistent
- *      (versions 1 and 3 present, version 2 absent).
+ *   2. After a partial-failure scenario in a 3-migration batch, NONE of the
+ *      migrations commit and NO version rows are written (all-or-nothing
+ *      batch atomicity).
  *   3. Calling `migrate(db, migrations)` twice in a row is a no-op on the
  *      second call (no version rows duplicated).
  *
- * If the function signature is ever changed in a way that does not support
- * injecting migrations, this file degrades into a characterization test
- * describing the current behaviour and is left in place until the C5 fix
- * lands.
+ * This contract is stronger than per-migration atomicity: a DDL failure in
+ * migration N rolls back migrations < N as well. The runner prefers this
+ * because a partial schema (v1 applied, v2 broken, v3 never tried) is harder
+ * to reason about than a clean re-run on the next boot.
  */
 
 function freshDb(): Database.Database {
@@ -92,21 +94,21 @@ describe("migrate() — atomicity", () => {
 
     expect(() => migrate(db, migrations)).toThrow();
 
-    // Version 1 must be present (it ran successfully), version 2 must NOT be
-    // present (it failed), and version 3 must NOT be present (the runner
-    // aborts on the first failure and never reaches 3).
+    // All-or-nothing batch atomicity: a failure in v2 rolls back v1's
+    // `schema_migrations` row too. The schema state is exactly what it was
+    // before the call.
     const versions = db
       .prepare("SELECT version FROM schema_migrations ORDER BY version ASC")
       .all() as Array<{ version: number }>;
-    expect(versions.map((v) => v.version)).toEqual([1]);
+    expect(versions.map((v) => v.version)).toEqual([]);
 
-    // The DDL of v1 must be applied; v2 and v3 must not.
+    // No DDL from any migration in the batch must have committed.
     const tables = db
       .prepare(
         "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('alpha','beta','gamma') ORDER BY name",
       )
       .all() as Array<{ name: string }>;
-    expect(tables.map((r) => r.name)).toEqual(["alpha"]);
+    expect(tables.map((r) => r.name)).toEqual([]);
   });
 
   it("calling migrate() twice in a row is a no-op on the second call (no version rows duplicated)", () => {

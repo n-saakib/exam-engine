@@ -11,6 +11,7 @@ import { readAllJsonFiles } from "@/server/data/fileReader";
 import { resolveUnderRoot } from "@/server/util/paths";
 import type { SetCatalogRepo, CatalogRow } from "@/server/data/repos/setCatalogRepo";
 import type { CompletionRepo } from "@/server/data/repos/completionRepo";
+import type { Settings } from "@/domain/types";
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
@@ -66,6 +67,13 @@ export interface DiagnosticEntry {
 export function createSetCatalogService(
   catalogRepo: SetCatalogRepo,
   completionRepo: CompletionRepo,
+  /**
+   * Returns the current settings (defaults merged with persisted overrides).
+   * Used so the scan honours the runtime `exams_root` setting, not just the
+   * env-derived floor. Read lazily on each `scan()` call so a PATCH that
+   * flips `exams_root` takes effect on the next rescan.
+   */
+  getSettings?: () => Settings,
 ) {
   /**
    * Derive the `ques_path` for a file by finding which configured leaf directory
@@ -157,7 +165,11 @@ export function createSetCatalogService(
      * @param quesPath  Optional leaf path to restrict the scan to one subtree.
      */
     async scan(quesPath?: string): Promise<ScanSummary> {
-      const examsRoot = config.examsRoot;
+      // Honour the runtime `exams_root` setting if provided, falling back to
+      // the env-derived `config.examsRoot`. This is what makes a PATCH to
+      // `exams_root` actually take effect on the next rescan.
+      const persisted = getSettings?.() ?? null;
+      const examsRoot = persisted?.exams_root ?? config.examsRoot;
       const uploadsRoot = config.uploadsRoot;
 
       // When quesPath is given, resolve it against the exams root to narrow the walk.

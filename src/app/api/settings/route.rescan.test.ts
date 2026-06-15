@@ -26,15 +26,20 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "certprep-settings-rescan-"));
 const dbPath = path.join(tmpDir, "rescan.db");
 
-// Two exam roots so we can PATCH between them. Each holds a different set.
-const initialExams = path.join(tmpDir, "Exams-initial");
-const targetExams = path.join(tmpDir, "Exams-target");
-fs.mkdirSync(path.join(initialExams, "Cloud", "AWS", "SAA", "Easy"), { recursive: true });
-fs.mkdirSync(path.join(targetExams, "Cloud", "AWS", "SAA", "Easy"), { recursive: true });
+// The sandbox is the env-derived `EXAMS_ROOT`. We start with the initial
+// dir as the entire sandbox, scan it once (so the catalogue has a baseline
+// row), then expand the sandbox to include the target dir BEFORE the PATCH
+// flips the persisted `exams_root`.
+const sandbox = path.join(tmpDir, "Exams-sandbox");
+const initialExams = path.join(sandbox, "Easy-initial");
+const targetExams = path.join(sandbox, "Easy-target");
+fs.mkdirSync(initialExams, { recursive: true });
+// Note: `targetExams` is NOT created yet — we expand the sandbox inside the
+// test after the initial scan so the scan only sees the initial set.
 
-// Write one set in each root so both scans return ≥ 1.
+// Write one set in the initial root only.
 fs.writeFileSync(
-  path.join(initialExams, "Cloud", "AWS", "SAA", "Easy", "initial.json"),
+  path.join(initialExams, "initial.json"),
   JSON.stringify({
     setId: "set-initial",
     setTitle: "Initial Set",
@@ -49,25 +54,9 @@ fs.writeFileSync(
     ],
   }),
 );
-fs.writeFileSync(
-  path.join(targetExams, "Cloud", "AWS", "SAA", "Easy", "target.json"),
-  JSON.stringify({
-    setId: "set-target",
-    setTitle: "Target Set",
-    difficulty: "Easy",
-    questions: [
-      {
-        id: 1,
-        questionText: "Q1",
-        options: { A: "a", B: "b", C: "c", D: "d" },
-        correctAnswer: ["A"],
-      },
-    ],
-  }),
-);
 
 process.env.DB_PATH = dbPath;
-process.env.EXAMS_ROOT = initialExams;
+process.env.EXAMS_ROOT = sandbox;
 
 // Reset any singletons from earlier test files in this process.
 {
@@ -137,6 +126,25 @@ function resetReq(body: unknown): Request {
 
 describe("PATCH /api/settings — exams_root rescan", () => {
   it("PATCHing exams_root to a new directory surfaces the new set in scan.added AND removes the old one", async () => {
+    // Expand the sandbox with the target dir + set AFTER the initial scan.
+    fs.mkdirSync(targetExams, { recursive: true });
+    fs.writeFileSync(
+      path.join(targetExams, "target.json"),
+      JSON.stringify({
+        setId: "set-target",
+        setTitle: "Target Set",
+        difficulty: "Easy",
+        questions: [
+          {
+            id: 1,
+            questionText: "Q1",
+            options: { A: "a", B: "b", C: "c", D: "d" },
+            correctAnswer: ["A"],
+          },
+        ],
+      }),
+    );
+
     const res = await PATCH_settings(patchReq({ exams_root: targetExams }), ctx);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {

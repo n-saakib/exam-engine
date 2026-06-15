@@ -4,6 +4,7 @@ import type { Database } from "better-sqlite3";
 import type { SessionRow } from "@/server/data/repos/sessionRepo";
 import type { Settings } from "@/domain/types";
 import { getAllSettings } from "@/server/data/repos/settingsRepo";
+import { safeParseArray } from "@/server/util/jsonSafe";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -152,7 +153,9 @@ export function createExportService(db: Database) {
 
       entry.questions = snapshot.map((q) => {
         const ans = answerMap.get(q.id);
-        const selected: string[] = ans ? (JSON.parse(ans.selected_options) as string[]) : [];
+        // safeParseArray: a single corrupt selected_options row must not
+        // abort the entire export. Returns [] on parse failure / non-array.
+        const selected: string[] = ans ? safeParseArray(ans.selected_options) : [];
         const isRevealed = (ans?.is_revealed ?? 0) === 1;
 
         let outcome = "unanswered";

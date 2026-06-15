@@ -15,6 +15,11 @@ const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "certprep-settings-f8-"));
 const validExamsDir = path.join(tmpDir, "Exams");
 fs.mkdirSync(validExamsDir, { recursive: true });
 process.env.DB_PATH = path.join(tmpDir, "settings-f8.db");
+// Pin the env-derived `EXAMS_ROOT` to the test's tmpDir so the route's
+// sandbox check accepts our `validExamsDir` (which lives under tmpDir).
+// The route is now sandboxed against `config.examsRoot`, so we must seed it
+// to a parent of the dirs we test.
+process.env.EXAMS_ROOT = tmpDir;
 
 type SettingsRoute = {
   GET: (req: Request, ctx: { params: Promise<Record<string, never>> }) => Promise<Response>;
@@ -74,11 +79,12 @@ describe("PATCH /api/settings — F8 extended behaviour", () => {
     expect(typeof scan.added).toBe("number");
   });
 
-  it("returns 400 VALIDATION_ERROR when exams_root is a non-existent path", async () => {
+  it("returns 400 VALIDATION_ERROR when exams_root is a non-existent path inside the sandbox", async () => {
+    // Inside the sandbox (no PATH_TRAVERSAL) but the directory does not exist.
     const req = new Request("http://localhost/api/settings", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ exams_root: "/this/path/definitely/does/not/exist/12345" }),
+      body: JSON.stringify({ exams_root: path.join(tmpDir, "missing-subdir-12345") }),
     });
     const res = await route.PATCH(req, ctx);
     expect(res.status).toBe(400);

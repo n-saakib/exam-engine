@@ -13,6 +13,7 @@ import type { Question, QuestionSet, SnapshotQuestion } from "@/domain/schemas";
 import { AppError } from "@/server/http/errors";
 import { createSeededRng, generateSeed } from "@/server/services/seededRng";
 import { gradeSession } from "@/server/services/scoreCalculator";
+import { safeParseArray } from "@/server/util/jsonSafe";
 import { toLiveSession, toResults } from "@/server/services/sessionMapper";
 import type { SessionRepo, SessionRow } from "@/server/data/repos/sessionRepo";
 import type { AnswerRepo } from "@/server/data/repos/answerRepo";
@@ -546,12 +547,3 @@ export function createExamEngine(deps: ExamEngineDeps) {
 }
 
 export type ExamEngine = ReturnType<typeof createExamEngine>;
-
-function safeParseArray(json: string): string[] {
-  try {
-    const v = JSON.parse(json);
-    return Array.isArray(v) ? (v as string[]) : [];
-  } catch {
-    return [];
-  }
-}
