@@ -59,24 +59,15 @@ test.describe("destructive reset", () => {
     const resetRes = await request.post("/api/progress/reset", {
       data: { scope: "all" },
     });
-    // The route must NOT have executed the destructive path. Either:
-    //   - status >= 400 (rejected with VALIDATION_ERROR / similar), OR
-    //   - if accepted, the confirm must be enforced elsewhere; either way
-    //     history must be unchanged.
-    if (resetRes.ok()) {
-      // In the unlikely case the route accepts the request (e.g. the
-      // confirm-flag check lives in a UI layer), still verify history survives.
-      const histAfter = await request.get("/api/history");
-      const after = (await histAfter.json()) as { total: number };
-      expect(after.total).toBe(before.total);
-    } else {
-      // Preferred path: explicit rejection. Verify the rejection status + that
-      // history is preserved.
-      expect(resetRes.status()).toBeGreaterThanOrEqual(400);
-      const histAfter = await request.get("/api/history");
-      const after = (await histAfter.json()) as { total: number };
-      expect(after.total).toBe(before.total);
-    }
+    // HIGH-5 contract: the route must REJECT (400) destructive scopes without
+    // explicit `confirm: true`. This is a strict assertion — a regression that
+    // silently accepts the request (even if it does nothing destructive) fails
+    // this test, which is the whole point.
+    expect(resetRes.ok()).toBeFalsy();
+    expect(resetRes.status()).toBe(400);
+    const histAfter = await request.get("/api/history");
+    const after = (await histAfter.json()) as { total: number };
+    expect(after.total).toBe(before.total);
   });
 
   test("POST /api/progress/reset {scope: 'all', confirm: true} clears history", async ({

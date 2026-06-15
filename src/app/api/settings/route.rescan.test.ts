@@ -136,7 +136,7 @@ function resetReq(body: unknown): Request {
 // ── cases ────────────────────────────────────────────────────────────────────
 
 describe("PATCH /api/settings — exams_root rescan", () => {
-  it("PATCHing exams_root to a new directory surfaces the new set in scan.added", async () => {
+  it("PATCHing exams_root to a new directory surfaces the new set in scan.added AND removes the old one", async () => {
     const res = await PATCH_settings(patchReq({ exams_root: targetExams }), ctx);
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
@@ -151,6 +151,10 @@ describe("PATCH /api/settings — exams_root rescan", () => {
     // If this assertion fails it indicates the rescan is still using
     // `config.examsRoot` (env-derived) instead of the freshly persisted setting.
     expect(body.scan.added).toBeGreaterThanOrEqual(1);
+    // Stronger pin: switching from `initialExams` (1 set) to `targetExams`
+    // (1 different set) must REMOVE the old set. A regression that always
+    // returns `removed: 0` (or always returns `added: 1`) would fail this.
+    expect(body.scan.removed).toBeGreaterThanOrEqual(1);
     expect(Array.isArray(body.scan.diagnostics)).toBe(true);
   });
 });

@@ -201,10 +201,13 @@ describe("exportService — CSV", () => {
     const exportService = createExportService(t.db);
     const csv = exportService.build("csv", "all").body;
 
-    expect(csv).toContain("'=cmd|'/c calc'!A1");
-    expect(csv).toContain("'+danger");
-    expect(csv).toContain("'-also-danger");
-    expect(csv).toContain("'@sum(1)");
+    // Pin the EXACT leading character: a single quote. A regression that used
+    // a backslash (`\=cmd|…`) would also pass `toContain` but Excel still
+    // interprets it as a formula; the single-quote prefix is the spec'd escape.
+    expect(csv).toMatch(/,'=cmd\|'\/c calc'!A1/);
+    expect(csv).toMatch(/,'\+danger/);
+    expect(csv).toMatch(/,'-also-danger/);
+    expect(csv).toMatch(/,'@sum\(1\)/);
   });
 
   it("CSV with no completed sessions returns header-only output", () => {

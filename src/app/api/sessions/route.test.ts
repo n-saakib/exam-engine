@@ -128,19 +128,20 @@ describe("POST /api/sessions — security contract", () => {
     expect(["PATH_TRAVERSAL", "VALIDATION_ERROR"]).toContain(body.error.code);
   });
 
-  it("rejects setId='../foo' with a validation / not-found error", async () => {
+  it("rejects setId='../foo' as a path-traversal violation (not SET_NOT_FOUND)", async () => {
+    // Adversarial hardening: an earlier draft accepted SET_NOT_FOUND as a
+    // valid response code, but that would let a 4xx-with-404 leak the
+    // existence-vs-traversal distinction. The contract is: traversal-shaped
+    // input must be classified as a traversal violation, not a 404.
     const res = await POST_handler(
       createReq({ quesPath: QUES_PATH, setId: "../foo" }),
       ctx,
     );
-    // The engine's setCatalog.loadSet goes through pathResolver; an `../foo`
-    // setId either fails to resolve (PATH_TRAVERSAL) or matches no set
-    // (SET_NOT_FOUND / VALIDATION_ERROR). All three are 4xx.
     expect(res.status).toBe(400);
     const body = (await res.json()) as { error: { code: string } };
-    expect(["PATH_TRAVERSAL", "VALIDATION_ERROR", "SET_NOT_FOUND"]).toContain(
-      body.error.code,
-    );
+    expect(["PATH_TRAVERSAL", "VALIDATION_ERROR"]).toContain(body.error.code);
+    // Pin: the code is NOT the benign "not found" code.
+    expect(body.error.code).not.toBe("SET_NOT_FOUND");
   });
 
   it("strips unknown body keys (mass-assignment guard: isAdmin is dropped)", async () => {
@@ -156,12 +157,17 @@ describe("POST /api/sessions — security contract", () => {
     );
     expect(res.status).toBe(201);
     const body = (await res.json()) as Record<string, unknown> & { id: string };
-    // The session was created with the canonical fields; nothing leaks
-    // through to the response.
+    // The response shape does not leak unknown keys.
     expect(body.isAdmin).toBeUndefined();
     expect(body.role).toBeUndefined();
-    // Sanity: the engine did write a session.
-    expect(typeof body.id).toBe("string");
+    // Stronger pin: the DB row itself has no leaked keys. A regression that
+    // filtered the response but wrote dirty values to the DB would pass the
+    // response-shape assertion above; this one catches it.
+    const { repos } = getContainer();
+    const row = repos.session.getById(body.id) as Record<string, unknown> | null;
+    expect(row).not.toBeNull();
+    expect(row).not.toHaveProperty("isAdmin");
+    expect(row).not.toHaveProperty("role");
   });
 
   it("happy path: valid input creates an in_progress session (201)", async () => {

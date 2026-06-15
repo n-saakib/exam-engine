@@ -26,7 +26,12 @@ export default defineConfig({
         test: {
           name: "server",
           environment: "node",
-          include: ["src/server/**/*.test.ts", "src/domain/**/*.test.ts"],
+          include: [
+            "src/server/**/*.test.ts",
+            "src/domain/**/*.test.ts",
+            // Route handler tests live next to their handlers in src/app/api/.
+            "src/app/api/**/*.test.ts",
+          ],
         },
       },
       {

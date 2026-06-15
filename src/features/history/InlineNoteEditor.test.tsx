@@ -82,12 +82,9 @@ describe("<InlineNoteEditor> (via <HistoryRow>)", () => {
     const row = makeRow({ hasNote: false });
     renderRow(row);
 
-    // Expand the row first. The expand toggle is the only button on the row
-    // that is NOT the bookmark button, so we click by aria-expanded.
-    const expandBtn = document.querySelector(
-      "button[aria-expanded='false']",
-    ) as HTMLButtonElement;
-    expect(expandBtn).toBeTruthy();
+    // Expand the row. The main row button is the only button with
+    // aria-expanded (the bookmark button uses aria-pressed).
+    const expandBtn = screen.getByRole("button", { expanded: false });
     await act(async () => {
       fireEvent.click(expandBtn);
     });
@@ -114,9 +111,7 @@ describe("<InlineNoteEditor> (via <HistoryRow>)", () => {
     renderRow(row);
 
     // Expand the row, open the editor, type, save.
-    const expandBtn = document.querySelector(
-      "button[aria-expanded='false']",
-    ) as HTMLButtonElement;
+    const expandBtn = screen.getByRole("button", { expanded: false });
     await act(async () => {
       fireEvent.click(expandBtn);
     });

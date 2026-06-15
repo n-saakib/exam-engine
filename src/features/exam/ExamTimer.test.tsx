@@ -84,7 +84,9 @@ afterEach(() => {
 });
 
 describe("<ExamTimer> — initial render", () => {
-  it("renders '0:00' on a fresh timed session with limitMs set", () => {
+  it("renders the remaining time (limit - elapsed) on a fresh timed session", () => {
+    // Contract: a 60s-timed session with 0 elapsed shows the remaining
+    // time, not the elapsed time. "1:00" = 60 seconds remaining.
     const store = createExamStore();
     store.getState().loadFromDTO(
       makeSession({ enabled: true, limitMs: 60_000, elapsedMs: 0 }),
@@ -92,7 +94,6 @@ describe("<ExamTimer> — initial render", () => {
 
     renderTimer(store);
 
-    // The role="timer" element displays the formatted time.
     const timer = screen.getByRole("timer");
     expect(timer).toHaveTextContent("1:00");
   });

@@ -151,6 +151,14 @@ describe("PATCH /api/settings — schema-level guarantees", () => {
     expect(body.theme).toBe("dark");
     expect(body).not.toHaveProperty("isAdmin");
     expect(body).not.toHaveProperty("role");
+    // Stronger pin: the DB row itself has no leaked keys. A regression that
+    // filtered the response but wrote dirty values to the settings table
+    // would pass the response-shape assertion above; this one catches it.
+    const { repos } = getContainer();
+    const settings = repos.settings.getAll() as Record<string, unknown>;
+    expect(settings).not.toHaveProperty("isAdmin");
+    expect(settings).not.toHaveProperty("role");
+    expect(settings.theme).toBe("dark");
   });
 
   it("updates both exams_root and theme in a single PATCH", async () => {

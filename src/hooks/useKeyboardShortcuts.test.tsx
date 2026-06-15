@@ -95,17 +95,16 @@ describe("useKeyboardShortcuts", () => {
     expect(onSelectIndex).not.toHaveBeenCalled();
   });
 
-  it("does not re-register the keydown listener when a parent re-renders with a new handlers literal", () => {
+  it("[stability guard] currently re-binds the keydown listener on every parent re-render with a new handlers literal", () => {
     // Stability guard: useEffect's dep array is [handlers, enabled]. If a
     // parent passes a fresh { onFlag } literal on every render, the effect
     // re-runs (re-binding the listener). That's a perf footgun, NOT a bug —
     // but we pin the count so a future refactor to [handlers.onFlag, enabled]
-    // would be caught.
+    // (or to a ref-stored handler) would be caught by THIS test failing.
     //
     // We measure the GROWTH in addEventListener("keydown", …) call count from
     // before → after a re-render. The current implementation re-binds; we
-    // assert the bound count grows by AT MOST 1 (one removeEventListener +
-    // one addEventListener per effect re-run).
+    // assert the bound count grows by exactly 1 per re-render.
     const addSpy = vi.spyOn(window, "addEventListener");
     const removeSpy = vi.spyOn(window, "removeEventListener");
 
