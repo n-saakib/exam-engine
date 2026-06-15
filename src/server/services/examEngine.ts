@@ -501,8 +501,19 @@ export function createExamEngine(deps: ExamEngineDeps) {
     },
 
     /**
-     * Discard an in-progress session (F4-T13). Hard-deletes the session; answers
-     * cascade. 409 if already completed (history has its own delete).
+     * Discard an in-progress session (F4-T13). Soft-discard: marks the session
+     * `status = 'discarded'` (preserving the row for history) and does NOT
+     * record it in `set_completion`. This:
+     *   - Removes it from the in-progress gate on the home page
+     *     (`inProgressCount` filters by `status = 'in_progress'`).
+     *   - Allows the user to start a new exam for the same set from `/`.
+     *   - Keeps the row in the history endpoint so the user can see what they
+     *     abandoned (it is excluded from the standard completed-session history
+     *     query by the `status = 'completed'` filter in sessionRepo.listCompleted).
+     *
+     * Answers are cascade-deleted via FK so the discarded row is lean.
+     *
+     * 409 if already completed (history has its own delete).
      */
     discard(id: string): void {
       const row = requireSession(id);
@@ -513,7 +524,23 @@ export function createExamEngine(deps: ExamEngineDeps) {
           409,
         );
       }
-      sessionRepo.deleteById(id);
+      if (row.status === "discarded") {
+        // Idempotent — silently no-op.
+        return;
+      }
+      // Soft-discard: flip status, cascade-delete answers so the row is lean.
+      const now = new Date().toISOString();
+      sessionRepo.db.transaction(() => {
+        sessionRepo.patch(id, {
+          status: "discarded",
+          completedAt: now, // wall-clock when the user gave up
+        });
+        // Delete per-question answer rows via cascade; do it explicitly here so
+        // the discarded session does not inflate storage with stale answers.
+        sessionRepo.db
+          .prepare("DELETE FROM session_answers WHERE session_id = ?")
+          .run(id);
+      })();
     },
   };
 }

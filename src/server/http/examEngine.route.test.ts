@@ -380,7 +380,7 @@ describe("submit + 409 + resume", () => {
 });
 
 describe("DELETE /api/sessions/:id — discard", () => {
-  it("discards an in-progress session (204) and answers cascade", async () => {
+  it("soft-discards an in-progress session (204): status flips to 'discarded', answers cascade", async () => {
     const s = await createSession({ quesPath: QUES_PATH, setId: "set-alpha", options: { seed: "del" } });
     const res = await DELETE_one(
       new Request(`http://localhost/api/sessions/${s.id}`, { method: "DELETE" }),
@@ -388,8 +388,26 @@ describe("DELETE /api/sessions/:id — discard", () => {
     );
     expect(res.status).toBe(204);
     const { getContainer } = await import("@/server/container");
-    expect(getContainer().repos.session.getById(s.id)).toBeUndefined();
+    // Soft-discard: the row is preserved in the DB (status = 'discarded') so
+    // the user can see it in history. Answers are cascade-deleted.
+    const row = getContainer().repos.session.getById(s.id);
+    expect(row).toBeDefined();
+    expect(row?.status).toBe("discarded");
     expect(getContainer().repos.answer.getBySession(s.id).length).toBe(0);
+  });
+
+  it("soft-discard is idempotent (a second DELETE is a no-op)", async () => {
+    const s = await createSession({ quesPath: QUES_PATH, setId: "set-alpha", options: { seed: "del3" } });
+    const { getContainer } = await import("@/server/container");
+    getContainer().services.examEngine.discard(s.id);
+    // A second delete on an already-discarded session is still 204.
+    const res = await DELETE_one(
+      new Request(`http://localhost/api/sessions/${s.id}`, { method: "DELETE" }),
+      ctx(s.id),
+    );
+    expect(res.status).toBe(204);
+    const row = getContainer().repos.session.getById(s.id);
+    expect(row?.status).toBe("discarded");
   });
 
   it("409 when discarding a completed session", async () => {
