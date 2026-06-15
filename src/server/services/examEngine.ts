@@ -274,11 +274,37 @@ export function createExamEngine(deps: ExamEngineDeps) {
         sessionPatch.currentIndex = patch.currentIndex;
       }
       if (patch.elapsedMs !== undefined) {
-        // Absolute / replace semantics, server-clamped to [0, limit] when timed
-        // (09 §7.1). Idempotent on retry: same absolute value ⇒ same stored value.
-        let elapsed = Math.max(0, patch.elapsedMs);
+        // C2: validate the value is a finite, non-negative integer. Reject
+        // NaN / Infinity / negative / fractional inputs (C2) and any
+        // regression below the stored value (timer integrity).
+        if (
+          !Number.isFinite(patch.elapsedMs) ||
+          patch.elapsedMs < 0 ||
+          !Number.isInteger(patch.elapsedMs)
+        ) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `elapsedMs must be a non-negative finite integer: ${patch.elapsedMs}`,
+            400,
+            { field: "elapsedMs", value: patch.elapsedMs },
+          );
+        }
+        // Server-clamped to [0, limit] when timed (09 §7.1). Idempotent on
+        // retry: same absolute value ⇒ same stored value.
+        let elapsed = patch.elapsedMs;
         if (row.timer_enabled === 1 && row.timer_limit_ms != null) {
           elapsed = Math.min(elapsed, row.timer_limit_ms);
+        }
+        // Monotonic: reject a value that regresses below the stored elapsed.
+        // The client's local timer can be reset (browser reload, time skew),
+        // but the server's view is the source of truth and only goes forward.
+        if (elapsed < row.time_elapsed_ms) {
+          throw new AppError(
+            "VALIDATION_ERROR",
+            `elapsedMs regression: stored ${row.time_elapsed_ms}, got ${elapsed}`,
+            400,
+            { field: "elapsedMs", stored: row.time_elapsed_ms, got: elapsed },
+          );
         }
         sessionPatch.timeElapsedMs = elapsed;
       }

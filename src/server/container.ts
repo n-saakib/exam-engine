@@ -4,6 +4,7 @@ import { config, type AppConfig } from "@/server/config";
 import { getDb } from "@/server/data/db";
 import {
   getAllSettings,
+  getPersistedSettingKeys,
   patchSettings,
   resetSettings,
 } from "@/server/data/repos/settingsRepo";
@@ -91,12 +92,18 @@ function build(): Container {
 
   // Services
   // `setCatalog` needs to read the current `exams_root` setting at scan time
-  // so a PATCH to that field takes effect on the next rescan (otherwise the
-  // scanner is locked to the env-derived `config.examsRoot`).
+  // so a PATCH to that field takes effect on the next rescan. The
+  // `getSettings` getter returns BOTH the merged settings (defaults + DB
+  // rows) AND the set of keys that were explicitly PATCHed — the latter is
+  // what the scan uses to decide whether the persisted `exams_root` is
+  // authoritative or just the module-load-time default.
   const setCatalogService = createSetCatalogService(
     setCatalogRepo,
     completionRepo,
-    () => getAllSettings(getDb()),
+    () => ({
+      settings: getAllSettings(getDb()),
+      persistedKeys: getPersistedSettingKeys(getDb()),
+    }),
   );
 
   // PathResolver — stateless (reads the file fresh each call); created here so

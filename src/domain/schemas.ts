@@ -53,7 +53,7 @@ export const ExplanationSchema = z.object({
  */
 export const QuestionSchema = z
   .object({
-    id: z.number().int(),
+    id: z.number().int().positive(),
     questionType: QuestionTypeSchema,
     questionText: z.string().min(1, "questionText must be non-empty"),
     options: z

@@ -49,6 +49,19 @@ export function getAllSettings(db: Database): Settings {
 }
 
 /**
+ * Return the set of setting keys that have a row in the DB. Used to
+ * distinguish "default value" from "explicitly-persisted value" — the
+ * default `exams_root` is computed at module-load time and can be stale
+ * across env-var changes inside a test, so callers that want to honour the
+ * runtime `exams_root` setting need to know whether the user actually
+ * PATCHed it.
+ */
+export function getPersistedSettingKeys(db: Database): Set<string> {
+  const rows = db.prepare("SELECT key FROM settings").all() as Array<{ key: string }>;
+  return new Set(rows.map((r) => r.key));
+}
+
+/**
  * Delete all settings rows, restoring factory defaults on next read.
  * Used by the "factory reset" scope.
  */

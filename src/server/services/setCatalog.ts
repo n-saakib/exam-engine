@@ -13,6 +13,19 @@ import type { SetCatalogRepo, CatalogRow } from "@/server/data/repos/setCatalogR
 import type { CompletionRepo } from "@/server/data/repos/completionRepo";
 import type { Settings } from "@/domain/types";
 
+/**
+ * Combined view of the settings + which keys the user has explicitly
+ * persisted. The `persistedKeys` set lets the scan distinguish "user
+ * PATCHed this" from "this is the module-load-time default" — the default
+ * `exams_root` is computed at module load and can be stale across env-var
+ * changes inside a test, so we only honour the persisted value when a row
+ * actually exists for it.
+ */
+export interface SettingsView {
+  settings: Settings;
+  persistedKeys: Set<string>;
+}
+
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
 /** Summary returned by `scan()`. */
@@ -68,12 +81,13 @@ export function createSetCatalogService(
   catalogRepo: SetCatalogRepo,
   completionRepo: CompletionRepo,
   /**
-   * Returns the current settings (defaults merged with persisted overrides).
-   * Used so the scan honours the runtime `exams_root` setting, not just the
-   * env-derived floor. Read lazily on each `scan()` call so a PATCH that
-   * flips `exams_root` takes effect on the next rescan.
+   * Returns the current settings (defaults merged with persisted overrides)
+   * AND the set of keys the user has explicitly PATCHed. The latter is used
+   * to distinguish "user-overridden value" from "module-load-time default"
+   * for `exams_root` (the default is computed once and can be stale across
+   * env-var changes inside a test).
    */
-  getSettings?: () => Settings,
+  getSettings?: () => SettingsView,
 ) {
   /**
    * Derive the `ques_path` for a file by finding which configured leaf directory
@@ -165,11 +179,17 @@ export function createSetCatalogService(
      * @param quesPath  Optional leaf path to restrict the scan to one subtree.
      */
     async scan(quesPath?: string): Promise<ScanSummary> {
-      // Honour the runtime `exams_root` setting if provided, falling back to
-      // the env-derived `config.examsRoot`. This is what makes a PATCH to
-      // `exams_root` actually take effect on the next rescan.
-      const persisted = getSettings?.() ?? null;
-      const examsRoot = persisted?.exams_root ?? config.examsRoot;
+      // Honour the runtime `exams_root` setting ONLY when the user has
+      // explicitly PATCHed it (i.e. a row exists in the settings table).
+      // The default value is computed at module-load time and is stale
+      // across env-var changes inside a test, so the env-derived
+      // `config.examsRoot` (always fresh) wins by default.
+      const view = getSettings?.() ?? null;
+      const envRoot = config.examsRoot;
+      const examsRoot =
+        view?.persistedKeys.has("exams_root") && view.settings.exams_root
+          ? view.settings.exams_root
+          : envRoot;
       const uploadsRoot = config.uploadsRoot;
 
       // When quesPath is given, resolve it against the exams root to narrow the walk.

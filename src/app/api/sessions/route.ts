@@ -8,24 +8,8 @@ import { getContainer } from "@/server/container";
 import { CreateSessionBodySchema } from "@/domain/types";
 import type { SessionList, SessionListRow } from "@/domain/types";
 import { AppError } from "@/server/http/errors";
-
-/**
- * Conservative check: a string is "traversal-shaped" if it contains a `..`
- * segment (after URL-decoding) or a NUL byte. Used at the route boundary to
- * fast-fail obviously-bad input so a 4xx-404 (PATH_NOT_FOUND) doesn't leak
- * the existence-vs-traversal distinction.
- */
-function looksLikePathTraversal(s: string): boolean {
-  if (s.includes("\0")) return true;
-  let decoded: string;
-  try {
-    decoded = decodeURIComponent(s);
-  } catch {
-    return true; // malformed = suspicious
-  }
-  if (decoded.includes("\0")) return true;
-  return /(^|\/)\.\.(\/|$)/.test(decoded);
-}
+import { resolveUnderRoot } from "@/server/util/paths";
+import { config } from "@/server/config";
 
 // DB-backed route → Node.js runtime (never edge); dynamic so reads aren't cached.
 export const runtime = "nodejs";
@@ -152,17 +136,29 @@ export const POST = defineHandler({
   handler: async ({ body }) => {
     runMigrations();
 
-    // Security: reject path-traversal-shaped input at the route boundary so a
-    // 4xx-404 (PATH_NOT_FOUND / SET_NOT_FOUND) doesn't leak the
-    // existence-vs-traversal distinction.
-    if (looksLikePathTraversal(body.quesPath) ||
-        (body.setId ? looksLikePathTraversal(body.setId) : false)) {
-      throw new AppError(
-        "PATH_TRAVERSAL",
-        `quesPath or setId looks like a path-traversal attempt`,
-        400,
-        { quesPath: body.quesPath, setId: body.setId ?? null },
-      );
+    // Security: `quesPath` must resolve inside the env-derived `EXAMS_ROOT`
+    // sandbox. `setId` (when present) is checked separately: a traversal-
+    // shaped setId is rejected outright (it can never be a valid setId in
+    // the catalogue). The `quesPath` is resolved by the path resolver, so
+    // `..` segments are OK as long as the resolution lands inside the
+    // sandbox — that lets tests / callers pass a fully-resolved absolute
+    // path or a relative path that walks via `..` and ends inside the
+    // sandbox.
+    if (body.setId) {
+      if (body.setId.includes("\0") || body.setId.includes("/") || body.setId.includes("\\")) {
+        throw new AppError(
+          "PATH_TRAVERSAL",
+          `setId is path-shaped: ${body.setId}`,
+          400,
+          { setId: body.setId },
+        );
+      }
+    }
+    try {
+      resolveUnderRoot(config.examsRoot, body.quesPath);
+    } catch (err) {
+      // resolveUnderRoot already throws AppError('PATH_TRAVERSAL', …).
+      throw err;
     }
 
     const session = getContainer().services.examEngine.createSession(body);
