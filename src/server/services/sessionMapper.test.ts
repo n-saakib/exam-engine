@@ -66,6 +66,7 @@ function row(over: Partial<SessionRow> = {}): SessionRow {
     correct_count: null,
     incorrect_count: null,
     revealed_count: null,
+    gave_up_count: null,
     unanswered_count: null,
     is_bookmarked: 0,
     note: null,
@@ -84,6 +85,7 @@ function answer(over: Partial<AnswerRow> & { question_id: number }): AnswerRow {
     selected_options: "[]",
     is_flagged: 0,
     is_revealed: 0,
+    is_gave_up: 0,
     is_correct: null,
     time_spent_ms: 0,
     answered_at: null,
@@ -136,6 +138,7 @@ describe("toLiveSession — answers hidden", () => {
       selected: ["A"],
       flagged: true,
       revealed: false,
+      gaveUp: false,
       timeSpentMs: 4200,
     });
   });

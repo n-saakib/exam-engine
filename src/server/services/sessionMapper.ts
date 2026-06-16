@@ -67,6 +67,7 @@ export function toLiveSession(row: SessionRow, answers: AnswerRow[]): LiveSessio
     const answer: LiveAnswer = {
       selected: ans ? parseSelected(ans.selected_options) : [],
       flagged: ans?.is_flagged === 1,
+      gaveUp: ans?.is_gave_up === 1,
       revealed,
       timeSpentMs: ans?.time_spent_ms ?? 0,
     };
@@ -131,6 +132,7 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       questionId: a.question_id,
       selected: parseSelected(a.selected_options),
       revealed: a.is_revealed === 1,
+      gaveUp: a.is_gave_up === 1,
     })),
   );
   const outcomeById = new Map<number, Outcome>(
@@ -154,6 +156,7 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       yourAnswer: ans ? parseSelected(ans.selected_options) : [],
       outcome: outcomeById.get(q.id) ?? "unanswered",
       flagged: ans?.is_flagged === 1,
+      gaveUp: ans?.is_gave_up === 1,
       explanations: q.explanations ?? {},
       ...(q.Tips !== undefined ? { Tips: q.Tips } : {}),
     };
@@ -173,6 +176,7 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       correct: row.correct_count ?? graded.totals.correct,
       incorrect: row.incorrect_count ?? graded.totals.incorrect,
       revealed: row.revealed_count ?? graded.totals.revealed,
+      gaveUp: row.gave_up_count ?? graded.totals.gaveUp,
       unanswered: row.unanswered_count ?? graded.totals.unanswered,
       total: row.total_questions,
       timeTakenMs: row.time_elapsed_ms,
