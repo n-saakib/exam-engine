@@ -57,6 +57,7 @@ function makeResults(overrides: Partial<Results> = {}): Results {
       correct: 8,
       incorrect: 1,
       revealed: 0,
+      gaveUp: 0,
       unanswered: 1,
       total: 10,
       timeTakenMs: 0,
@@ -122,6 +123,7 @@ describe("<ScoreSummaryCard>", () => {
               correct: 0,
               incorrect: 0,
               revealed: 0,
+              gaveUp: 0,
               unanswered: 0,
               total: 10,
               timeTakenMs: 0,
@@ -158,6 +160,7 @@ describe("<ScoreSummaryCard>", () => {
           correct: 6,
           incorrect: 1,
           revealed: 0,
+          gaveUp: 0,
           unanswered: 1,
           total: 8,
           timeTakenMs: 0,
@@ -170,8 +173,8 @@ describe("<ScoreSummaryCard>", () => {
     expect(within(section).getByText("6 of 8 correct")).toBeTruthy();
   });
 
-  // ── Four-way breakdown ─────────────────────────────────────────────────────
-  it("renders the four-way breakdown with the right values and colours", async () => {
+  // ── Five-way breakdown ─────────────────────────────────────────────────────
+  it("renders the five-way breakdown with the right values and colours", async () => {
     await renderCard(
       makeResults({
         summary: {
@@ -179,8 +182,9 @@ describe("<ScoreSummaryCard>", () => {
           correct: 6,
           incorrect: 2,
           revealed: 1,
+          gaveUp: 1,
           unanswered: 1,
-          total: 10,
+          total: 11,
           timeTakenMs: 0,
           timerLimitMs: null,
         },
@@ -190,28 +194,32 @@ describe("<ScoreSummaryCard>", () => {
     const list = screen.getByLabelText("Question breakdown");
     expect(list).toBeTruthy();
     const items = within(list).getAllByRole("listitem");
-    expect(items).toHaveLength(4);
+    expect(items).toHaveLength(5);
 
-    // Labels (in order: Correct / Incorrect / Revealed / Skipped).
+    // Labels (in order: Correct / Incorrect / Gave up / Revealed / Skipped).
     expect(within(items[0]).getByText("Correct")).toBeTruthy();
     expect(within(items[1]).getByText("Incorrect")).toBeTruthy();
-    expect(within(items[2]).getByText("Revealed")).toBeTruthy();
-    expect(within(items[3]).getByText("Skipped")).toBeTruthy();
+    expect(within(items[2]).getByText("Gave up")).toBeTruthy();
+    expect(within(items[3]).getByText("Revealed")).toBeTruthy();
+    expect(within(items[4]).getByText("Skipped")).toBeTruthy();
 
     // Values
     expect(within(items[0]).getByText("6")).toBeTruthy();
     expect(within(items[1]).getByText("2")).toBeTruthy();
     expect(within(items[2]).getByText("1")).toBeTruthy();
     expect(within(items[3]).getByText("1")).toBeTruthy();
+    expect(within(items[4]).getByText("1")).toBeTruthy();
 
     // Colours
     const correctValueSpan = within(items[0]).getByText("6");
     const incorrectValueSpan = within(items[1]).getByText("2");
-    const revealedValueSpan = within(items[2]).getByText("1");
-    const skippedValueSpan = within(items[3]).getByText("1");
+    const gaveUpValueSpan = within(items[2]).getByText("1");
+    const revealedValueSpan = within(items[3]).getByText("1");
+    const skippedValueSpan = within(items[4]).getByText("1");
 
     expect(correctValueSpan.className).toContain("text-correct");
     expect(incorrectValueSpan.className).toContain("text-incorrect");
+    expect(gaveUpValueSpan.className).toContain("text-warning");
     expect(revealedValueSpan.className).toContain("text-revealed");
     expect(skippedValueSpan.className).toContain("text-muted");
   });
@@ -234,6 +242,7 @@ describe("<ScoreSummaryCard>", () => {
               correct: 0,
               incorrect: 0,
               revealed: 0,
+              gaveUp: 0,
               unanswered: 0,
               total: 0,
               timeTakenMs,
@@ -263,6 +272,7 @@ describe("<ScoreSummaryCard>", () => {
             correct: 5,
             incorrect: 5,
             revealed: 0,
+            gaveUp: 0,
             unanswered: 0,
             total: 10,
             timeTakenMs: 60_000,
@@ -285,6 +295,7 @@ describe("<ScoreSummaryCard>", () => {
             correct: 5,
             incorrect: 5,
             revealed: 0,
+            gaveUp: 0,
             unanswered: 0,
             total: 10,
             timeTakenMs: 60_000,
@@ -308,6 +319,7 @@ describe("<ScoreSummaryCard>", () => {
             correct: 5,
             incorrect: 5,
             revealed: 0,
+            gaveUp: 0,
             unanswered: 0,
             total: 10,
             timeTakenMs: 60_000,

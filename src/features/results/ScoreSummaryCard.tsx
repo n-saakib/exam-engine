@@ -42,7 +42,7 @@ interface ScoreSummaryCardProps {
  */
 export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
   const { summary, domainLabel, difficulty } = results;
-  const { scorePercent, correct, incorrect, revealed, unanswered, timeTakenMs, timerLimitMs } = summary;
+  const { scorePercent, correct, incorrect, gaveUp, revealed, unanswered, timeTakenMs, timerLimitMs } = summary;
 
   // Colour-code the score.
   const scoreColor =
@@ -81,9 +81,9 @@ export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
         </span>
       </div>
 
-      {/* Four-way breakdown */}
+      {/* Five-way breakdown */}
       <div
-        className="grid grid-cols-4 divide-x divide-border border border-border rounded-card"
+        className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-border border border-border rounded-card"
         role="list"
         aria-label="Question breakdown"
       >
@@ -92,6 +92,9 @@ export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
         </div>
         <div role="listitem" className="p-3 flex flex-col items-center gap-0.5">
           <BreakdownItem label="Incorrect" value={incorrect} colorClass="text-incorrect" />
+        </div>
+        <div role="listitem" className="p-3 flex flex-col items-center gap-0.5">
+          <BreakdownItem label="Gave up" value={gaveUp} colorClass="text-warning" />
         </div>
         <div role="listitem" className="p-3 flex flex-col items-center gap-0.5">
           <BreakdownItem label="Revealed" value={revealed} colorClass="text-revealed" />
