@@ -317,6 +317,7 @@ export function createExamEngine(deps: ExamEngineDeps) {
           const a = patch.answer;
           const existing = answerRepo.getOne(id, a.questionId);
           const alreadyRevealed = existing?.is_revealed === 1;
+          const alreadyGaveUp = existing?.is_gave_up === 1;
 
           answerRepo.upsert(id, a.questionId, {
             ...(a.selected !== undefined ? { selected: a.selected } : {}),
@@ -325,6 +326,7 @@ export function createExamEngine(deps: ExamEngineDeps) {
             ...(a.revealed === true || alreadyRevealed
               ? { revealed: true }
               : {}),
+            ...(a.gaveUp === true || alreadyGaveUp ? { gaveUp: true } : {}),
             ...(a.timeSpentMs !== undefined
               ? { timeSpentMs: a.timeSpentMs }
               : {}),
@@ -368,6 +370,7 @@ export function createExamEngine(deps: ExamEngineDeps) {
           questionId: a.question_id,
           selected: safeParseArray(a.selected_options),
           revealed: a.is_revealed === 1,
+          gaveUp: a.is_gave_up === 1,
         })),
       );
 
@@ -389,6 +392,7 @@ export function createExamEngine(deps: ExamEngineDeps) {
           correctCount: graded.totals.correct,
           incorrectCount: graded.totals.incorrect,
           revealedCount: graded.totals.revealed,
+          gaveUpCount: graded.totals.gaveUp,
           unansweredCount: graded.totals.unanswered,
           completedAt: now,
         });
@@ -451,7 +455,8 @@ export function createExamEngine(deps: ExamEngineDeps) {
           const ans = answerById.get(q.id);
           if (!ans) return false;
           const isRevealed = ans.is_revealed === 1;
-          if (isRevealed) return true;
+          const isGaveUp = ans.is_gave_up === 1;
+          if (isRevealed || isGaveUp) return true;
           // Incorrect: graded wrong (is_correct = 0) AND the learner actually answered
           // (selected_options is not empty). Unanswered get is_correct=0 but should not
           // appear in a "retake incorrect" set.
