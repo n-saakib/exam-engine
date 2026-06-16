@@ -61,6 +61,7 @@ export interface SessionRow {
   correct_count: number | null;
   incorrect_count: number | null;
   revealed_count: number | null;
+  gave_up_count: number | null;
   unanswered_count: number | null;
   is_bookmarked: number;
   note: string | null;
@@ -97,6 +98,7 @@ export interface SessionPatch {
   correctCount?: number;
   incorrectCount?: number;
   revealedCount?: number;
+  gaveUpCount?: number;
   unansweredCount?: number;
   isBookmarked?: boolean;
   note?: string | null;
@@ -220,6 +222,7 @@ export function createSessionRepo(db: Database) {
     correctCount: "correct_count",
     incorrectCount: "incorrect_count",
     revealedCount: "revealed_count",
+    gaveUpCount: "gave_up_count",
     unansweredCount: "unanswered_count",
     isBookmarked: "is_bookmarked",
     note: "note",

@@ -10,6 +10,7 @@ export interface AnswerRow {
   selected_options: string; // JSON array
   is_flagged: number;
   is_revealed: number;
+  is_gave_up: number;
   is_correct: number | null;
   time_spent_ms: number;
   answered_at: string | null;
@@ -22,6 +23,8 @@ export interface AnswerPatch {
   flagged?: boolean;
   /** Monotonic: callers must not pass `false` to un-reveal (engine enforces). */
   revealed?: boolean;
+  /** Monotonic: callers must not pass `false` to un-give-up (engine enforces). */
+  gaveUp?: boolean;
   timeSpentMs?: number;
 }
 
@@ -95,6 +98,10 @@ export function createAnswerRepo(db: Database) {
       if (patch.revealed !== undefined) {
         sets.push("is_revealed = @revealed");
         values.revealed = patch.revealed ? 1 : 0;
+      }
+      if (patch.gaveUp !== undefined) {
+        sets.push("is_gave_up = @gaveUp");
+        values.gaveUp = patch.gaveUp ? 1 : 0;
       }
       if (patch.timeSpentMs !== undefined) {
         sets.push("time_spent_ms = @timeSpentMs");
