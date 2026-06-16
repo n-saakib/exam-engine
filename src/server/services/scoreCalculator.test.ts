@@ -28,8 +28,9 @@ function ans(
   questionId: number,
   selected: string[],
   revealed = false,
+  gaveUp = false,
 ): AnswerInput {
-  return { questionId, selected, revealed };
+  return { questionId, selected, revealed, gaveUp };
 }
 
 describe("gradeSession — outcomes", () => {
@@ -167,6 +168,7 @@ describe("gradeSession — selection edge cases", () => {
     expect(totals).toEqual({
       correct: 0,
       incorrect: 0,
+      gaveUp: 0,
       revealed: 0,
       unanswered: 0,
       total: 0,

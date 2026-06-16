@@ -37,6 +37,8 @@ export interface AnswerInput {
   selected: string[];
   /** "Gave up" — overrides correctness; counts as `revealed`. */
   revealed: boolean;
+  /** User explicitly gave up on this question (first-class outcome, distinct from per-question "submit for review" reveal). */
+  gaveUp: boolean;
 }
 
 /** Per-question grading result. */
@@ -57,6 +59,7 @@ export interface ScoreTotals {
   incorrect: number;
   revealed: number;
   unanswered: number;
+  gaveUp: number;
   total: number;
   /** round(correct / total * 100); 0 when total === 0. */
   scorePercent: number;
@@ -119,12 +122,14 @@ export function gradeSession(
   let incorrect = 0;
   let revealed = 0;
   let unanswered = 0;
+  let gaveUp = 0;
 
   for (const q of snapshot) {
     const answer = byId.get(q.id) ?? {
       questionId: q.id,
       selected: [],
       revealed: false,
+      gaveUp: false,
     };
 
     const grader = GRADERS[q.questionType];
@@ -136,7 +141,12 @@ export function gradeSession(
       : false;
 
     let outcome: Outcome;
-    if (answer.revealed) {
+    if (answer.gaveUp) {
+      // User explicitly gave up — first-class outcome, distinct from
+      // a per-question "submit for review" reveal.
+      outcome = "gave_up";
+      gaveUp++;
+    } else if (answer.revealed) {
       outcome = "revealed";
       revealed++;
     } else if (answer.selected.length === 0) {
@@ -153,7 +163,12 @@ export function gradeSession(
     perQuestion.push({
       questionId: q.id,
       outcome,
-      isCorrect: answer.selected.length === 0 && !answer.revealed ? null : isCorrect,
+      isCorrect:
+        answer.selected.length === 0 && !answer.revealed && !answer.gaveUp
+          ? null
+          : answer.gaveUp
+            ? null
+            : isCorrect,
     });
   }
 
@@ -162,6 +177,6 @@ export function gradeSession(
 
   return {
     perQuestion,
-    totals: { correct, incorrect, revealed, unanswered, total, scorePercent },
+    totals: { correct, incorrect, revealed, unanswered, gaveUp, total, scorePercent },
   };
 }
