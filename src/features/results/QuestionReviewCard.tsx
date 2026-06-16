@@ -17,6 +17,11 @@ const OUTCOME_STYLES: Record<Outcome, { border: string; badge: string; label: st
     badge: "bg-incorrect/10 text-incorrect",
     label: "Incorrect",
   },
+  gave_up: {
+    border: "border-warning/40",
+    badge: "bg-warning/10 text-warning",
+    label: "Gave up",
+  },
   revealed: {
     border: "border-revealed/40",
     badge: "bg-revealed/10 text-revealed",

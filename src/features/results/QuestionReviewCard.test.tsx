@@ -49,6 +49,7 @@ const CORRECT_QUESTION: ResultsQuestion = {
   },
   correctAnswer: "B",
   yourAnswer: ["B"],
+  gaveUp: false,
   outcome: "correct",
   flagged: false,
   explanations: {
@@ -74,6 +75,7 @@ const INCORRECT_FLAGGED_QUESTION: ResultsQuestion = {
   },
   correctAnswer: "C",
   yourAnswer: ["A"],
+  gaveUp: false,
   outcome: "incorrect",
   flagged: true,
   explanations: {
