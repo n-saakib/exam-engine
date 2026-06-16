@@ -179,7 +179,7 @@ describe("POST /api/progress/reset — factory scope", () => {
     expect(before.shuffle_questions).toBe(true);
 
     // Factory reset.
-    const res = await POST_reset(resetReq({ scope: "factory" }), ctx);
+    const res = await POST_reset(resetReq({ scope: "factory", confirm: true }), ctx);
     expect(res.status).toBe(200);
 
     // After the reset, the settings should be back to defaults.

@@ -24,7 +24,9 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "certprep-upload-sec-"));
 const dbPath = path.join(tmpDir, "upload-sec.db");
-const uploadsDir = path.join(tmpDir, "data", "uploads");
+// The runtime derives uploadsRoot from `path.dirname(dbPath) + "/uploads"`,
+// so the test must put files at exactly that path.
+const uploadsDir = path.join(path.dirname(dbPath), "uploads");
 
 process.env.DB_PATH = dbPath;
 process.env.EXAMS_ROOT = path.join(tmpDir, "Exams");
@@ -144,11 +146,18 @@ describe("POST /api/catalog/upload — validation & security", () => {
     // at the destination. We pre-create a symlink at the target and assert
     // the request is rejected.
     fs.mkdirSync(uploadsDir, { recursive: true });
-    // Force a deterministic content hash so we can predict the target name.
+    // The actual destination is `<uploadsDir>/<hash12>_<filename>`. We must
+    // pre-create the symlink at THAT path, not the basename.
+    const crypto = await import("node:crypto");
     const text = validSetJSON();
-    const target = path.join(uploadsDir, "preexisting-link.json");
+    const hash = crypto
+      .createHash("sha256")
+      .update(text)
+      .digest("hex")
+      .slice(0, 12);
+    const target = path.join(uploadsDir, `${hash}_preexisting-link.json`);
     fs.symlinkSync(path.join(tmpDir, "outside"), target, "file");
-    // Sanity: the symlink exists.
+    // Sanity: the symlink exists at the real destination path.
     expect(fs.lstatSync(target).isSymbolicLink()).toBe(true);
 
     const req = multipartReq("preexisting-link.json", text);

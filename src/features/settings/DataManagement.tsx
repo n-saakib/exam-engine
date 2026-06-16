@@ -96,7 +96,7 @@ export function DataManagement() {
     setIsResetting(true);
     try {
       const result = await apiClient.post<ResetResponse>("/progress/reset", {
-        json: { scope: "all" },
+        json: { scope: "all", confirm: true },
       });
       toast({
         title: "Full reset complete",

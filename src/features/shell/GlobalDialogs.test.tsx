@@ -77,12 +77,15 @@ describe("<GlobalDialogs> — confirm() Promise semantics", () => {
 
 describe("<GlobalDialogs> — unmount safety", () => {
   it("does not leak the pending promise when the provider unmounts", async () => {
-    // Capture the promise so we can observe its resolution.
-    let captured: Promise<boolean> | null = null;
+    // Capture the promise via a ref (set inside an effect) so the assignment
+    // doesn't happen during render.
+    const capturedRef: { current: Promise<boolean> | null } = { current: null };
 
     function Probe() {
       const { confirm } = useGlobalDialogs();
-      captured = confirm({ title: "Will unmount" });
+      React.useEffect(() => {
+        capturedRef.current = confirm({ title: "Will unmount" });
+      }, [confirm]);
       return null;
     }
 
@@ -104,8 +107,8 @@ describe("<GlobalDialogs> — unmount safety", () => {
 
     // The captured promise must resolve to false (cancel semantics) rather
     // than hang forever, so consumers can always await it without leaks.
-    expect(captured).not.toBeNull();
-    const value = await captured!;
+    expect(capturedRef.current).not.toBeNull();
+    const value = await capturedRef.current!;
     expect(value).toBe(false);
   });
 });

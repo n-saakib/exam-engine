@@ -55,6 +55,12 @@ export function ExamDefaultsSettings() {
   }
 
   function handleToggle(key: keyof SettingsPatch, current: boolean) {
+    if (key === "timer_enabled" && !current && settings?.timer_default_minutes == null) {
+      // Enabling the timer from `null` minutes: seed a sensible default (60)
+      // so the field renders a positive number, not an empty input.
+      save({ timer_enabled: true, timer_default_minutes: 60 });
+      return;
+    }
     save({ [key]: !current });
   }
 

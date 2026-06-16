@@ -81,7 +81,9 @@ describe("QuestionSetSchema strictness (C6 guardrails)", () => {
     // (the existing refine caps count at >= 2 and <= 6). Z must be accepted
     // and the full set must parse successfully.
     const zQuestion: Question = {
-      ...goodSingle,
+      id: goodSingle.id,
+      questionType: goodSingle.questionType as Question["questionType"],
+      questionText: goodSingle.questionText,
       options: { A: "a", Z: "z" },
       correctAnswer: ["A"],
       explanations: {

@@ -4,7 +4,9 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -55,6 +57,13 @@ const DEFAULT_CONFIRM: ConfirmOptions = {
  */
 export function GlobalDialogsProvider({ children }: { children: React.ReactNode }) {
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  // Ref mirrors the current state so the unmount cleanup can resolve any
+  // in-flight promise even after the state has been reset. Mirrored in an
+  // effect (not during render) to satisfy react-hooks/refs.
+  const stateRef = useRef<ConfirmState | null>(null);
+  useEffect(() => {
+    stateRef.current = confirmState;
+  }, [confirmState]);
 
   const confirm = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise<boolean>((resolve) => {
@@ -64,6 +73,16 @@ export function GlobalDialogsProvider({ children }: { children: React.ReactNode 
         resolve,
       });
     });
+  }, []);
+
+  // If the provider unmounts while a confirm is pending, resolve the
+  // outstanding promise as `false` so the caller doesn't hang on a
+  // never-resolving Promise (which can also surface as an act() timeout).
+  useEffect(() => {
+    return () => {
+      const pending = stateRef.current;
+      if (pending) pending.resolve(false);
+    };
   }, []);
 
   const handleConfirm = () => {

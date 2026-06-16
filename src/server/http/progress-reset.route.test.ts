@@ -173,7 +173,7 @@ describe("POST /api/progress/reset — scope: all", () => {
     const req = new Request("http://localhost/api/progress/reset", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ scope: "all" }),
+      body: JSON.stringify({ scope: "all", confirm: true }),
     });
     const res = await resetRoute.POST(req, ctx);
     expect(res.status).toBe(200);
@@ -213,7 +213,7 @@ describe("POST /api/progress/reset — scope: factory", () => {
     const req = new Request("http://localhost/api/progress/reset", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ scope: "factory" }),
+      body: JSON.stringify({ scope: "factory", confirm: true }),
     });
     const res = await resetRoute.POST(req, ctx);
     expect(res.status).toBe(200);
@@ -253,6 +253,32 @@ describe("POST /api/progress/reset — validation", () => {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ scope: "path" }),
+    });
+    const res = await resetRoute.POST(req, ctx);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for 'all' scope without explicit confirm:true (HIGH-5 guard)", async () => {
+    // HIGH-5: destructive endpoints must require explicit confirmation so a
+    // stray POST cannot wipe history.
+    const req = new Request("http://localhost/api/progress/reset", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "all" }),
+    });
+    const res = await resetRoute.POST(req, ctx);
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: { code: string } };
+    expect(body.error.code).toBe("VALIDATION_ERROR");
+  });
+
+  it("returns 400 for 'factory' scope without explicit confirm:true (HIGH-5 guard)", async () => {
+    const req = new Request("http://localhost/api/progress/reset", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scope: "factory" }),
     });
     const res = await resetRoute.POST(req, ctx);
     expect(res.status).toBe(400);

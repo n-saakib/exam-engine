@@ -160,7 +160,7 @@ describe("schema violations — synthetic fixtures (C6)", () => {
     expect(result.ok).toBe(false);
     expect(
       result.diagnostics.some(
-        (d) =>
+        (d: { severity: string; path?: string; message: string }) =>
           d.severity === "error" &&
           (d.path === "questions.0.correctAnswer" ||
             /correctAnswer|Required|Invalid input/i.test(d.message)),

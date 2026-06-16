@@ -123,6 +123,37 @@ async function handleUpload(req: Request): Promise<Response> {
       continue;
     }
 
+    // Symlink guard: refuse to overwrite a pre-existing symlink at the
+    // destination. `fs.writeFileSync` would follow the symlink, which could
+    // point OUTSIDE the uploads root and overwrite an arbitrary file.
+    //
+    // Use `lstatSync` (not `existsSync`) because `existsSync` follows
+    // symlinks and returns false for a broken symlink — we still want to
+    // refuse the upload in that case. `lstatSync` reports the symlink
+    // itself regardless of whether the target exists.
+    try {
+      const lst = fs.lstatSync(destPath);
+      if (lst.isSymbolicLink()) {
+        rejected.push({
+          name,
+          reason: "Refusing to overwrite a pre-existing symlink at the upload target",
+        });
+        continue;
+      }
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") {
+        // lstat failed for some reason other than "doesn't exist" — treat
+        // as unsafe; refuse the upload.
+        rejected.push({
+          name,
+          reason: `Could not stat the upload target: ${err.message}`,
+        });
+        continue;
+      }
+      // ENOENT: no existing entry — safe to write.
+    }
+
     // Write the file.
     try {
       fs.writeFileSync(destPath, text, "utf8");

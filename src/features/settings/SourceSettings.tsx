@@ -82,6 +82,10 @@ export function SourceSettings() {
       {
         onSuccess: () => {
           toast({ title: `Switched to ${mode} mode`, variant: "success" });
+          // Switching to upload should re-fetch the uploaded-sets list so the
+          // UI shows the current state immediately. Switching to filesystem
+          // should also drop any stale upload data.
+          void queryClient.invalidateQueries({ queryKey: ["uploadedSets"] });
         },
         onError: (err) => {
           toast({ title: "Failed to update mode", description: err.message, variant: "danger" });

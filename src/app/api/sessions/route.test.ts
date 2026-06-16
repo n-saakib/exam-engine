@@ -170,7 +170,7 @@ describe("POST /api/sessions — security contract", () => {
     // filtered the response but wrote dirty values to the DB would pass the
     // response-shape assertion above; this one catches it.
     const { repos } = await getContainer();
-    const row = repos.session.getById(body.id) as Record<string, unknown> | null;
+    const row = repos.session.getById(body.id) as unknown as Record<string, unknown> | null;
     expect(row).not.toBeNull();
     expect(row).not.toHaveProperty("isAdmin");
     expect(row).not.toHaveProperty("role");

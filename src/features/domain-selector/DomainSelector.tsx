@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useExamPaths } from "@/hooks/useExamPaths";
 import { useSettings, useUpdateSettings } from "@/hooks/useSettings";
 import { childNodes, type ExamPathNode } from "@/domain/schemas";
@@ -42,6 +42,16 @@ function DomainSelectorInner({ settings }: { settings: Settings }) {
     },
     [updateSettings],
   );
+
+  // Clear any pending debounce on unmount so we don't fire a stale PATCH.
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = undefined;
+      }
+    };
+  }, []);
 
   const handleLevelChange = useCallback(
     (level: number, key: string) => {

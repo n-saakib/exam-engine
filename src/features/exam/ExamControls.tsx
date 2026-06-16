@@ -121,14 +121,24 @@ export function SubmitOrGiveUpButton({
 
   const handle = async () => {
     if (qid === undefined || revealed) return;
-    // Submit (has selection) proceeds without confirmation; only Give up
-    // (no selection) asks for confirmation before revealing.
+    // Give up (no selection) asks for confirmation before revealing.
+    // Submit (has selection) on the LAST question also asks for confirmation —
+    // the user is about to finalise, so we want a clear handoff.
     if (!hasSelection) {
       const ok = await confirm({
         title: "Reveal the answer?",
         description:
           "This shows the correct answer and explanations, and marks the question as revealed (excluded from your score).",
         confirmLabel: "Reveal",
+        variant: "primary" as const,
+      });
+      if (!ok) return;
+    } else if (canSubmitLast) {
+      const ok = await confirm({
+        title: "Submit and reveal the answer?",
+        description:
+          "This reveals the answer for this question and lets you finalise the exam.",
+        confirmLabel: "Submit",
         variant: "primary" as const,
       });
       if (!ok) return;

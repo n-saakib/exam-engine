@@ -158,7 +158,7 @@ describe("<SubmitOrGiveUpButton>", () => {
         </GlobalDialogsProvider>
       </ToastProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: /^Submit$/i }));
+    // Not on the last question → no dialog; one click commits the answer.
     fireEvent.click(screen.getByRole("button", { name: /^Submit$/i }));
     await waitFor(() => {
       expect(patch).toHaveBeenCalled();

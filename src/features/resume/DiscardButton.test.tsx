@@ -52,13 +52,17 @@ function makeWrapper() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) => (
-    <QueryClientProvider client={qc}>
-      <ToastProvider>
-        <GlobalDialogsProvider>{children}</GlobalDialogsProvider>
-      </ToastProvider>
-    </QueryClientProvider>
-  );
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <ToastProvider>
+          <GlobalDialogsProvider>{children}</GlobalDialogsProvider>
+        </ToastProvider>
+      </QueryClientProvider>
+    );
+  }
+  Wrapper.displayName = "DiscardTestWrapper";
+  return Wrapper;
 }
 
 beforeEach(() => {

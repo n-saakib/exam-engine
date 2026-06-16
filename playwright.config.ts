@@ -20,7 +20,11 @@ import path from "path";
  * get fast iteration on already-built apps.
  */
 
-const tempDb = path.join(os.tmpdir(), `certprep-e2e-${Date.now()}.db`);
+// Use process.pid in the temp DB name so concurrent workers (and sequential
+// spec files that boot their own server) don't collide on the SQLite file.
+// Without this, the second spec would open a second handle on the same DB
+// and the first spec's writes would be invisible — leading to flakes.
+const tempDb = path.join(os.tmpdir(), `certprep-e2e-${process.pid}-${Date.now()}.db`);
 const examsRoot = path.join(__dirname, "Exams");
 
 export default defineConfig({
@@ -41,7 +45,11 @@ export default defineConfig({
   webServer: {
     command: `DB_PATH=${tempDb} EXAMS_ROOT=${examsRoot} PORT=3001 node_modules/.bin/next start -p 3001`,
     url: "http://localhost:3001/api/health",
-    reuseExistingServer: !process.env.CI,
+    // Always start a fresh server per `npx playwright test` invocation.
+    // Without `reuseExistingServer:false`, sequential spec files share one
+    // server (and one DB) — the destructive spec wipes the DB at the end,
+    // leaving the spine spec with no catalog, which causes flakes.
+    reuseExistingServer: false,
     timeout: 120_000,
     env: {
       DB_PATH: tempDb,
