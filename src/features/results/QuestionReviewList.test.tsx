@@ -59,6 +59,7 @@ function makeQuestion(id: number, order: number): ResultsQuestion {
     },
     correctAnswer: "A",
     yourAnswer: ["A"],
+    gaveUp: false,
     outcome: "correct",
     flagged: false,
     explanations: {},

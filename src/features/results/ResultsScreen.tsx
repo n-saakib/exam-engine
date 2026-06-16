@@ -20,6 +20,8 @@ function applyFilter(questions: ResultsQuestion[], filter: ReviewFilter): Result
   switch (filter) {
     case "incorrect":
       return questions.filter((q) => q.outcome === "incorrect");
+    case "gave_up":
+      return questions.filter((q) => q.outcome === "gave_up");
     case "revealed":
       return questions.filter((q) => q.outcome === "revealed");
     case "flagged":
@@ -33,6 +35,7 @@ function applyFilter(questions: ResultsQuestion[], filter: ReviewFilter): Result
 const FILTER_LABELS: Record<ReviewFilter, string> = {
   all: "All",
   incorrect: "Incorrect",
+  gave_up: "Gave up",
   revealed: "Revealed",
   flagged: "Flagged",
 };
@@ -73,10 +76,11 @@ export function ResultsScreen({ sessionId, mode = "post-exam" }: ResultsScreenPr
   );
 
   const filterCounts = useMemo(() => {
-    if (!data) return { all: 0, incorrect: 0, revealed: 0, flagged: 0 };
+    if (!data) return { all: 0, incorrect: 0, gaveUp: 0, revealed: 0, flagged: 0 };
     return {
       all: data.questions.length,
       incorrect: data.questions.filter((q) => q.outcome === "incorrect").length,
+      gaveUp: data.questions.filter((q) => q.outcome === "gave_up").length,
       revealed: data.questions.filter((q) => q.outcome === "revealed").length,
       flagged: data.questions.filter((q) => q.flagged).length,
     };

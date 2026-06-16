@@ -52,6 +52,7 @@ const MOCK_RESULTS: Results = {
     correct: 2,
     incorrect: 1,
     revealed: 1,
+    gaveUp: 0,
     unanswered: 0,
     total: 4,
     timeTakenMs: 120000,
@@ -69,6 +70,7 @@ const MOCK_RESULTS: Results = {
       options: { A: "Internet Access Management", B: "Identity and Access Management", C: "Integrated Account Manager", D: "Internal Auth Module" },
       correctAnswer: "B",
       yourAnswer: ["B"],
+      gaveUp: false,
       outcome: "correct",
       flagged: false,
       explanations: {
@@ -87,6 +89,7 @@ const MOCK_RESULTS: Results = {
       options: { A: "On-Demand", B: "Reserved", C: "Spot", D: "Dedicated" },
       correctAnswer: "C",
       yourAnswer: ["A"],
+      gaveUp: false,
       outcome: "incorrect",
       flagged: true,
       explanations: {
@@ -104,6 +107,7 @@ const MOCK_RESULTS: Results = {
       options: { A: "Compute", B: "Database", C: "Storage", D: "Networking" },
       correctAnswer: "C",
       yourAnswer: [],
+      gaveUp: false,
       outcome: "revealed",
       flagged: false,
       explanations: {
@@ -121,6 +125,7 @@ const MOCK_RESULTS: Results = {
       options: { A: "Virtual Private Cloud", B: "Virtual Public Cloud", C: "Virtual Protocol Controller", D: "Virtual Port Config" },
       correctAnswer: "A",
       yourAnswer: ["A"],
+      gaveUp: false,
       outcome: "correct",
       flagged: false,
       explanations: {
