@@ -145,7 +145,8 @@ export function SubmitOrGiveUpButton({
     }
     setBusy(true);
     try {
-      await reveal(qid);
+      const isGiveUp = !hasSelection;
+      await reveal(qid, { gaveUp: isGiveUp });
       if (canSubmitLast) onLastSubmit?.();
     } finally {
       setBusy(false);

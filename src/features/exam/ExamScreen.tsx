@@ -160,7 +160,7 @@ export function ExamScreen({
         // shared; the dialog open is delegated.
         const hasSelection = (s.answers[q.id]?.selected.length ?? 0) > 0;
         const isLast = s.currentIndex >= s.questions.length - 1;
-        void s.reveal(q.id).then(() => {
+        void s.reveal(q.id, { gaveUp: !hasSelection }).then(() => {
           if (hasSelection && isLast) setSubmitOpen(true);
         });
       },
