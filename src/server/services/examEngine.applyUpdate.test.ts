@@ -232,6 +232,47 @@ describe("examEngine.applyUpdate — idempotency & monotonicity", () => {
     const q1 = session.questions.find((q) => q.id === 1)!;
     expect(q1.answer.revealed).toBe(true);
   });
+
+  it("persists gaveUp on the answer row (live DTO carries gaveUp=true)", () => {
+    // F4 gave-up: user clicks "Give up" with no selection; reveal() must
+    // persist is_gave_up=1 and the next getSession() must surface gaveUp=true
+    // on the LiveAnswer. The flag is monotonic (give-up is a one-way intent).
+    const id = makeSession();
+    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true, gaveUp: true } });
+    const session = engine.getSession(id);
+    const q1 = session.questions.find((q) => q.id === 1)!;
+    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.gaveUp).toBe(true);
+  });
+
+  it("monotonic gaveUp: a later gaveUp:false on a revealed row does not un-give-up", () => {
+    // The schema (PatchAnswerSchema) does not allow `gaveUp: false` from
+    // the wire, but the engine itself must defend — once gaveUp is true it
+    // stays true, parallel to `revealed`. This pins the symmetry.
+    const id = makeSession();
+    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true, gaveUp: true } });
+    engine.applyUpdate(id, {
+      answer: { questionId: 1, gaveUp: false } as unknown as { questionId: number; gaveUp: boolean },
+    });
+    const session = engine.getSession(id);
+    const q1 = session.questions.find((q) => q.id === 1)!;
+    expect(q1.answer.gaveUp).toBe(true);
+  });
+
+  it("a give-up WITH a selection (user picks, then changes mind) still records gaveUp", () => {
+    // The user might select options and then change their mind and click
+    // "Give up" — gaveUp is the *intent*, not a derivation from `selected`.
+    // The PATCH must carry both `selected` and `gaveUp: true` and the row
+    // must reflect both fields.
+    const id = makeSession();
+    engine.applyUpdate(id, { answer: { questionId: 1, selected: ["B"] } });
+    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true, gaveUp: true } });
+    const session = engine.getSession(id);
+    const q1 = session.questions.find((q) => q.id === 1)!;
+    expect(q1.answer.selected).toEqual(["B"]);
+    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.gaveUp).toBe(true);
+  });
 });
 
 describe("examEngine.applyUpdate — regression / lifecycle", () => {

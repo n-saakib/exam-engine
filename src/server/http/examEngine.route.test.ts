@@ -269,6 +269,29 @@ describe("PATCH /api/sessions/:id — autosave", () => {
     expect(dto.questions.find((q) => q.id === 1)!.answer.revealed).toBe(true);
   });
 
+  it("PATCH with gaveUp:true persists is_gave_up=1 and surfaces gaveUp on the DTO", async () => {
+    // F4 gave-up: the user clicks "Give up" with no selection; reveal() must
+    // persist is_gave_up=1, and the next GET must surface gaveUp:true on the
+    // LiveAnswer so the navigator's 7-state swatch collapses to "gave_up".
+    const res = await patch({ answer: { questionId: 1, revealed: true, gaveUp: true } });
+    const dto = (await res.json()) as {
+      questions: Array<{ id: number; answer: { revealed: boolean; gaveUp: boolean } }>;
+    };
+    const q1 = dto.questions.find((q) => q.id === 1)!;
+    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.gaveUp).toBe(true);
+  });
+
+  it("PATCH gaveUp:false on a revealed row does not un-give-up (monotonic)", async () => {
+    // The wire-level schema doesn't allow gaveUp:false, but the engine itself
+    // must defend — once gaveUp is true, it stays true (parallel to revealed).
+    await patch({ answer: { questionId: 1, revealed: true, gaveUp: true } });
+    // Re-patch with selected; the existing gaveUp must stick.
+    const res = await patch({ answer: { questionId: 1, selected: ["C"] } });
+    const dto = (await res.json()) as { questions: Array<{ id: number; answer: { gaveUp: boolean } }> };
+    expect(dto.questions.find((q) => q.id === 1)!.answer.gaveUp).toBe(true);
+  });
+
   it("404 for an unknown session", async () => {
     const res = await PATCH_one(
       new Request("http://localhost/api/sessions/does-not-exist", {
