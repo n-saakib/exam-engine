@@ -164,6 +164,47 @@ describe("toLiveSession — answers hidden", () => {
     ]);
     expect(dto.timer.expired).toBeUndefined();
   });
+
+  it("propagates a shuffled optionOrder in the exact array order", () => {
+    // Rebuild a snapshot whose question 7 has a non-natural optionOrder
+    // (shuffle output: C, A, B) so we can assert the mapper carries the
+    // order verbatim rather than re-sorting it to the natural map order.
+    const shuffled: SnapshotQuestion[] = [
+      {
+        ...SNAPSHOT[0]!,
+        optionOrder: ["C", "A", "B"],
+      },
+      SNAPSHOT[1]!,
+    ];
+    const dto = toLiveSession(
+      row({ question_snapshot: JSON.stringify(shuffled) }),
+      [answer({ question_id: 7 }), answer({ question_id: 9 })],
+    );
+    const q7 = dto.questions.find((q) => q.id === 7)!;
+    expect(q7.optionOrder).toEqual(["C", "A", "B"]);
+    // Sanity: it's the exact array reference order, not sorted.
+    expect(q7.optionOrder).not.toEqual(["A", "B", "C"]);
+  });
+
+  it("omits optionOrder on the LiveQuestion when the snapshot has none", () => {
+    // Drop optionOrder from both snapshot questions; the mapper must NOT
+    // synthesise an empty array — the field should simply be undefined so
+    // consumers fall back to the natural option map order.
+    const noOrder: SnapshotQuestion[] = SNAPSHOT.map(({ optionOrder: _o, ...rest }) => {
+      void _o;
+      return rest;
+    });
+    const dto = toLiveSession(
+      row({ question_snapshot: JSON.stringify(noOrder) }),
+      [answer({ question_id: 7 }), answer({ question_id: 9 })],
+    );
+    for (const q of dto.questions) {
+      expect(q.optionOrder).toBeUndefined();
+      // Specifically: not an empty array, which would carry different
+      // meaning (an explicit "no options to render" signal).
+      expect(q.optionOrder).not.toEqual([]);
+    }
+  });
 });
 
 describe("toResults — answers shown", () => {
@@ -189,5 +230,93 @@ describe("toResults — answers shown", () => {
     expect(q7.yourAnswer).toEqual(["B"]);
     expect(q9.outcome).toBe("incorrect");
     expect(q9.explanations).toBeDefined();
+  });
+
+  it("propagates a shuffled optionOrder in the exact array order", () => {
+    // The review screen must render options in the same order the user saw
+    // during the exam — so the mapper carries the snapshot's optionOrder
+    // verbatim, NOT sorted to the natural map order.
+    const shuffled: SnapshotQuestion[] = [
+      { ...SNAPSHOT[0]!, optionOrder: ["C", "A", "B"] },
+      SNAPSHOT[1]!,
+    ];
+    const completed = row({
+      status: "completed",
+      score_percent: 50,
+      correct_count: 1,
+      incorrect_count: 1,
+      revealed_count: 0,
+      unanswered_count: 0,
+      completed_at: "t1",
+      question_snapshot: JSON.stringify(shuffled),
+    });
+    const results = toResults(completed, [
+      answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }),
+      answer({ question_id: 9, selected_options: JSON.stringify(["B"]) }),
+    ]);
+    const q7 = results.questions.find((q) => q.id === 7)!;
+    expect(q7.optionOrder).toEqual(["C", "A", "B"]);
+    expect(q7.optionOrder).not.toEqual(["A", "B", "C"]);
+  });
+
+  it("omits optionOrder on the ResultsQuestion when the snapshot has none", () => {
+    // When the snapshot has no optionOrder (e.g. shuffle off and the engine
+    // didn't populate it), the field must be omitted — not an empty array.
+    const noOrder: SnapshotQuestion[] = SNAPSHOT.map(({ optionOrder: _o, ...rest }) => {
+      void _o;
+      return rest;
+    });
+    const completed = row({
+      status: "completed",
+      score_percent: 50,
+      correct_count: 1,
+      incorrect_count: 1,
+      revealed_count: 0,
+      unanswered_count: 0,
+      completed_at: "t1",
+      question_snapshot: JSON.stringify(noOrder),
+    });
+    const results = toResults(completed, [
+      answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }),
+      answer({ question_id: 9, selected_options: JSON.stringify(["B"]) }),
+    ]);
+    for (const q of results.questions) {
+      expect(q.optionOrder).toBeUndefined();
+      expect(q.optionOrder).not.toEqual([]);
+    }
+  });
+
+  it("carries optionOrder independently per question (no bleed across questions)", () => {
+    // Question 7 has a shuffled optionOrder; question 9 has none. The mapper
+    // must carry each question's optionOrder independently — q7 keeps its
+    // shuffle, q9 stays undefined, and neither picks up the other's state.
+    const mixed: SnapshotQuestion[] = [
+      { ...SNAPSHOT[0]!, optionOrder: ["C", "A", "B"] },
+      { ...SNAPSHOT[1]!, optionOrder: undefined },
+    ];
+    const completed = row({
+      status: "completed",
+      score_percent: 50,
+      correct_count: 1,
+      incorrect_count: 1,
+      revealed_count: 0,
+      unanswered_count: 0,
+      completed_at: "t1",
+      question_snapshot: JSON.stringify(mixed),
+    });
+    const results = toResults(completed, [
+      answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }),
+      answer({ question_id: 9, selected_options: JSON.stringify(["B"]) }),
+    ]);
+    const q7 = results.questions.find((q) => q.id === 7)!;
+    const q9 = results.questions.find((q) => q.id === 9)!;
+
+    expect(q7.optionOrder).toEqual(["C", "A", "B"]);
+    expect(q9.optionOrder).toBeUndefined();
+
+    // Cross-check: q9 must NOT inherit q7's shuffle, and q7 must NOT lose
+    // its shuffle by being adjacent to a question without one.
+    expect(q9.optionOrder).not.toEqual(["C", "A", "B"]);
+    expect(q7.optionOrder).not.toEqual(["A", "B"]);
   });
 });
