@@ -41,7 +41,7 @@ export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export const SessionModeSchema = z.enum(["full", "retake_all", "retake_incorrect"]);
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
-export const OutcomeSchema = z.enum(["correct", "incorrect", "revealed", "unanswered"]);
+export const OutcomeSchema = z.enum(["correct", "incorrect", "gave_up", "revealed", "unanswered"]);
 export type Outcome = z.infer<typeof OutcomeSchema>;
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -78,6 +78,8 @@ export const LiveAnswerSchema = z.object({
   selected: z.array(z.string()),
   flagged: z.boolean(),
   revealed: z.boolean(),
+  /** True once the user explicitly gives up on this question. */
+  gaveUp: z.boolean(),
   timeSpentMs: z.number().int(),
 });
 export type LiveAnswer = z.infer<typeof LiveAnswerSchema>;
@@ -127,6 +129,8 @@ export const ResultsSummarySchema = z.object({
   scorePercent: z.number(),
   correct: z.number().int(),
   incorrect: z.number().int(),
+  /** Count of questions the user explicitly gave up on. */
+  gaveUp: z.number().int(),
   revealed: z.number().int(),
   unanswered: z.number().int(),
   total: z.number().int(),
@@ -150,6 +154,8 @@ export const ResultsQuestionSchema = z.object({
   optionOrder: z.array(z.string()).optional(),
   correctAnswer: z.union([z.string(), z.array(z.string())]),
   yourAnswer: z.array(z.string()),
+  /** True if the user explicitly gave up on this question. */
+  gaveUp: z.boolean(),
   outcome: OutcomeSchema,
   flagged: z.boolean(),
   explanations: z.record(z.string(), ExplanationSchema),
@@ -319,6 +325,8 @@ export const PatchAnswerSchema = z.object({
   /** Replaces the current selection; `[]` clears it. */
   selected: z.array(z.string()).optional(),
   flagged: z.boolean().optional(),
+  /** Monotonic: once `true` it can never be unset (server enforces), parallel to `revealed`. */
+  gaveUp: z.boolean().optional(),
   /** Monotonic: once `true` it can never be unset (server enforces). */
   revealed: z.boolean().optional(),
   timeSpentMs: z.number().int().min(0).optional(),
