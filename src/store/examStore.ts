@@ -41,6 +41,8 @@ export interface AnswerState {
   selected: string[];
   flagged: boolean;
   revealed: boolean;
+  /** True once the user explicitly gives up on this question. */
+  gaveUp: boolean;
   timeSpentMs: number;
 }
 
@@ -75,7 +77,7 @@ export interface ExamStoreState {
   loadFromDTO(dto: LiveSession): void;
   select(qid: number, option: string): void;
   toggleFlag(qid: number): void;
-  reveal(qid: number): Promise<void>;
+  reveal(qid: number, options?: { gaveUp?: boolean }): Promise<void>;
   goTo(index: number): void;
   tick(deltaMs: number): void;
   pause(): Promise<void>;
@@ -101,6 +103,7 @@ function liveAnswerToState(a: LiveAnswer): AnswerState {
     selected: [...a.selected],
     flagged: a.flagged,
     revealed: a.revealed,
+    gaveUp: a.gaveUp ?? false,
     timeSpentMs: a.timeSpentMs,
   };
 }
@@ -293,16 +296,23 @@ export function createExamStore(): ExamStore {
         scheduleFlush();
       },
 
-      async reveal(qid) {
+      async reveal(qid, options) {
         const cur = get().answers[qid];
         if (!cur || cur.revealed) return; // monotonic / irreversible
+        // gaveUp is sticky: only set to true here, and only when the caller
+        // explicitly opts in via `options.gaveUp`. Once true it stays true.
+        const gaveUpRequested = options?.gaveUp === true;
+        const nextGaveUp = cur.gaveUp || gaveUpRequested;
         set((s) => ({
-          answers: { ...s.answers, [qid]: { ...cur, revealed: true } },
+          answers: { ...s.answers, [qid]: { ...cur, revealed: true, gaveUp: nextGaveUp } },
         }));
         // Cancel pending debounce; fold reveal into a forced immediate flush so
         // the server returns this question's correct answer + explanations.
         clearDebounce();
         queueAnswer(qid, { revealed: true });
+        if (gaveUpRequested && !cur.gaveUp) {
+          queueAnswer(qid, { gaveUp: true });
+        }
         const sessionId = get().sessionId;
         if (!sessionId) return;
         const bodies = drainBody();

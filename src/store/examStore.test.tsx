@@ -44,7 +44,7 @@ function fixture(overrides: Partial<LiveSession> = {}): LiveSession {
         questionType: "single",
         questionText: "Q1?",
         options: { A: "a", B: "b", C: "c", D: "d" },
-        answer: { selected: [], flagged: false, revealed: false, timeSpentMs: 0 },
+        answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
       },
       {
         id: 2,
@@ -52,7 +52,7 @@ function fixture(overrides: Partial<LiveSession> = {}): LiveSession {
         questionType: "single",
         questionText: "Q2?",
         options: { A: "a", B: "b", C: "c", D: "d" },
-        answer: { selected: [], flagged: false, revealed: false, timeSpentMs: 0 },
+        answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
       },
     ],
     createdAt: "2026-06-10T00:00:00Z",
@@ -284,6 +284,7 @@ describe("ExamStore — resume hydration", () => {
       selected: ["B"],
       flagged: true,
       revealed: false,
+      gaveUp: false,
       timeSpentMs: 4000,
     };
     store.getState().loadFromDTO(dto);
