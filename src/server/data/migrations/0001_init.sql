@@ -69,6 +69,7 @@ CREATE TABLE exam_sessions (
   incorrect_count   INTEGER,
   revealed_count    INTEGER,
   unanswered_count  INTEGER,
+  gave_up_count     INTEGER,
   is_bookmarked     INTEGER NOT NULL DEFAULT 0,
   note              TEXT,
   created_at        TEXT    NOT NULL,

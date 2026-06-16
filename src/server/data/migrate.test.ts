@@ -6,25 +6,25 @@ describe("migration runner", () => {
   let t: TestDb;
   afterEach(() => t?.cleanup());
 
-  it("applies 0001_init and 0002_drop_confidence; a second run is a no-op (one row per version)", () => {
+  it("applies 0001_init, 0002_drop_confidence, and 0003_add_gave_up; a second run is a no-op (one row per version)", () => {
     t = makeTestDb(); // makeTestDb already ran migrate once
 
     // schema_migrations exists and has one row per registered version.
     const rows = t.db
       .prepare("SELECT version FROM schema_migrations ORDER BY version")
       .all() as Array<{ version: number }>;
-    expect(rows).toEqual([{ version: 1 }, { version: 2 }]);
-    expect(getSchemaVersion(t.db)).toBe(2);
+    expect(rows).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }]);
+    expect(getSchemaVersion(t.db)).toBe(3);
 
     // Re-running applies nothing new and does not duplicate the version row.
     const result = migrate(t.db);
     expect(result.applied).toEqual([]);
-    expect(result.currentVersion).toBe(2);
+    expect(result.currentVersion).toBe(3);
 
     const after = t.db
       .prepare("SELECT COUNT(*) AS c FROM schema_migrations")
       .get() as { c: number };
-    expect(after.c).toBe(2);
+    expect(after.c).toBe(3);
   });
 
   it("creates all MVP tables with the enum CHECK constraints", () => {
