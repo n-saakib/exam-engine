@@ -31,7 +31,7 @@ vi.mock("@/lib/apiClient", () => ({
 async function renderBar(
   activeFilter: ReviewFilter,
   onFilterChange: ReturnType<typeof vi.fn>,
-  counts: { all: number; incorrect: number; revealed: number; flagged: number },
+  counts: { all: number; incorrect: number; gaveUp: number; revealed: number; flagged: number },
 ) {
   const { DetailFilterBar } = await import("./DetailFilterBar");
   return render(
@@ -46,6 +46,7 @@ async function renderBar(
 const DEFAULT_COUNTS = {
   all: 12,
   incorrect: 3,
+  gaveUp: 1,
   revealed: 4,
   flagged: 2,
 };
@@ -53,18 +54,19 @@ const DEFAULT_COUNTS = {
 // ── Test suite ────────────────────────────────────────────────────────────────
 
 describe("<DetailFilterBar>", () => {
-  // ── 1. Renders exactly 4 tabs in the correct order ────────────────────────
-  it("renders exactly 4 tabs with labels 'All', 'Incorrect', 'Revealed', 'Flagged' in that order", async () => {
+  // ── 1. Renders exactly 5 tabs in the correct order ────────────────────────
+  it("renders exactly 5 tabs with labels 'All', 'Incorrect', 'Gave up', 'Revealed', 'Flagged' in that order", async () => {
     await renderBar("all", vi.fn(), DEFAULT_COUNTS);
 
     const tablist = screen.getByRole("tablist");
     const tabs = within(tablist).getAllByRole("tab");
-    expect(tabs).toHaveLength(4);
+    expect(tabs).toHaveLength(5);
 
     expect(tabs[0].textContent).toContain("All");
     expect(tabs[1].textContent).toContain("Incorrect");
-    expect(tabs[2].textContent).toContain("Revealed");
-    expect(tabs[3].textContent).toContain("Flagged");
+    expect(tabs[2].textContent).toContain("Gave up");
+    expect(tabs[3].textContent).toContain("Revealed");
+    expect(tabs[4].textContent).toContain("Flagged");
   });
 
   // ── 2. aria-selected reflects the active filter ───────────────────────────
@@ -74,8 +76,9 @@ describe("<DetailFilterBar>", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0].getAttribute("aria-selected")).toBe("true"); // All
     expect(tabs[1].getAttribute("aria-selected")).toBe("false"); // Incorrect
-    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Revealed
-    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Flagged
+    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Gave up
+    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Revealed
+    expect(tabs[4].getAttribute("aria-selected")).toBe("false"); // Flagged
   });
 
   it("marks only the active tab with aria-selected='true' when activeFilter='incorrect'", async () => {
@@ -84,8 +87,20 @@ describe("<DetailFilterBar>", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0].getAttribute("aria-selected")).toBe("false"); // All
     expect(tabs[1].getAttribute("aria-selected")).toBe("true"); // Incorrect
-    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Revealed
-    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Flagged
+    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Gave up
+    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Revealed
+    expect(tabs[4].getAttribute("aria-selected")).toBe("false"); // Flagged
+  });
+
+  it("marks only the active tab with aria-selected='true' when activeFilter='gave_up'", async () => {
+    await renderBar("gave_up", vi.fn(), DEFAULT_COUNTS);
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs[0].getAttribute("aria-selected")).toBe("false"); // All
+    expect(tabs[1].getAttribute("aria-selected")).toBe("false"); // Incorrect
+    expect(tabs[2].getAttribute("aria-selected")).toBe("true"); // Gave up
+    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Revealed
+    expect(tabs[4].getAttribute("aria-selected")).toBe("false"); // Flagged
   });
 
   it("marks only the active tab with aria-selected='true' when activeFilter='revealed'", async () => {
@@ -94,8 +109,9 @@ describe("<DetailFilterBar>", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0].getAttribute("aria-selected")).toBe("false"); // All
     expect(tabs[1].getAttribute("aria-selected")).toBe("false"); // Incorrect
-    expect(tabs[2].getAttribute("aria-selected")).toBe("true"); // Revealed
-    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Flagged
+    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Gave up
+    expect(tabs[3].getAttribute("aria-selected")).toBe("true"); // Revealed
+    expect(tabs[4].getAttribute("aria-selected")).toBe("false"); // Flagged
   });
 
   it("marks only the active tab with aria-selected='true' when activeFilter='flagged'", async () => {
@@ -104,8 +120,9 @@ describe("<DetailFilterBar>", () => {
     const tabs = screen.getAllByRole("tab");
     expect(tabs[0].getAttribute("aria-selected")).toBe("false"); // All
     expect(tabs[1].getAttribute("aria-selected")).toBe("false"); // Incorrect
-    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Revealed
-    expect(tabs[3].getAttribute("aria-selected")).toBe("true"); // Flagged
+    expect(tabs[2].getAttribute("aria-selected")).toBe("false"); // Gave up
+    expect(tabs[3].getAttribute("aria-selected")).toBe("false"); // Revealed
+    expect(tabs[4].getAttribute("aria-selected")).toBe("true"); // Flagged
   });
 
   // ── 3. Count badges ───────────────────────────────────────────────────────
@@ -113,6 +130,7 @@ describe("<DetailFilterBar>", () => {
     const counts = {
       all: 25,
       incorrect: 7,
+      gaveUp: 2,
       revealed: 1,
       flagged: 0,
     };
@@ -125,6 +143,10 @@ describe("<DetailFilterBar>", () => {
     const incorrectBadge = screen.getByLabelText("7 questions");
     expect(incorrectBadge).toBeTruthy();
     expect(incorrectBadge.textContent).toBe("7");
+
+    const gaveUpBadge = screen.getByLabelText("2 questions");
+    expect(gaveUpBadge).toBeTruthy();
+    expect(gaveUpBadge.textContent).toBe("2");
 
     const revealedBadge = screen.getByLabelText("1 questions");
     expect(revealedBadge).toBeTruthy();
@@ -147,6 +169,12 @@ describe("<DetailFilterBar>", () => {
       `${DEFAULT_COUNTS.incorrect} questions`,
     );
     expect(incorrectBadge.textContent).toBe(String(DEFAULT_COUNTS.incorrect));
+
+    const gaveUpTab = screen.getByRole("tab", { name: /Gave up/i });
+    const gaveUpBadge = within(gaveUpTab).getByLabelText(
+      `${DEFAULT_COUNTS.gaveUp} questions`,
+    );
+    expect(gaveUpBadge.textContent).toBe(String(DEFAULT_COUNTS.gaveUp));
 
     const revealedTab = screen.getByRole("tab", { name: /Revealed/i });
     const revealedBadge = within(revealedTab).getByLabelText(
@@ -178,6 +206,15 @@ describe("<DetailFilterBar>", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Incorrect/i }));
     expect(onFilterChange).toHaveBeenCalledTimes(1);
     expect(onFilterChange).toHaveBeenCalledWith("incorrect");
+  });
+
+  it("calls onFilterChange with 'gave_up' when the Gave up tab is clicked", async () => {
+    const onFilterChange = vi.fn();
+    await renderBar("all", onFilterChange, DEFAULT_COUNTS);
+
+    fireEvent.click(screen.getByRole("tab", { name: /Gave up/i }));
+    expect(onFilterChange).toHaveBeenCalledTimes(1);
+    expect(onFilterChange).toHaveBeenCalledWith("gave_up");
   });
 
   it("calls onFilterChange with 'revealed' when the Revealed tab is clicked", async () => {
@@ -222,12 +259,12 @@ describe("<DetailFilterBar>", () => {
 
     const tabs = screen.getAllByRole("tab");
 
-    // Active = revealed (index 2).
-    expect(tabs[2].className).toContain("bg-brand");
-    expect(tabs[2].className).not.toContain("bg-surface");
+    // Active = revealed (index 3).
+    expect(tabs[3].className).toContain("bg-brand");
+    expect(tabs[3].className).not.toContain("bg-surface");
 
     // Inactive tabs.
-    for (const idx of [0, 1, 3]) {
+    for (const idx of [0, 1, 2, 4]) {
       expect(tabs[idx].className, `tab index ${idx} should be inactive`).toContain(
         "bg-surface",
       );
@@ -238,7 +275,7 @@ describe("<DetailFilterBar>", () => {
   });
 
   it("applies bg-brand to whichever tab is currently active (per filter value)", async () => {
-    const filters: ReviewFilter[] = ["all", "incorrect", "revealed", "flagged"];
+    const filters: ReviewFilter[] = ["all", "incorrect", "gave_up", "revealed", "flagged"];
 
     for (const active of filters) {
       const { unmount } = await renderBar(active, vi.fn(), DEFAULT_COUNTS);

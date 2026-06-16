@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/cn";
 
-export type ReviewFilter = "all" | "incorrect" | "revealed" | "flagged";
+export type ReviewFilter = "all" | "incorrect" | "gave_up" | "revealed" | "flagged";
 
 interface DetailFilterBarProps {
   activeFilter: ReviewFilter;
@@ -10,6 +10,7 @@ interface DetailFilterBarProps {
   counts: {
     all: number;
     incorrect: number;
+    gaveUp: number;
     revealed: number;
     flagged: number;
   };
@@ -18,6 +19,7 @@ interface DetailFilterBarProps {
 const FILTERS: Array<{ key: ReviewFilter; label: string }> = [
   { key: "all", label: "All" },
   { key: "incorrect", label: "Incorrect" },
+  { key: "gave_up", label: "Gave up" },
   { key: "revealed", label: "Revealed" },
   { key: "flagged", label: "Flagged" },
 ];
@@ -38,7 +40,10 @@ export function DetailFilterBar({
       className="flex gap-1 overflow-x-auto"
     >
       {FILTERS.map(({ key, label }) => {
-        const count = counts[key];
+        const count =
+          key === "gave_up"
+            ? counts.gaveUp
+            : counts[key as Exclude<ReviewFilter, "gave_up">];
         const isActive = activeFilter === key;
 
         return (
