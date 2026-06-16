@@ -295,6 +295,7 @@ CREATE TABLE exam_sessions (
   correct_count     INTEGER,
   incorrect_count   INTEGER,
   revealed_count    INTEGER,
+  gave_up_count     INTEGER,                       -- distinct from revealed_count (post-ADR-14)
   unanswered_count  INTEGER,
   is_bookmarked     INTEGER NOT NULL DEFAULT 0,
   note              TEXT,
@@ -314,7 +315,8 @@ CREATE TABLE session_answers (
   question_id      INTEGER NOT NULL,              -- matches question.id in the snapshot
   selected_options TEXT NOT NULL DEFAULT '[]',    -- JSON array (single = one element)
   is_flagged       INTEGER NOT NULL DEFAULT 0,
-  is_revealed      INTEGER NOT NULL DEFAULT 0,    -- "gave up"
+  is_revealed      INTEGER NOT NULL DEFAULT 0,    -- "submitted for review"
+  is_gave_up       INTEGER NOT NULL DEFAULT 0,    -- "I give up" intent (post-ADR-14)
   is_correct       INTEGER,                       -- null until graded
   time_spent_ms    INTEGER NOT NULL DEFAULT 0,
   answered_at      TEXT,

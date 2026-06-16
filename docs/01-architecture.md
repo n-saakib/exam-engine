@@ -264,7 +264,7 @@ A session is the unit of history and the thing that gets paused/resumed. Its lif
 ```mermaid
 stateDiagram-v2
     [*] --> in_progress: POST /sessions (create)
-    in_progress --> in_progress: PATCH (answer / flag / reveal / navigate / autosave)
+    in_progress --> in_progress: PATCH (answer / flag / reveal / gaveUp / navigate / autosave)
     in_progress --> completed: POST /sessions/:id/submit
     in_progress --> discarded: DELETE /sessions/:id
     completed --> [*]
@@ -280,6 +280,25 @@ stateDiagram-v2
 - **In-progress = resumable.** There is no distinct "paused" status; pausing is just "stop sending updates." Because every change is autosaved, an in-progress session is *always* resumable — even after a crash or refresh. The "Paused exams" list (F6) is simply `status = 'in_progress'`.
 - **Completed** sessions become history (F7) and trigger a `set_completion` insert (F3 repeat-avoidance).
 - **Discarded** sessions are soft-handled: row deleted (or marked) and answers cascade-deleted; they never appear in history.
+
+#### 9.1 Per-question state machine (post-ADR-14)
+
+Each `session_answers` row carries four raw state fields — `selected_options`, `is_flagged`, `is_revealed`, **`is_gave_up`** (post-ADR-14) — and derives a single **7-state `NavStatus`** for the live palette on the client:
+
+```
+NavStatus (priority order):
+  1. current            ←  i === s.currentIndex
+  2. gave_up            ←  a.gaveUp === true        (user intent; sticky / monotonic)
+  3. answered_correct   ←  a.revealed && setEquals(selected, correctAnswer)
+  4. answered_incorrect ←  a.revealed && !setEquals(selected, correctAnswer)
+  5. answered_pending   ←  a.revealed && (no selection OR correctAnswer not yet known)
+  6. flagged            ←  a.flagged
+  7. unanswered         ←  default
+```
+
+- `gaveUp` is captured at the moment of reveal (not derived from `selected`) — a user may pick options and then change their mind. The PATCH body folds `{ revealed: true, gaveUp: true }` into a single atomic write so the server never sees a gave-up question without a corresponding reveal.
+- The post-reveal `answered_correct` / `answered_incorrect` split is computed client-side from the snapshot's `correctAnswer` (which the server only attaches to revealed questions) and the user's `selected` set. This mirrors the server's `ScoreCalculator.setEquals` exactly.
+- The server's `ScoreCalculator` independently classifies the question as `outcome = "gave_up"` (priority 1) → `"revealed"` → `"unanswered"` → `"correct"` / `"incorrect"`, and writes the tally into `exam_sessions.{gave_up_count, revealed_count, …}`.
 
 ---
 
@@ -355,6 +374,7 @@ stateDiagram-v2
 | ADR-11 | **Timer = client tick + absolute-`elapsedMs` autosave, server-clamped (replace semantics)** | Idempotent autosave; instant UI | Trusts a clamped client value; ~400 ms crash window |
 | ADR-12 | **`instrumentation.register()` runs migrations + boot scan** + lazy `getDb()` guard | Next-idiomatic single boot hook; idempotent, test-safe | Must guard to `NEXT_RUNTIME==='nodejs'` |
 | ADR-13 | **Unified array shape for `correctAnswer`** (always `string[]`) + checkbox-group UI for BOTH `single` and `multi` (user is never told which is which) + set-equality grader on a normalised array | Removes the polymorphic-shape pain across schema, mapper, display, grader; makes `multi` in-MVP; trains choice elimination (pedagogical) | Historical `exam_sessions.question_snapshot` rows still hold strings; the grader normalises both shapes. Picking 2+ options on a `single` question scores `incorrect` (intentional — the user is not prevented from over-selecting). Display components keep a defensive `Array.isArray` branch (cheap) until snapshots age out. |
+| ADR-14 | **`gave_up` is a first-class outcome** — distinct from `revealed` — captured as a new `session_answers.is_gave_up` column + monotonic client field + 5-way results breakdown + dedicated filter tab + retake-pool inclusion | Users can see "I gave up" isolated from "I submitted for review"; the live palette can collapse gave-up questions into a distinct `gave_up` swatch instead of conflating them with `revealed`; the navigator gains a `correct`/`incorrect` split post-reveal | New DB column (`is_gave_up`) + new score field (`gave_up_count`) + new `Outcome` enum value; client derives the post-reveal correct/incorrect split from the snapshot's `correctAnswer` (only attached to revealed questions, so the split is safe by construction) |
 
 ADR-9–12 are detailed in [`09-nextjs-refinement.md`](09-nextjs-refinement.md). These mirror and extend the recommendations in the product plan; revisit them in [`05-feature-roadmap.md`](05-feature-roadmap.md) when sequencing.
 

@@ -164,7 +164,7 @@ Used by `GET /api/sessions/:id` and the create response. The exam screen never r
       "optionOrder": ["A","B","C","D"],
       // NO correctAnswer / explanations / Tips here unless revealed:
       "answer": { "selected": ["A"], "flagged": true, "revealed": false,
-                  "timeSpentMs": 18000 }
+                  "gaveUp": false, "timeSpentMs": 18000 }
     }
   ],
   "createdAt": "...", "startedAt": "...", "updatedAt": "..."
@@ -188,6 +188,8 @@ The exam screen's workhorse. Accepts a **partial** update for a question and/or 
     "selected": ["B"],               // replaces selection; [] clears
     "flagged": true,
     "revealed": true,                // "give up" or "submit" — irreversible; server attaches correct data
+    "gaveUp": true,                  // distinct from `revealed` — captures the user-intent
+                                     // "I give up" (post-ADR-14); monotonic; outcome="gave_up"
     "timeSpentMs": 23000
   }
 }
@@ -196,6 +198,7 @@ The exam screen's workhorse. Accepts a **partial** update for a question and/or 
 **Errors:** `404 SESSION_NOT_FOUND`; `409 SESSION_NOT_IN_PROGRESS` (already submitted/discarded).
 **Semantics:**
 - `revealed: true` is monotonic (cannot be un-revealed) and marks the question as not counting toward score (counts as "revealed", see scoring).
+- `gaveUp: true` is monotonic and captures user intent ("I give up") at the moment of reveal. A gave-up question still reveals the correct data, but its outcome is `"gave_up"` — distinct from `"revealed"` (which is the per-question "submit for review" path) — so the live palette, results breakdown, filter bar, and retake pool can all treat it as its own first-class state. The `gaveUp` field is set by the client when the user clicks the "Give up" button with no selection, OR by the keyboard shortcut (see F4-T22). The score-percent calculation is identical to a regular reveal (revealed questions are excluded from the numerator and counted in the denominator), but the breakdown and filter buckets are separate.
 - Submitting a selection does not auto-lock in MVP unless `lockOnSubmit` is set per question — the plan's "Submit locks selection and reveals per-option detail inline" is the **per-question submit** variant; see F4 for the two interaction models. The PATCH supports an optional `"locked": true`.
 
 ### `POST /api/sessions/:id/submit` — finish & grade
@@ -226,7 +229,7 @@ Full graded detail — **answers and explanations included** — for the results
   "mode": "full",
   "summary": {
     "scorePercent": 80,
-    "correct": 8, "incorrect": 1, "revealed": 1, "unanswered": 0,
+    "correct": 8, "incorrect": 1, "gaveUp": 0, "revealed": 1, "unanswered": 0,
     "total": 10,
     "timeTakenMs": 254000,
     "timerLimitMs": 1200000
@@ -241,8 +244,9 @@ Full graded detail — **answers and explanations included** — for the results
       "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
       "correctAnswer": ["B"],     // ADR-13: unified array shape (length 1 for single, ≥ 1 for multi)
       "yourAnswer": ["A"],
-      "outcome": "incorrect",          // correct | incorrect | revealed | unanswered
+      "outcome": "incorrect",          // correct | incorrect | gave_up | revealed | unanswered
       "flagged": true,
+      "gaveUp": false,                  // true when the user clicked "Give up" at reveal time
       "explanations": { "A": { "description": "...", "reason": "..." }, "...": {} },
       "Tips": "..."
     }
@@ -260,8 +264,10 @@ Creates a **new** session referencing the original via `origin_session_id`.
 ```jsonc
 { "scope": "incorrect", "options": { "shuffleQuestions": true } }
 // scope: "all" (whole set fresh) | "incorrect" (only incorrect+revealed from origin)
+//        "incorrect" now also includes "gave_up" (post-ADR-14) — a user who gave
+//        up and retakes is the right behaviour.
 ```
-**201** → new live session DTO. For `incorrect`, the new snapshot contains only the questions whose origin outcome was `incorrect` or `revealed`. `409` if scope `incorrect` but there were none.
+**201** → new live session DTO. For `incorrect`, the new snapshot contains only the questions whose origin outcome was `incorrect`, `revealed`, or `gave_up`. `409` if scope `incorrect` but there were none.
 
 ---
 

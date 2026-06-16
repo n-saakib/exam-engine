@@ -115,16 +115,16 @@ flowchart LR
  └─ <SubmitExamDialog/>          // confirm finish; shows unanswered/flagged counts
 ```
 - Reads/writes the **Zustand exam store**; the store debounces `PATCH /api/sessions/:id` (autosave).
-- `<QuestionNavigator>` colour legend (drives the design tokens): **answered**, **flagged**, **revealed**, **current**, **unanswered**.
+- `<QuestionNavigator>` colour legend (drives the design tokens): **current**, **answered (correct)**, **answered (incorrect)**, **answered (pending)**, **gave up**, **flagged**, **unanswered** — the 7-state palette (post-ADR-14). `current` and `flagged` are styled identically to the pre-ADR-14 5-state palette; `gave_up` shares the amber `revealed` colour tokens but carries a distinct `⏏` glyph so it never visually collides with a "submitted for review" reveal. `answered_correct` and `answered_incorrect` are derived client-side from `(revealed, selected, correctAnswer)` using `setEquals` (mirroring the server's `scoreCalculator`), and only apply AFTER the user has revealed a question.
 - **Progressive reveal** (plan §5): after submit/reveal, show correct/incorrect first; `<RevealedDetail>` is collapsed behind a "Show explanations" expander when `progressive_reveal` is on.
 - **Pause**: flush autosave, then navigate away — the session stays `in_progress` and appears under Resume.
 
 ### 4.3 ResultsScreen (F5, reused for history detail F7)
 ```
 <ResultsScreen mode="post-exam | from-history">
- ├─ <ScoreSummaryCard/>          // %, correct/incorrect/revealed/unanswered, time
+ ├─ <ScoreSummaryCard/>          // %, correct/incorrect/gave-up/revealed/unanswered, time
  ├─ <ResultsActions/>            // bookmark, add/edit note, retake (all/incorrect), home
- ├─ <DetailFilterBar/>           // all | incorrect only | revealed only | flagged
+ ├─ <DetailFilterBar/>           // all | incorrect | gave-up | revealed | flagged
  └─ <QuestionReviewList>
      └─ <QuestionReviewCard/>×n  // your answer, correct answer, all explanations, Tips
 ```
