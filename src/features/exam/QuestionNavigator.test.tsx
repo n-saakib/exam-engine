@@ -7,6 +7,7 @@
  *   - One button per question is rendered.
  *   - The current question has `aria-current="true"`.
  *   - Clicking a button calls `goTo` with the new index.
+ *   - The 7-state palette maps each answer shape to the right swatch/glyph.
  */
 
 import { render, screen, within, fireEvent } from "@testing-library/react";
@@ -24,14 +25,17 @@ vi.mock("@/lib/apiClient", () => ({
 
 import { QuestionNavigator } from "./QuestionNavigator";
 
-function makeQuestion(id: number): LiveQuestion {
+function makeQuestion(id: number, correctAnswer: string | string[] = "A"): LiveQuestion {
   return {
     id,
     order: id - 1,
     questionType: "single",
     questionText: `Q${id}?`,
     options: { A: "a", B: "b" },
-    answer: { selected: [], flagged: false, revealed: false, timeSpentMs: 0 },
+    answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
+    // The server only attaches correctAnswer post-reveal, but exposing it
+    // in the fixture keeps the post-reveal tests self-contained.
+    correctAnswer,
   };
 }
 
@@ -114,14 +118,15 @@ describe("<QuestionNavigator>", () => {
     expect(store.getState().currentIndex).toBe(3);
   });
 
-  it("marks an answered (non-current) question with data-status='answered' and ✓ glyph", () => {
+  it("marks an answered-but-not-revealed question as 'answered_pending' with a ? glyph", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q1 is current. Mark Q2 (id=2) as answered with selected=["A"].
+    // Q1 is current. Mark Q2 (id=2) as answered with selected=["A"] but NOT
+    // revealed — this is a "pending" answer in the new model.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        2: { selected: ["A"], flagged: false, revealed: false, timeSpentMs: 0 },
+        2: { selected: ["A"], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -129,14 +134,16 @@ describe("<QuestionNavigator>", () => {
 
     const nav = screen.getByTestId("question-navigator");
     const q2 = within(nav).getByRole("button", { name: /question 2/i });
-    expect(q2).toHaveAttribute("data-status", "answered");
+    expect(q2).toHaveAttribute("data-status", "answered_pending");
     // data-flagged is only set when flagged.
     expect(q2).not.toHaveAttribute("data-flagged");
-    // The ✓ glyph should be present as an aria-hidden span inside the button.
-    expect(q2.textContent).toContain("✓");
+    // The ? glyph should be present as an aria-hidden span inside the button.
+    expect(q2.textContent).toContain("?");
     // And NOT the other state glyphs.
     expect(q2.textContent).not.toContain("⚑");
-    expect(q2.textContent).not.toContain("👁");
+    expect(q2.textContent).not.toContain("✓");
+    expect(q2.textContent).not.toContain("✗");
+    expect(q2.textContent).not.toContain("⏏");
   });
 
   it("marks a flagged (non-current) question with data-status='flagged' and ⚑ glyph", () => {
@@ -146,7 +153,7 @@ describe("<QuestionNavigator>", () => {
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        3: { selected: [], flagged: true, revealed: false, timeSpentMs: 0 },
+        3: { selected: [], flagged: true, revealed: false, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -157,19 +164,21 @@ describe("<QuestionNavigator>", () => {
     expect(q3).toHaveAttribute("data-status", "flagged");
     expect(q3).toHaveAttribute("data-flagged", "true");
     expect(q3.textContent).toContain("⚑");
-    // No ✓ or 👁 glyph for plain-flagged.
+    // No other state glyphs for plain-flagged.
     expect(q3.textContent).not.toContain("✓");
-    expect(q3.textContent).not.toContain("👁");
+    expect(q3.textContent).not.toContain("✗");
+    expect(q3.textContent).not.toContain("?");
+    expect(q3.textContent).not.toContain("⏏");
   });
 
-  it("marks a revealed (non-current) question with data-status='revealed' and 👁 glyph", () => {
+  it("marks a revealed-and-correct question as 'answered_correct' with a ✓ glyph", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Mark Q4 (id=4) as revealed.
+    // Q4 (id=4): revealed with the correct answer "A".
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        4: { selected: [], flagged: false, revealed: true, timeSpentMs: 0 },
+        4: { selected: ["A"], flagged: false, revealed: true, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -177,13 +186,59 @@ describe("<QuestionNavigator>", () => {
 
     const nav = screen.getByTestId("question-navigator");
     const q4 = within(nav).getByRole("button", { name: /question 4/i });
-    expect(q4).toHaveAttribute("data-status", "revealed");
+    expect(q4).toHaveAttribute("data-status", "answered_correct");
     // Not flagged.
     expect(q4).not.toHaveAttribute("data-flagged");
-    // The 👁 glyph is present.
-    expect(q4.textContent).toContain("👁");
-    expect(q4.textContent).not.toContain("✓");
+    // The ✓ glyph is present.
+    expect(q4.textContent).toContain("✓");
+    expect(q4.textContent).not.toContain("✗");
     expect(q4.textContent).not.toContain("⚑");
+    expect(q4.textContent).not.toContain("⏏");
+    expect(q4.textContent).not.toContain("?");
+  });
+
+  it("marks a revealed-and-incorrect question as 'answered_incorrect' with a ✗ glyph", () => {
+    const store = createExamStore();
+    store.getState().loadFromDTO(makeSession(5, 0));
+    // Q2 (id=2): revealed but with the wrong answer "B" (correct is "A").
+    store.setState((s) => ({
+      answers: {
+        ...s.answers,
+        2: { selected: ["B"], flagged: false, revealed: true, gaveUp: false, timeSpentMs: 0 },
+      },
+    }));
+
+    renderNavigator(store);
+
+    const nav = screen.getByTestId("question-navigator");
+    const q2 = within(nav).getByRole("button", { name: /question 2/i });
+    expect(q2).toHaveAttribute("data-status", "answered_incorrect");
+    expect(q2.textContent).toContain("✗");
+    expect(q2.textContent).not.toContain("✓");
+    expect(q2.textContent).not.toContain("⚑");
+  });
+
+  it("marks a gave-up question with data-status='gave_up' and ⏏ glyph", () => {
+    const store = createExamStore();
+    store.getState().loadFromDTO(makeSession(5, 0));
+    // Q3 (id=3): gaveUp=true, revealed=true, no selection.
+    store.setState((s) => ({
+      answers: {
+        ...s.answers,
+        3: { selected: [], flagged: false, revealed: true, gaveUp: true, timeSpentMs: 0 },
+      },
+    }));
+
+    renderNavigator(store);
+
+    const nav = screen.getByTestId("question-navigator");
+    const q3 = within(nav).getByRole("button", { name: /question 3/i });
+    expect(q3).toHaveAttribute("data-status", "gave_up");
+    expect(q3.textContent).toContain("⏏");
+    expect(q3.textContent).not.toContain("✓");
+    expect(q3.textContent).not.toContain("✗");
+    expect(q3.textContent).not.toContain("?");
+    expect(q3.textContent).not.toContain("⚑");
   });
 
   it("marks an untouched question with data-status='unanswered' and no extra glyph", () => {
@@ -200,18 +255,20 @@ describe("<QuestionNavigator>", () => {
     // No extra glyph beyond the number.
     expect(q5.textContent?.trim()).toBe("5");
     expect(q5.textContent).not.toContain("✓");
+    expect(q5.textContent).not.toContain("✗");
     expect(q5.textContent).not.toContain("⚑");
-    expect(q5.textContent).not.toContain("👁");
+    expect(q5.textContent).not.toContain("⏏");
+    expect(q5.textContent).not.toContain("?");
   });
 
-  it("prioritises 'flagged' over 'answered' when both are set, but exposes both in the aria-label", () => {
+  it("flag wins the swatch over an answered_pending question, and is surfaced via data-flagged + aria", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q2 (id=2): answered AND flagged.
+    // Q2 (id=2): answered AND flagged, but not revealed.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        2: { selected: ["A"], flagged: true, revealed: false, timeSpentMs: 0 },
+        2: { selected: ["A"], flagged: true, revealed: false, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -219,26 +276,25 @@ describe("<QuestionNavigator>", () => {
 
     const nav = screen.getByTestId("question-navigator");
     const q2 = within(nav).getByRole("button", { name: /question 2/i });
-    // Swatch status follows the priority order: flagged wins over answered.
+    // Swatch status: flagged wins over the pending answer (per the
+    // `answerStatus` priority order in selectors.ts).
     expect(q2).toHaveAttribute("data-status", "flagged");
-    // data-flagged is set because it's flagged.
     expect(q2).toHaveAttribute("data-flagged", "true");
-    // Glyph: the component uses ⚑ whenever flagged (per code: `flagged ? "⚑" : STATUS_GLYPH[status]`).
+    // Glyph: ⚑ wins when flagged.
     expect(q2.textContent).toContain("⚑");
-    // aria-label should mention both "flagged" and "answered".
+    // aria-label mentions "flagged" exactly once (the primary status word).
     const label = q2.getAttribute("aria-label") ?? "";
     expect(label).toMatch(/flagged/i);
-    expect(label).toMatch(/answered/i);
   });
 
-  it("prioritises 'revealed' over 'flagged' when both are set, and exposes both in the aria-label", () => {
+  it("flag overlay is preserved on an answered_correct question", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q4 (id=4): revealed AND flagged.
+    // Q4 (id=4): revealed, correct, AND flagged.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        4: { selected: [], flagged: true, revealed: true, timeSpentMs: 0 },
+        4: { selected: ["A"], flagged: true, revealed: true, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -246,17 +302,19 @@ describe("<QuestionNavigator>", () => {
 
     const nav = screen.getByTestId("question-navigator");
     const q4 = within(nav).getByRole("button", { name: /question 4/i });
-    // Swatch status: revealed wins.
-    expect(q4).toHaveAttribute("data-status", "revealed");
+    // Swatch status: correct wins.
+    expect(q4).toHaveAttribute("data-status", "answered_correct");
     // data-flagged is still set because the question IS flagged.
     expect(q4).toHaveAttribute("data-flagged", "true");
-    // aria-label should mention both "revealed" and "flagged".
+    // Glyph: ⚑ wins.
+    expect(q4.textContent).toContain("⚑");
+    // aria-label should mention both "correct" and "flagged".
     const label = q4.getAttribute("aria-label") ?? "";
-    expect(label).toMatch(/revealed/i);
+    expect(label).toMatch(/correct/i);
     expect(label).toMatch(/flagged/i);
   });
 
-  it("renders the legend with all five swatch types (current, answered, flagged, revealed, unanswered)", () => {
+  it("renders the legend with all seven swatch types", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
 
@@ -272,9 +330,11 @@ describe("<QuestionNavigator>", () => {
     const legend = lists[lists.length - 1];
     const legendText = legend.textContent ?? "";
     expect(legendText).toMatch(/current/);
-    expect(legendText).toMatch(/answered/);
+    expect(legendText).toMatch(/answered \(correct\)/);
+    expect(legendText).toMatch(/answered \(incorrect\)/);
+    expect(legendText).toMatch(/answered \(pending\)/);
+    expect(legendText).toMatch(/gave up/);
     expect(legendText).toMatch(/flagged/);
-    expect(legendText).toMatch(/revealed/);
     expect(legendText).toMatch(/unanswered/);
   });
 });
