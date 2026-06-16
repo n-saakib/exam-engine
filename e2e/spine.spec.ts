@@ -96,8 +96,12 @@ test.describe("spine", () => {
       const leafPanel = page.getByTestId("leaf-panel");
       await expect(leafPanel).toBeVisible({ timeout: 10_000 });
 
-      // The leaf summary (role=status) should show set count info
-      const leafStatus = leafPanel.getByRole("status");
+      // The leaf summary (role=status) should show set count info. There may
+      // be multiple role=status elements inside the leaf panel (e.g. a "you
+      // have a paused exam" notice left over from a previous spec run that
+      // didn't clean up its in-progress session), so filter for the one
+      // showing the sets/remaining text.
+      const leafStatus = leafPanel.getByRole("status").filter({ hasText: /set/i });
       await expect(leafStatus).toBeVisible();
       // At least "set" text is present (e.g. "3 sets · 3 remaining")
       await expect(leafStatus).toContainText(/set/i);
@@ -224,14 +228,28 @@ test.describe("spine", () => {
       await expect(navQ2).toBeVisible();
       await expect(navQ2).toHaveAttribute("data-flagged", "true");
 
-      // Q3's navigator button should carry "revealed" in its aria-label
-      // (data-status will be "current" if Q3 is the active question on resume,
-      //  but the aria-label always reflects the revealed state independently)
+      // Q3 was the "current" question at pause time, so on resume it has
+      // status="current" in the palette (the highest-priority swatch). To
+      // assert the gave-up state cleanly, navigate to a different question
+      // first — then the swatch collapses to its derived state.
+      // Use a strict end-anchor to avoid matching "Question 10".
+      const navQ1 = navigator.getByRole("button", { name: /^Question 1(,|$)/i });
+      await expect(navQ1).toBeVisible();
+      await navQ1.click();
+      await expect(questionText).toContainText(/Q1\./);
+
+      // Q3's navigator button should now carry "gave up" in its aria-label
+      // and data-status="gave_up" — the gave-up state is a first-class
+      // outcome (distinct from "revealed"), surfaced in the live palette
+      // and persisted to the DB as is_gave_up.
       const navQ3 = navigator.getByRole("button", { name: /Question 3/i });
       await expect(navQ3).toBeVisible();
-      // The aria-label includes "revealed" for any revealed question
       const navQ3Label = await navQ3.getAttribute("aria-label");
-      expect(navQ3Label).toMatch(/revealed/i);
+      expect(navQ3Label).toMatch(/gave up/i);
+      // data-status is the source of truth for the swatch colour and is one
+      // of the 7 NavStatus values. The user gave up on Q3 with no selection,
+      // so the status should be "gave_up" (not "revealed").
+      await expect(navQ3).toHaveAttribute("data-status", "gave_up");
 
       // ── Step 13: Navigate to the last question to reach "Submit exam" ───────
       // Click navigator button for Q10 directly to jump to last question
@@ -273,12 +291,15 @@ test.describe("spine", () => {
       const scoreSummary = page.getByLabel("Score summary");
       await expect(scoreSummary).toBeVisible();
 
-      // Four-way breakdown is present (Correct / Incorrect / Revealed / Skipped)
+      // Five-way breakdown is present (Correct / Incorrect / Gave up /
+      // Revealed / Skipped) — the "Gave up" outcome is a first-class state
+      // distinct from "Revealed", reflected both here and in the filter bar.
       const breakdown = scoreSummary.getByLabel("Question breakdown");
       await expect(breakdown).toBeVisible();
       // Use exact: true to avoid "Correct" matching "Incorrect" substring
       await expect(breakdown.getByText("Correct", { exact: true })).toBeVisible();
       await expect(breakdown.getByText("Incorrect", { exact: true })).toBeVisible();
+      await expect(breakdown.getByText("Gave up", { exact: true })).toBeVisible();
       await expect(breakdown.getByText("Revealed", { exact: true })).toBeVisible();
       await expect(breakdown.getByText("Skipped", { exact: true })).toBeVisible();
 
@@ -289,19 +310,24 @@ test.describe("spine", () => {
       // "Question review" heading
       await expect(page.getByRole("heading", { name: /Question review/i })).toBeVisible();
 
-      // The filter bar (tablist) is visible with All / Incorrect / Revealed / Flagged
+      // The filter bar (tablist) is visible with All / Incorrect / Gave up /
+      // Revealed / Flagged — the new "Gave up" tab is between Incorrect and
+      // Revealed so it visually flows from "wrong" → "I gave up" → "I submitted
+      // for review".
       const filterBar = page.getByRole("tablist", { name: /Filter questions by outcome/i });
       await expect(filterBar).toBeVisible();
 
-      // ── Step 17: Filter by "Revealed" — the give-up question shows ──────────
-      // Expect at least 1 revealed question (we revealed Q3)
-      const revealedFilterBtn = filterBar.getByRole("tab", { name: /Revealed/i });
-      await expect(revealedFilterBtn).toBeVisible();
-      await revealedFilterBtn.click();
-      await expect(revealedFilterBtn).toHaveAttribute("aria-selected", "true");
+      // ── Step 17: Filter by "Gave up" — the gave-up question (Q3) shows ──────
+      // Q3 was a give-up, so it must now appear under its own "Gave up" filter
+      // (NOT under "Revealed" — the user gave up rather than submitted for
+      // review, so the outcome is "gave_up" not "revealed").
+      const gaveUpFilterBtn = filterBar.getByRole("tab", { name: /Gave up/i });
+      await expect(gaveUpFilterBtn).toBeVisible();
+      await gaveUpFilterBtn.click();
+      await expect(gaveUpFilterBtn).toHaveAttribute("aria-selected", "true");
 
-      // After filtering with "Revealed", the review list should still contain at
-      // least one card (we gave up Q3): assert the section isn't the empty state.
+      // After filtering with "Gave up", the review list should still contain
+      // at least one card (we gave up Q3): assert the section isn't the empty state.
       await expect(reviewSection).not.toContainText(/no questions/i, { timeout: 5_000 });
 
       // Reset filter to "All"
@@ -312,8 +338,8 @@ test.describe("spine", () => {
       await expect(actionsSection).toBeVisible();
 
       // "Retake incorrect only" button — may be disabled if all correct; check either way.
-      // We answered Q1 (possibly correct) + Q2 (flagged + answered) + Q3 (revealed) +
-      // Q4–Q10 (unanswered = incorrect). There will be incorrect+revealed >= 1.
+      // We answered Q1 (possibly correct) + Q2 (flagged + answered) + Q3 (gave up) +
+      // Q4–Q10 (unanswered = incorrect). There will be incorrect+gave-up >= 1.
       const retakeIncorrectBtn = actionsSection.getByRole("button", {
         name: /Retake.*incorrect/i,
       });
@@ -343,7 +369,8 @@ test.describe("spine", () => {
         await waitForExamScreen(page);
 
         // The navigator in the retake exam should have fewer than 10 questions
-        // (only incorrect + revealed questions are included)
+        // (only incorrect + gave-up + revealed questions are included — gave-up
+        // questions are now part of the retake pool alongside incorrect+revealed).
         const retakeNav = page.getByTestId("question-navigator");
         const retakeNavBtns = retakeNav.getByRole("button");
         // There should be at least 1 and at most 9 (definitely fewer than 10,

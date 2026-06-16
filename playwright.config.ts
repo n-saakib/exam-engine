@@ -30,6 +30,14 @@ const examsRoot = path.join(__dirname, "Exams");
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false, // spine test is sequential end-to-end; no parallelism needed
+  // Pin a single worker: all spec files share the same temp SQLite DB
+  // (one process.pid → one tempDb path), and the destructive spec wipes the
+  // DB at the end. Running 4 spec files in parallel across 4 workers
+  // therefore races them on the same database and produces a 1-in-4 flake
+  // (destructive's reset clobbers the spine's in-progress session mid-flow).
+  // 1 worker is the simplest correctness fix; the suite is small (5 tests
+  // total) so the wall-clock cost is negligible.
+  workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: "list",

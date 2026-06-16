@@ -147,6 +147,14 @@ test.describe("retake", () => {
       const retakeQ2Text = (await retakeQuestion1.textContent())?.trim() ?? "";
       expect(stripQPrefix(retakeQ2Text)).toBe(stripQPrefix(q2Text));
     }
+
+    // ── Cleanup: discard the retake session ─────────────────────────────────
+    // Without this the retake leaves an in-progress session in the DB, which
+    // gates the Start Exam button on the home page (`gatedByResume` rule).
+    // Subsequent spec files (e.g. the spine) would then fail at the Start
+    // Exam step because the button is replaced with "Continue in Resume".
+    // DELETE /api/sessions/:id is a direct API call (no UI dependency).
+    await page.request.delete(`/api/sessions/${retakeId}`);
   });
 });
 
