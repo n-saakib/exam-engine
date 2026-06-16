@@ -51,8 +51,15 @@ export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
   const yourAnswerStr =
     question.yourAnswer.length > 0 ? question.yourAnswer.join(", ") : "—";
 
-  // Determine which options to display (respect optionOrder if present, else sorted).
-  const optionKeys = Object.keys(question.options).sort();
+  // Display options in the same order the user saw during the exam. The
+  // session snapshot's `optionOrder` is the shuffled order (or natural
+  // order when shuffle is off) — `buildSnapshot` always populates it. We
+  // fall back to sorted natural keys for any pre-existing session that
+  // pre-dates the field.
+  const optionKeys =
+    question.optionOrder && question.optionOrder.length > 0
+      ? question.optionOrder.filter((k) => k in question.options)
+      : Object.keys(question.options).sort();
 
   return (
     <article

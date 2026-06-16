@@ -145,6 +145,11 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       questionType: q.questionType,
       questionText: q.questionText,
       options: q.options,
+      // Carry the snapshot's optionOrder so the review screen can render
+      // options + explanations in the same shuffled order the user saw
+      // during the exam. BuildSnapshot always sets this (either the
+      // shuffled order or the natural map order when shuffle is off).
+      ...(q.optionOrder ? { optionOrder: q.optionOrder } : {}),
       correctAnswer: q.correctAnswer,
       yourAnswer: ans ? parseSelected(ans.selected_options) : [],
       outcome: outcomeById.get(q.id) ?? "unanswered",

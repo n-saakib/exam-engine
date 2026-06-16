@@ -10,7 +10,22 @@ import type { LiveQuestion } from "@/domain/types";
  * option's explanation, and Tips. Progressive reveal (settings
  * `progressive_reveal`): show correctness first, explanations behind a
  * "Show explanations" expander. When off, explanations are shown inline.
+ *
+ * Explanations are keyed by the ORIGINAL option letter (A/B/C/D) and travel
+ * unchanged through shuffling — the option's content moves but the
+ * explanation is still keyed by its stable ID. To match the SHUFFLED
+ * presentation order the user saw on the option list, we iterate via
+ * `question.optionOrder` (with a fallback to natural order) — same as
+ * `OptionList.tsx`. This keeps the visible letters on the explanation
+ * chips aligned with the letters on the option buttons above.
  */
+function orderedOptionKeys(question: LiveQuestion): string[] {
+  if (question.optionOrder && question.optionOrder.length > 0) {
+    return question.optionOrder.filter((k) => k in question.options);
+  }
+  return Object.keys(question.options);
+}
+
 export function RevealedDetail({
   question,
   progressive,
@@ -25,8 +40,12 @@ export function RevealedDetail({
     ? question.correctAnswer
     : [question.correctAnswer];
   const explanations = question.explanations ?? {};
+  // Iterate options in the SAME order as the option list above, then keep
+  // only those that have an explanation. This guarantees the letter shown
+  // next to each explanation matches the letter on the corresponding
+  // option button — even after per-question option shuffling.
   const keys = Object.keys(explanations).length
-    ? Object.keys(question.options).filter((k) => k in explanations)
+    ? orderedOptionKeys(question).filter((k) => k in explanations)
     : [];
 
   return (

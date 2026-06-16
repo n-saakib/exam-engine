@@ -141,6 +141,13 @@ export const ResultsQuestionSchema = z.object({
   questionType: QuestionTypeSchema,
   questionText: z.string(),
   options: z.record(z.string(), z.string()),
+  /**
+   * Display order of option keys. Present iff the session snapshot has
+   * `optionOrder` (i.e. shuffle was on, or the server always populates it
+   * for snapshots — see examEngine.buildSnapshot). When absent, consumers
+   * fall back to the natural option map order.
+   */
+  optionOrder: z.array(z.string()).optional(),
   correctAnswer: z.union([z.string(), z.array(z.string())]),
   yourAnswer: z.array(z.string()),
   outcome: OutcomeSchema,
@@ -377,8 +384,11 @@ export type HistoryFilters = z.infer<typeof HistoryFiltersSchema>;
 
 export const ResetScopeSchema = z.discriminatedUnion("scope", [
   z.object({ scope: z.literal("path"), quesPath: z.string().min(1) }),
-  z.object({ scope: z.literal("all") }),
-  z.object({ scope: z.literal("factory") }),
+  // Destructive scopes require explicit `confirm: true` (HIGH-5). The UI
+  // shows a confirm dialog before sending, but the API guards the contract
+  // so a misbehaving client cannot wipe history with a stray POST.
+  z.object({ scope: z.literal("all"), confirm: z.literal(true) }),
+  z.object({ scope: z.literal("factory"), confirm: z.literal(true) }),
 ]);
 export type ResetScope = z.infer<typeof ResetScopeSchema>;
 
