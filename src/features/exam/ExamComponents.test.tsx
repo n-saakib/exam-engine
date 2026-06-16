@@ -63,6 +63,7 @@ function fixture(): LiveSession {
         selected: [],
         flagged: false,
         revealed: false,
+        gaveUp: false,
         timeSpentMs: 0,
       },
     })),
@@ -105,9 +106,9 @@ describe("<QuestionNavigator>", () => {
     expect(q1).toHaveAttribute("data-status", "current");
     expect(q1).toHaveAttribute("aria-current", "true");
 
-    // Q2 answered.
-    const q2 = screen.getByRole("button", { name: /Question 2, answered/i });
-    expect(q2).toHaveAttribute("data-status", "answered");
+    // Q2 answered but not revealed → "answered (pending)" in the 7-state model.
+    const q2 = screen.getByRole("button", { name: /Question 2, answered \(pending\)/i });
+    expect(q2).toHaveAttribute("data-status", "answered_pending");
 
     // Q3 flagged — colour is not the only signal (label + glyph).
     const q3 = screen.getByRole("button", { name: /Question 3, flagged/i });

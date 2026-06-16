@@ -35,7 +35,7 @@ function makeQuestion(overrides: Partial<LiveQuestion> = {}): LiveQuestion {
     questionType: "single",
     questionText: "Pick one",
     options: { A: "alpha", B: "bravo", C: "charlie" },
-    answer: { selected: [], flagged: false, revealed: false, timeSpentMs: 0 },
+    answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
     ...overrides,
   };
 }
@@ -45,6 +45,7 @@ function makeAnswer(overrides: Partial<AnswerState> = {}): AnswerState {
     selected: [],
     flagged: false,
     revealed: false,
+    gaveUp: false,
     timeSpentMs: 0,
     ...overrides,
   };

@@ -43,7 +43,7 @@ function makeQuestion(overrides: Partial<LiveQuestion> = {}): LiveQuestion {
     questionType: "single",
     questionText: "Q?",
     options: { A: "a", B: "b", C: "c", D: "d" },
-    answer: { selected: [], flagged: false, revealed: true, timeSpentMs: 0 },
+    answer: { selected: [], flagged: false, revealed: true, gaveUp: false, timeSpentMs: 0 },
     correctAnswer: "A",
     explanations: {
       // Descriptions use a fixed "expl-" prefix so they remain unique

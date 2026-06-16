@@ -38,7 +38,7 @@ function makeQuestion(id: number): LiveQuestion {
     questionType: "single",
     questionText: `Q${id}?`,
     options: { A: "a", B: "b" },
-    answer: { selected: [], flagged: false, revealed: false, timeSpentMs: 0 },
+    answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
   };
 }
 
