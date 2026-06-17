@@ -1,9 +1,12 @@
 /**
  * Component tests for QuestionReviewCard.
  *
- * Critical: these tests guard the bug fix where the component now renders
- * options in the SHUFFLED order from `question.optionOrder` instead of always
- * falling back to `Object.keys(question.options).sort()` (alphabetical).
+ * Critical: the history / review surface ALWAYS displays options in the
+ * fixed A, B, C, D order (ADR-15), regardless of the snapshot's
+ * `optionOrder`. The shuffle is a per-session transient that the live
+ * exam view uses to map display positions to underlying keys; the history
+ * view shows the original underlying keys in natural A, B, C, D order so
+ * "Correct answer: B" matches the option labeled B in the list.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -107,13 +110,15 @@ describe("<QuestionReviewCard>", () => {
   });
 
   // ── BUG GUARD ──────────────────────────────────────────────────────────────
-  // The fix: when `optionOrder` is set, options must render in that order
-  // (the order the user saw during the exam) — NOT in alphabetical order.
-  it("[BUG GUARD] renders options in the order from `optionOrder` when present", async () => {
+  // ADR-15: the history / review surface must ALWAYS render options in the
+  // fixed A, B, C, D order (the natural underlying keys), regardless of
+  // the snapshot's `optionOrder`. The `optionOrder` is a per-session
+  // transient used only by the live exam view; history ignores it.
+  it("[BUG GUARD] renders options in fixed A, B, C, D order regardless of `optionOrder`", async () => {
     const shuffled: ResultsQuestion = {
       ...CORRECT_QUESTION,
-      // Natural key order would be A,B,C,D (sorted); we shuffle to C,A,B,D
-      // so alphabetical [A, B, C, D] cannot accidentally match.
+      // Snapshot has a non-natural optionOrder (C, A, B, D) — the history
+      // view MUST ignore it and render A, B, C, D in natural order.
       optionOrder: ["C", "A", "B", "D"],
     };
 
@@ -123,25 +128,27 @@ describe("<QuestionReviewCard>", () => {
     const items = within(list).getAllByRole("listitem");
     expect(items).toHaveLength(4);
 
-    // Each <li> contains the letter prefix followed by the option text.
-    // We assert by the unique option text per key.
+    // The displayed letter on each row must be A, B, C, D — not the
+    // shuffled order [C, A, B, D]. The underlying key is the original
+    // A/B/C/D from `question.options`, so "A" maps to "Internet Access
+    // Management", "B" to "Identity and Access Management", etc.
     const texts = items.map((li) => li.textContent ?? "");
 
-    expect(texts[0]).toContain("C.");
-    expect(texts[0]).toContain("Integrated Account Manager");
+    expect(texts[0]).toContain("A.");
+    expect(texts[0]).toContain("Internet Access Management");
 
-    expect(texts[1]).toContain("A.");
-    expect(texts[1]).toContain("Internet Access Management");
+    expect(texts[1]).toContain("B.");
+    expect(texts[1]).toContain("Identity and Access Management");
 
-    expect(texts[2]).toContain("B.");
-    expect(texts[2]).toContain("Identity and Access Management");
+    expect(texts[2]).toContain("C.");
+    expect(texts[2]).toContain("Integrated Account Manager");
 
     expect(texts[3]).toContain("D.");
     expect(texts[3]).toContain("Internal Auth Module");
   });
 
-  it("falls back to alphabetical (Object.keys().sort()) order when `optionOrder` is absent", async () => {
-    // No optionOrder on this question.
+  it("renders options in natural alphabetical order when `optionOrder` is absent", async () => {
+    // No optionOrder on this question — the canonical A, B, C, D order.
     const { optionOrder: _omitted, ...noOptionOrder } = CORRECT_QUESTION;
     void _omitted;
 
@@ -162,15 +169,16 @@ describe("<QuestionReviewCard>", () => {
     expect(texts[3]).toContain("Internal Auth Module");
   });
 
-  it("falls back to alphabetical order when `optionOrder` is an empty array", async () => {
-    const emptyOrder: ResultsQuestion = { ...CORRECT_QUESTION, optionOrder: [] };
+  it("ignores `optionOrder` even when it is non-empty (history view is deterministic)", async () => {
+    const emptyOrder: ResultsQuestion = { ...CORRECT_QUESTION, optionOrder: ["D", "C", "B", "A"] };
     await renderCard(emptyOrder);
 
     const list = screen.getByLabelText("Answer options");
     const items = within(list).getAllByRole("listitem");
     const texts = items.map((li) => li.textContent ?? "");
 
-    // Empty array → falsy length → fallback to sorted natural keys.
+    // The displayed order is the natural A, B, C, D, NOT the reversed
+    // optionOrder [D, C, B, A] from the snapshot.
     expect(texts[0]).toContain("A.");
     expect(texts[1]).toContain("B.");
     expect(texts[2]).toContain("C.");
@@ -296,8 +304,10 @@ describe("<QuestionReviewCard>", () => {
 
     // The reason text for option B (the correct one) is visible now.
     // The same string also appears in the Tips section, so we scope to the
-    // explanation row for option B (the first row in the panel since the
-    // CORRECT_QUESTION fixture's optionOrder puts B first).
+    // explanation row for option B (ADR-15: explanations render in natural
+    // A, B, C, D order on the history view, so the row labeled "B." is the
+    // second one in the panel — but `getByText` returns the first match,
+    // which is the explanation row for B).
     const optionBRow = within(opened!).getByText("B.", { exact: true }).closest("div");
     expect(optionBRow).toBeTruthy();
     expect(within(optionBRow!).getByText("IAM = Identity and Access Management")).toBeTruthy();
