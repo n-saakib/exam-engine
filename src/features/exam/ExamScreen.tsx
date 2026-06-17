@@ -168,12 +168,19 @@ export function ExamScreen({
         const s = store.getState();
         const q = s.questions[s.currentIndex];
         if (!q) return;
-        const keys =
-          q.optionOrder && q.optionOrder.length > 0
-            ? q.optionOrder.filter((k) => k in q.options)
-            : Object.keys(q.options);
-        const key = keys[index];
-        if (key) s.select(q.id, key);
+        // Map the keyboard's display-position (index) to the underlying key
+        // the snapshot's optionOrder assigns to that position. When shuffle
+        // is off the underlying key is the display position itself.
+        const displayLetters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+        const total = Object.keys(q.options).length;
+        const displayLetter = displayLetters[index];
+        if (!displayLetter || index >= total) return;
+        const order = q.optionOrder;
+        const underlying =
+          order && index < order.length && order[index] && order[index]! in q.options
+            ? order[index]!
+            : displayLetter;
+        s.select(q.id, underlying);
       },
       onAdvance: () => {
         const s = store.getState();
