@@ -6,15 +6,16 @@
  * button; otherwise they are shown inline.
  *
  * BUG GUARD: The most important test in this file verifies that the
- * explanations list is rendered in the SAME order as the SHUFFLED
- * `optionOrder` (when the server-side exam engine has shuffled the options).
- * If this breaks, the user sees a "C" chip next to a description that
- * actually belongs to option A — confusing and hard to spot in review.
+ * explanations list is rendered in the FIXED A, B, C, D order (ADR-15), with
+ * each chip's letter mapped to the underlying key from `optionOrder`. If
+ * this breaks, the user sees a "C" chip next to a description that actually
+ * belongs to option A — confusing and hard to spot in review.
  *
  * Verifies:
  *   - Returns null when no `correctAnswer` is set.
  *   - Joins the correct answer keys with ", ".
- *   - (BUG GUARD) Iterates explanations via `optionOrder` when set.
+ *   - (BUG GUARD) Iterates explanations in fixed A, B, C, D order; the
+ *     description text comes from the underlying key (via optionOrder).
  *   - Falls back to `Object.keys(options)` when `optionOrder` is absent.
  *   - Progressive reveal toggle: hidden by default, click to expand.
  *   - Inline mode: explanations visible without a click.
@@ -86,17 +87,19 @@ describe("<RevealedDetail>", () => {
     expect(screen.getByText(/correct answer: a, b/i)).toBeInTheDocument();
   });
 
-  it("BUG GUARD: aligns explanations with the shuffled optionOrder", () => {
-    // The server-side engine has shuffled the options so they are
-    // presented in the order [C, A, B, D]. The explanations below MUST
-    // match that order — otherwise a user sees, e.g., a "C" chip next
-    // to the description that actually belongs to option A.
+  it("BUG GUARD: renders explanations in fixed A, B, C, D order, remapping descriptions via optionOrder", () => {
+    // ADR-15: the chip letter on each explanation is always A, B, C, D — the
+    // description text, however, comes from the underlying key mapped via
+    // `optionOrder`. With optionOrder=[C, A, B, D], chip A shows the
+    // description for the underlying C, chip B for A, chip C for B, chip D
+    // for D. If the mapping is wrong the user sees e.g. a "C" chip next
+    // to a description that actually belongs to option A.
     //
     // Each explanation is a <div> with one <p> (the chip + description)
     // and a second <p> (the reason). The "description" element gets
     // unique per-letter values like "__DESC_A__" so that, after we read
-    // the <p>'s textContent (which is "C__DESC_C__" etc.), we can
-    // unambiguously extract the description token.
+    // the <p>'s textContent (which is "A__DESC_C__" etc.), we can
+    // unambiguously extract both the chip letter and the description token.
     const question = makeQuestion({
       options: { A: "a", B: "b", C: "c", D: "d" },
       optionOrder: ["C", "A", "B", "D"],
@@ -113,24 +116,32 @@ describe("<RevealedDetail>", () => {
 
     const list = screen.getByTestId("explanations");
     // Each explanation is rendered as one direct child <div> of the
-    // explanations list. The chip-letter <p> contains the description
-    // text (e.g. "C" + "__DESC_C__" → "C__DESC_C__").
+    // explanations list. The chip-letter <p> contains the chip + the
+    // description text (e.g. "A" + "__DESC_C__" → "A__DESC_C__").
     const rows = list.querySelectorAll(":scope > div");
-    const descriptions = Array.from(rows).map((row) => {
+    const rowsParsed = Array.from(rows).map((row) => {
       const p = row.querySelector("p");
       const text = p?.textContent ?? "";
-      // Pull the "__DESC_X__" token out of the chip+description text.
-      const match = /__DESC_[A-D]__/.exec(text);
-      return match ? match[0] : text;
+      const chipMatch = /^([A-D])/.exec(text);
+      const descMatch = /__DESC_[A-D]__/.exec(text);
+      return {
+        chip: chipMatch ? chipMatch[1] : null,
+        description: descMatch ? descMatch[0] : text,
+      };
     });
 
-    // Order should follow optionOrder: C, A, B, D — NOT the natural
-    // Object.keys(options) order A, B, C, D.
-    expect(descriptions).toEqual([
-      "__DESC_C__",
-      "__DESC_A__",
-      "__DESC_B__",
-      "__DESC_D__",
+    // Chips are in fixed A, B, C, D order (NOT the shuffled order), and
+    // the description for chip X is the one whose underlying key sits at
+    // optionOrder[chipIndex]. Concretely:
+    //   chip A → optionOrder[0]="C" → "__DESC_C__"
+    //   chip B → optionOrder[1]="A" → "__DESC_A__"
+    //   chip C → optionOrder[2]="B" → "__DESC_B__"
+    //   chip D → optionOrder[3]="D" → "__DESC_D__"
+    expect(rowsParsed).toEqual([
+      { chip: "A", description: "__DESC_C__" },
+      { chip: "B", description: "__DESC_A__" },
+      { chip: "C", description: "__DESC_B__" },
+      { chip: "D", description: "__DESC_D__" },
     ]);
   });
 

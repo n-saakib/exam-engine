@@ -11,19 +11,32 @@ import type { LiveQuestion } from "@/domain/types";
  * `progressive_reveal`): show correctness first, explanations behind a
  * "Show explanations" expander. When off, explanations are shown inline.
  *
- * Explanations are keyed by the ORIGINAL option letter (A/B/C/D) and travel
- * unchanged through shuffling — the option's content moves but the
- * explanation is still keyed by its stable ID. To match the SHUFFLED
- * presentation order the user saw on the option list, we iterate via
- * `question.optionOrder` (with a fallback to natural order) — same as
- * `OptionList.tsx`. This keeps the visible letters on the explanation
- * chips aligned with the letters on the option buttons above.
+ * Display order is FIXED to A, B, C, D (ADR-15). Explanations are keyed by
+ * the underlying option letter (which is what travels with the question and
+ * is what `correctAnswer` references). The display letter on each row maps
+ * to its underlying key via `question.optionOrder` — same as `OptionList.tsx`.
+ * This keeps the visible letter on each explanation chip aligned with the
+ * letter on the corresponding option button above, even when options are
+ * shuffled.
  */
-function orderedOptionKeys(question: LiveQuestion): string[] {
-  if (question.optionOrder && question.optionOrder.length > 0) {
-    return question.optionOrder.filter((k) => k in question.options);
+const DISPLAY_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+function displayLetters(question: LiveQuestion): string[] {
+  const total = Object.keys(question.options).length;
+  return DISPLAY_LETTERS.slice(0, total);
+}
+
+function underlyingKey(
+  question: LiveQuestion,
+  displayLetter: string,
+  displayIndex: number,
+): string {
+  const order = question.optionOrder;
+  if (order && displayIndex < order.length) {
+    const candidate = order[displayIndex];
+    if (candidate && candidate in question.options) return candidate;
   }
-  return Object.keys(question.options);
+  return displayLetter;
 }
 
 export function RevealedDetail({
@@ -40,12 +53,17 @@ export function RevealedDetail({
     ? question.correctAnswer
     : [question.correctAnswer];
   const explanations = question.explanations ?? {};
-  // Iterate options in the SAME order as the option list above, then keep
-  // only those that have an explanation. This guarantees the letter shown
-  // next to each explanation matches the letter on the corresponding
-  // option button — even after per-question option shuffling.
-  const keys = Object.keys(explanations).length
-    ? orderedOptionKeys(question).filter((k) => k in explanations)
+  // Iterate display positions in FIXED A, B, C, D order (ADR-15), then drop
+  // any display letter whose underlying key has no explanation. This keeps
+  // the chip letter aligned with the option button above — even when the
+  // options are shuffled.
+  const rows = Object.keys(explanations).length
+    ? displayLetters(question)
+        .map((displayLetter, i) => ({
+          displayLetter,
+          key: underlyingKey(question, displayLetter, i),
+        }))
+        .filter((r) => r.key in explanations)
     : [];
 
   return (
@@ -74,11 +92,11 @@ export function RevealedDetail({
 
       {open ? (
         <div className="mt-3 flex flex-col gap-3" data-testid="explanations">
-          {keys.map((key) => {
+          {rows.map(({ displayLetter, key }) => {
             const ex = explanations[key];
             const isCorrect = correct.includes(key);
             return (
-              <div key={key} className="text-sm">
+              <div key={displayLetter} className="text-sm">
                 <p className="font-medium">
                   <span
                     className={cn(
@@ -88,7 +106,7 @@ export function RevealedDetail({
                         : "bg-surface text-muted ring-1 ring-border",
                     )}
                   >
-                    {key}
+                    {displayLetter}
                   </span>
                   {ex.description}
                 </p>
