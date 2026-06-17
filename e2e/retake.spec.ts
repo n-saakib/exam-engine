@@ -19,7 +19,7 @@
 
 import { test, expect } from "@playwright/test";
 
-import { waitForExamScreen, selectOptionByKey } from "./helpers";
+import { waitForExamScreen, selectOptionByLabel } from "./helpers";
 
 test.describe("retake", () => {
   test("retake-incorrect only includes the wrong questions from the original", async ({
@@ -73,7 +73,7 @@ test.describe("retake", () => {
 
     // ── Step 4: Answer Q1 INCORRECTLY (pick A — correct answer is B for the
     //   first IAM question, so A is guaranteed wrong) ────────────────────────
-    await selectOptionByKey(page, "A");
+    await selectOptionByLabel(page, "A");
 
     // ── Step 5: Move to Q2 and answer INCORRECTLY (A — correct is C) ─────────
     const nextButton = page.getByRole("button", { name: /^Next$/i });
@@ -81,7 +81,7 @@ test.describe("retake", () => {
     await nextButton.click();
     await expect(questionText).toContainText(/Q2\./);
     const q2Text = (await questionText.textContent())?.trim() ?? "";
-    await selectOptionByKey(page, "A");
+    await selectOptionByLabel(page, "A");
 
     // ── Step 6: Jump to the last question via the navigator and submit ───────
     const navigator = page.getByTestId("question-navigator");
