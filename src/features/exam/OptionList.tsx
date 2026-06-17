@@ -9,19 +9,45 @@ import type { AnswerState } from "@/store/examStore";
  * rendered as checkboxes regardless of `questionType` — the user is never told
  * whether a question is single or multi, which trains choice elimination
  * (pedagogical: ticking all candidates, then de-selecting the wrong ones).
- * Respects `optionOrder`. Every option is a tab stop (WAI-ARIA APG pattern
- * for `group > checkbox[]`); Space/Enter toggles the focused option; arrow
- * keys do not move focus inside the group. After reveal/lock shows per-option
- * correctness styling. Colour is paired with text ("Correct"/"Your answer")
- * so it isn't the only signal.
+ *
+ * Display order is FIXED to A, B, C, D (ADR-15): the chip letter on screen is a
+ * label, and the underlying option key (the one stored in `selected` and used
+ * for grading) is looked up from `question.optionOrder`. When the snapshot has
+ * no `optionOrder` (or the index is missing) the display letter falls back to
+ * being its own underlying key — i.e. the un-shuffled natural order.
+ *
+ * Every option is a tab stop (WAI-ARIA APG pattern for `group > checkbox[]`);
+ * Space/Enter toggles the focused option; arrow keys do not move focus inside
+ * the group. After reveal/lock shows per-option correctness styling. Colour is
+ * paired with text ("Correct"/"Your answer") so it isn't the only signal.
  */
 
-function orderedKeys(question: LiveQuestion): string[] {
-  if (question.optionOrder && question.optionOrder.length > 0) {
-    // Keep only keys that actually exist in options, preserving order.
-    return question.optionOrder.filter((k) => k in question.options);
+/** Letters used as display labels, in canonical order. */
+const DISPLAY_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+/** Display letters that exist on this question (truncated to options.length). */
+function displayLetters(question: LiveQuestion): string[] {
+  const total = Object.keys(question.options).length;
+  return DISPLAY_LETTERS.slice(0, total);
+}
+
+/**
+ * The underlying option key for a given display letter. When shuffle is on,
+ * `optionOrder` is the shuffled list of underlying keys — the display letter
+ * at position `i` maps to `optionOrder[i]`. When shuffle is off (or the index
+ * is out of range), the display letter IS the underlying key.
+ */
+function underlyingKey(
+  question: LiveQuestion,
+  displayLetter: string,
+  displayIndex: number,
+): string {
+  const order = question.optionOrder;
+  if (order && displayIndex < order.length) {
+    const candidate = order[displayIndex];
+    if (candidate && candidate in question.options) return candidate;
   }
-  return Object.keys(question.options);
+  return displayLetter;
 }
 
 function correctSet(question: LiveQuestion): Set<string> {
@@ -39,7 +65,7 @@ export function OptionList({
   answer: AnswerState;
   onSelect: (option: string) => void;
 }) {
-  const keys = orderedKeys(question);
+  const letters = displayLetters(question);
   const locked = answer.revealed;
   const revealed = answer.revealed && question.correctAnswer !== undefined;
   const correct = correctSet(question);
@@ -59,14 +85,15 @@ export function OptionList({
       className="flex flex-col gap-2"
       data-testid="option-list"
     >
-      {keys.map((key) => {
+      {letters.map((displayLetter, i) => {
+        const key = underlyingKey(question, displayLetter, i);
         const selected = answer.selected.includes(key);
         const isCorrect = revealed && correct.has(key);
         const isWrongPick = revealed && selected && !correct.has(key);
 
         return (
           <button
-            key={key}
+            key={displayLetter}
             type="button"
             role="checkbox"
             aria-checked={selected}
@@ -75,6 +102,7 @@ export function OptionList({
             onClick={() => onSelect(key)}
             onKeyDown={onKeyDown}
             data-option={key}
+            data-label={displayLetter}
             data-selected={selected ? "true" : undefined}
             data-correct={isCorrect ? "true" : undefined}
             data-incorrect={isWrongPick ? "true" : undefined}
@@ -98,7 +126,7 @@ export function OptionList({
                 isWrongPick && "border-incorrect bg-incorrect text-white",
               )}
             >
-              {selected ? "✓" : key}
+              {selected ? "✓" : displayLetter}
             </span>
             <span className="flex-1 text-sm">
               <span>{question.options[key]}</span>

@@ -1,16 +1,17 @@
 /**
- * <OptionList> tests. The component renders one checkbox-button per option,
- * honours `question.optionOrder` from the server snapshot when present, and
- * falls back to `Object.keys(question.options)` when absent.
+ * <OptionList> tests. The component renders one checkbox-button per option
+ * with the chips ALWAYS in the fixed A, B, C, D order (ADR-15). The chip's
+ * `data-label` is the display letter (A/B/C/...) and `data-option` is the
+ * underlying option key that the click handler receives — these differ when
+ * the snapshot's `optionOrder` maps a display position to a shuffled key.
  *
  * Verifies:
- *   - When `optionOrder` is absent, options render in option-map insertion order.
- *   - When `optionOrder` is present, options render in THAT exact order (this
- *     is the bug we're guarding against: previously some code paths re-derived
- *     order from the option map and ignored the server-provided shuffle).
- *   - `optionOrder` entries that don't appear in `options` are filtered out
+ *   - Chips render in fixed A, B, C, D order regardless of `optionOrder`.
+ *   - `data-option` is the underlying key (from `optionOrder[i]`, or the
+ *     display letter when no shuffle is in effect).
+ *   - `optionOrder` entries that don't appear in `options` are dropped
  *     defensively (snapshot drift tolerance).
- *   - Clicking a button calls `onSelect(key)`.
+ *   - Clicking a button calls `onSelect(underlyingKey)`.
  *   - Post-reveal, correct options get `data-correct="true"` and wrong
  *     selections get `data-incorrect="true"`.
  */
@@ -60,7 +61,9 @@ beforeEach(() => {
 });
 
 describe("<OptionList>", () => {
-  it("renders options in Object.keys(question.options) order when no optionOrder is set (fallback)", () => {
+  it("renders chips in fixed A, B, C, D order; data-option is the underlying key (no shuffle)", () => {
+    // No optionOrder set: the display letter IS the underlying key, and the
+    // chip labels read A, B, C in canonical order.
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo", C: "charlie" },
       // optionOrder intentionally omitted
@@ -72,6 +75,11 @@ describe("<OptionList>", () => {
     const list = screen.getByTestId("option-list");
     const buttons = within(list).getAllByRole("checkbox");
     expect(buttons).toHaveLength(3);
+    expect(buttons.map((b) => b.getAttribute("data-label"))).toEqual([
+      "A",
+      "B",
+      "C",
+    ]);
     expect(buttons.map((b) => b.getAttribute("data-option"))).toEqual([
       "A",
       "B",
@@ -79,10 +87,11 @@ describe("<OptionList>", () => {
     ]);
   });
 
-  it("renders options in the EXACT order from question.optionOrder when present", () => {
-    // The option map insertion order is A, B, C — but the server snapshot
-    // tells us the shuffled display order is C, A, B. We must render C, A, B
-    // and not fall back to the option map.
+  it("[BUG GUARD] keeps chips in fixed A, B, C, D order even when optionOrder is shuffled", () => {
+    // ADR-15: the chip letter is always A, B, C, D — never the shuffled
+    // order. The underlying key (the one stored in `selected`) is remapped
+    // from the snapshot's optionOrder. So with optionOrder=[C, A, B] the
+    // first chip is still labeled A, but it points at the underlying "C".
     const question = makeQuestion({
       options: { A: "first", B: "second", C: "third" },
       optionOrder: ["C", "A", "B"],
@@ -94,6 +103,13 @@ describe("<OptionList>", () => {
     const list = screen.getByTestId("option-list");
     const buttons = within(list).getAllByRole("checkbox");
     expect(buttons).toHaveLength(3);
+    // Display order: always A, B, C.
+    expect(buttons.map((b) => b.getAttribute("data-label"))).toEqual([
+      "A",
+      "B",
+      "C",
+    ]);
+    // Underlying key (for onSelect) is remapped from optionOrder.
     expect(buttons.map((b) => b.getAttribute("data-option"))).toEqual([
       "C",
       "A",
@@ -101,10 +117,11 @@ describe("<OptionList>", () => {
     ]);
   });
 
-  it("filters optionOrder to drop keys that aren't in options (defensive)", () => {
-    // "GHOST" and "X" appear in the snapshot's optionOrder but were removed
-    // from the options map (e.g. server-side change). They must be dropped
-    // and the surviving keys must keep their declared order.
+  it("filters out optionOrder entries that aren't in options (defensive)", () => {
+    // "GHOST" and "X" appear in optionOrder but were removed from the
+    // options map. They must be dropped; surviving entries keep their slot
+    // in the display order, and the display letter for the dropped slot
+    // falls back to being its own underlying key.
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo", C: "charlie" },
       optionOrder: ["GHOST", "B", "X", "A", "C"],
@@ -116,14 +133,46 @@ describe("<OptionList>", () => {
     const list = screen.getByTestId("option-list");
     const buttons = within(list).getAllByRole("checkbox");
     expect(buttons).toHaveLength(3);
-    expect(buttons.map((b) => b.getAttribute("data-option"))).toEqual([
-      "B",
+    expect(buttons.map((b) => b.getAttribute("data-label"))).toEqual([
       "A",
+      "B",
+      "C",
+    ]);
+    // Display A → optionOrder[0]="GHOST" is missing → falls back to "A".
+    // Display B → optionOrder[1]="B" → "B".
+    // Display C → optionOrder[2]="X" is missing → falls back to "C".
+    expect(buttons.map((b) => b.getAttribute("data-option"))).toEqual([
+      "A",
+      "B",
       "C",
     ]);
   });
 
-  it("calls onSelect with the clicked option key", () => {
+  it("clicking a chip calls onSelect with the underlying key (not the display label)", () => {
+    // With optionOrder=[B, C, A, D], clicking chip A (the FIRST chip) must
+    // fire onSelect with the underlying "B" — not "A". This is the contract
+    // that keeps the rest of the app (selected storage, grading) stable
+    // while the chip labels are fixed.
+    const question = makeQuestion({
+      options: { A: "alpha", B: "bravo", C: "charlie", D: "delta" },
+      optionOrder: ["B", "C", "A", "D"],
+    });
+    const answer = makeAnswer();
+    const onSelect = vi.fn();
+
+    renderOptionList(question, answer, onSelect);
+
+    const list = screen.getByTestId("option-list");
+    const buttons = within(list).getAllByRole("checkbox");
+    fireEvent.click(buttons[0]); // chip "A" → underlying "B"
+    fireEvent.click(buttons[2]); // chip "C" → underlying "A"
+
+    expect(onSelect).toHaveBeenCalledTimes(2);
+    expect(onSelect).toHaveBeenNthCalledWith(1, "B");
+    expect(onSelect).toHaveBeenNthCalledWith(2, "A");
+  });
+
+  it("calls onSelect with the clicked option key (no shuffle case)", () => {
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo", C: "charlie" },
     });
