@@ -235,10 +235,11 @@ describe("toResults — answers shown", () => {
     expect(q9.explanations).toBeDefined();
   });
 
-  it("propagates a shuffled optionOrder in the exact array order", () => {
-    // The review screen must render options in the same order the user saw
-    // during the exam — so the mapper carries the snapshot's optionOrder
-    // verbatim, NOT sorted to the natural map order.
+  it("[ADR-15] does NOT surface optionOrder on the results DTO (history view is deterministic)", () => {
+    // The history / review surface renders options in natural A, B, C, D
+    // order regardless of the per-session shuffle. The mapper therefore
+    // drops `optionOrder` from the emitted `ResultsQuestion` — the field
+    // is a per-session transient used only by the live exam view.
     const shuffled: SnapshotQuestion[] = [
       { ...SNAPSHOT[0]!, optionOrder: ["C", "A", "B"] },
       SNAPSHOT[1]!,
@@ -257,9 +258,12 @@ describe("toResults — answers shown", () => {
       answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }),
       answer({ question_id: 9, selected_options: JSON.stringify(["B"]) }),
     ]);
-    const q7 = results.questions.find((q) => q.id === 7)!;
-    expect(q7.optionOrder).toEqual(["C", "A", "B"]);
-    expect(q7.optionOrder).not.toEqual(["A", "B", "C"]);
+    for (const q of results.questions) {
+      expect(q.optionOrder).toBeUndefined();
+      // Specifically: not the snapshot's shuffle (which would leak the
+      // per-session transient to the history view).
+      expect(q.optionOrder).not.toEqual(["C", "A", "B"]);
+    }
   });
 
   it("omits optionOrder on the ResultsQuestion when the snapshot has none", () => {
@@ -289,10 +293,10 @@ describe("toResults — answers shown", () => {
     }
   });
 
-  it("carries optionOrder independently per question (no bleed across questions)", () => {
-    // Question 7 has a shuffled optionOrder; question 9 has none. The mapper
-    // must carry each question's optionOrder independently — q7 keeps its
-    // shuffle, q9 stays undefined, and neither picks up the other's state.
+  it("[ADR-15] history view is deterministic regardless of per-question shuffle state", () => {
+    // Question 7 has a shuffled optionOrder; question 9 has none. The
+    // mapper drops optionOrder for both — the history view never sees the
+    // shuffle, so each question is rendered in natural A, B, C, D order.
     const mixed: SnapshotQuestion[] = [
       { ...SNAPSHOT[0]!, optionOrder: ["C", "A", "B"] },
       { ...SNAPSHOT[1]!, optionOrder: undefined },
@@ -314,11 +318,11 @@ describe("toResults — answers shown", () => {
     const q7 = results.questions.find((q) => q.id === 7)!;
     const q9 = results.questions.find((q) => q.id === 9)!;
 
-    expect(q7.optionOrder).toEqual(["C", "A", "B"]);
+    // Both questions' optionOrder must be undefined on the results DTO.
+    expect(q7.optionOrder).toBeUndefined();
     expect(q9.optionOrder).toBeUndefined();
 
-    // Cross-check: q9 must NOT inherit q7's shuffle, and q7 must NOT lose
-    // its shuffle by being adjacent to a question without one.
+    // Cross-check: neither leaks the other's state.
     expect(q9.optionOrder).not.toEqual(["C", "A", "B"]);
     expect(q7.optionOrder).not.toEqual(["A", "B"]);
   });
