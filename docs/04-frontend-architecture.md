@@ -105,10 +105,13 @@ flowchart LR
  │   └─ <PauseButton/> <GiveUpButton/>
  ├─ <QuestionPanel>
  │   ├─ <QuestionText/>
- │   ├─ <OptionList>             // single → radio; multi → checkbox (future)
+ │   ├─ <OptionList>             // chips always render in fixed A, B, C, D order (ADR-15)
  │   │   └─ <OptionItem/>×n      // selectable; post-reveal shows correctness
- │   ├─ <RevealedDetail/>        // shown after give-up/submit: per-option explanations + Tips
+ │   ├─ <RevealedDetail/>        // shown after give-up/submit: explanations in fixed A, B, C, D order with description text remapped from the underlying key via optionOrder
  │   // (per ADR-13, single and multi render identically as a checkbox group)
+ │   // (per ADR-15, the visible chip letter is a display label; the underlying key
+ │   //  — the one stored in `selected` and used for grading — is looked up via
+ │   //  the snapshot's `optionOrder`. When shuffle is off, display letter = key.)
  ├─ <NavigatorBar>
  │   ├─ <PrevButton/> <FlagButton/> <SubmitOrNextButton/>
  │   └─ <QuestionNavigator/>     // numbered buttons, colour-coded by state
@@ -127,6 +130,8 @@ flowchart LR
  ├─ <DetailFilterBar/>           // all | incorrect | gave-up | revealed | flagged
  └─ <QuestionReviewList>
      └─ <QuestionReviewCard/>×n  // your answer, correct answer, all explanations, Tips
+     // ADR-15: options always in natural A, B, C, D order; the snapshot's
+     // `optionOrder` is ignored on the history view.
 ```
 - `<RetakeMenu>`: "Retake all" / "Retake incorrect only" → `POST /sessions/:id/retake` → `/exam/:newId`.
 - Same component serves post-exam and history detail; `mode` only tweaks the header/back affordance.

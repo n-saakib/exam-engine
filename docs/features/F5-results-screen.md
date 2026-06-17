@@ -18,7 +18,7 @@ After submit, show a score summary and a detailed, filterable, fully-explained r
 
 ## Acceptance Criteria
 - The summary shows score %, the **five-way breakdown** (correct / incorrect / gave up / revealed / unanswered), and time taken (vs limit if timed). The `gave_up` bucket is its own column — distinct from `revealed` — so a user who clicked "Give up" can see it isolated from a user who submitted-for-review.
-- The detailed list shows, per question: your answer, the correct answer, all per-option explanations, and Tips, with correct/incorrect/gave-up/revealed styling. A question with `outcome="gave_up"` shows a "Gave up" pill on the card.
+- The detailed list shows, per question: your answer, the correct answer, all per-option explanations, and Tips, with correct/incorrect/gave-up/revealed styling. A question with `outcome="gave_up"` shows a "Gave up" pill on the card. **ADR-15:** options + explanations render in the FIXED A, B, C, D order using the original underlying keys — the snapshot's `optionOrder` (the per-session shuffle) is intentionally NOT surfaced on the results DTO and is ignored by the review component, so the letter on each chip matches the original key in the source.
 - Filters switch the detailed list between All / Incorrect only / **Gave up only** / Revealed only / Flagged. The "Gave up" tab is positioned between "Incorrect" and "Revealed" so it visually flows from "wrong" → "I gave up" → "I submitted for review".
 - Bookmark toggles and a note can be added/edited inline; both persist.
 - "Retake all" and "Retake incorrect only" each start a new session and navigate to it. The retake-incorrect pool now includes gave-up questions (post-ADR-14) alongside incorrect+revealed — a user who gave up and retakes is the right behaviour.

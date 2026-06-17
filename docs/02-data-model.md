@@ -413,7 +413,7 @@ Stored one row per key, value JSON-encoded. The API exposes them as a single obj
     "questionType": "single",
     "questionText": "...",
     "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-    "optionOrder": ["C","A","D","B"],   // present iff shuffle_options; else natural order
+    "optionOrder": ["C","A","D","B"],   // per-session transient (ADR-15): the live exam view uses this to map display positions A/B/C/D to the underlying option keys; the history/review surface ignores it and renders options in natural A, B, C, D order
     "correctAnswer": ["B"],        // stored as array (ADR-13); pre-migration snapshots may hold a string — the grader normalises both
     "explanations": { "A": {...}, "B": {...}, ... },
     "Tips": "..."
