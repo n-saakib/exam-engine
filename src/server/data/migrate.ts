@@ -71,7 +71,25 @@ export function migrate(
   if (pending.length > 0) {
     const runBatch = db.transaction(() => {
       for (const m of pending) {
-        db.exec(m.sql);
+        // Idempotent backfills: a forward-only column backfill (e.g. 0004
+        // adding a column that an older 0001 didn't declare) must be safe to
+        // re-run against a DB that was created from the modern 0001 (which
+        // already has the column). SQLite has no `ADD COLUMN IF NOT EXISTS`,
+        // so we catch the "duplicate column name" error here and treat it as
+        // "already applied" — the version marker is still written so the
+        // migration won't run again.
+        try {
+          db.exec(m.sql);
+        } catch (e) {
+          if (isDuplicateColumnError(e)) {
+            // Continue: the column was added by an earlier DDL statement
+            // (typically the modern version of a sibling migration), so the
+            // post-condition this migration was meant to achieve is already
+            // satisfied.
+          } else {
+            throw e;
+          }
+        }
         insertVersion.run(m.version, new Date().toISOString());
       }
     });
@@ -93,4 +111,18 @@ export function getSchemaVersion(db: Database): number {
     .prepare("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations")
     .get() as { v: number };
   return row.v;
+}
+
+/**
+ * Best-effort detection of "duplicate column name" errors from
+ * `ALTER TABLE … ADD COLUMN`. better-sqlite3 surfaces the SQLite error code
+ * (e.g. `SQLITE_ERROR`) and message ("duplicate column name: …"). We don't
+ * rely on a specific error class — the message check is stable across SQLite
+ * versions and bundler chunk boundaries.
+ */
+function isDuplicateColumnError(err: unknown): boolean {
+  if (err === null || typeof err !== "object") return false;
+  const e = err as { message?: unknown; code?: unknown };
+  if (typeof e.message !== "string") return false;
+  return /duplicate column name/i.test(e.message);
 }

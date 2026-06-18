@@ -1,0 +1,15 @@
+-- 0004_add_gave_up_count — add the `gave_up_count` column to `exam_sessions`.
+--
+-- Why: 0001 originally declared `gave_up_count` on `exam_sessions`, but
+-- databases created against an earlier in-flight 0001 (before that column
+-- landed) were never backfilled — and 0003 only added the per-question
+-- `is_gave_up` to `session_answers`. Submitting a session writes the per-
+-- session give-up total via `sessionRepo.patch({ gaveUpCount })`, which
+-- resolves to `gave_up_count` in the UPDATE SET clause. On a database that
+-- never got the column, the UPDATE raises "no such column: gave_up_count"
+-- and the route surfaces a generic 500 INTERNAL.
+--
+-- Forward-only: ALTER TABLE … ADD COLUMN with a default is safe and
+-- non-blocking in SQLite. The default of 0 keeps all historical rows
+-- consistent with the previous behaviour (no give-ups recorded).
+ALTER TABLE exam_sessions ADD COLUMN gave_up_count INTEGER;

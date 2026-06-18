@@ -336,6 +336,33 @@ describe("submit + 409 + resume", () => {
     // Answers shown in results.
     expect(results.questions.every((q) => q.correctAnswer !== undefined)).toBe(true);
 
+    // Regression for the production "submit returns 500 INTERNAL" bug: a DB
+    // whose `exam_sessions` was missing `gave_up_count` (pre-0004) would have
+    // raised "no such column: gave_up_count" during the UPDATE in submit().
+    // The 0004 migration backfills the column; we assert the write happened
+    // (column now exists AND is queryable) so a future regression of either
+    // the migration or the patch path trips this guard.
+    const { getDb } = await import("@/server/data/db");
+    const db = getDb();
+    const cols = db
+      .prepare("PRAGMA table_info('exam_sessions')")
+      .all() as Array<{ name: string }>;
+    expect(cols.map((c) => c.name)).toContain("gave_up_count");
+    const row = db
+      .prepare(
+        "SELECT gave_up_count, correct_count, incorrect_count, unanswered_count FROM exam_sessions WHERE id = ?",
+      )
+      .get(s.id) as {
+      gave_up_count: number | null;
+      correct_count: number | null;
+      incorrect_count: number | null;
+      unanswered_count: number | null;
+    };
+    expect(row.gave_up_count).toBe(0); // no give-ups in this fixture
+    expect(row.correct_count).toBe(1);
+    expect(row.incorrect_count).toBe(1);
+    expect(row.unanswered_count).toBe(1);
+
     // set_completion recorded for this path+set.
     const completed = getContainer().repos.completion.listCompletedSetIds(QUES_PATH);
     expect(completed).toContain("set-alpha");
