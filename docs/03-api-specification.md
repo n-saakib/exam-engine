@@ -242,9 +242,7 @@ Full graded detail — **answers and explanations included** — for the results
       "id": 7, "order": 1, "questionType": "single",
       "questionText": "...",
       "options": { "A": "...", "B": "...", "C": "...", "D": "..." },
-      // ADR-15: optionOrder is intentionally NOT surfaced on the results DTO —
-      // the history view always renders options in natural A, B, C, D order
-      // using the original underlying keys.
+      "optionOrder": ["C","A","D","B"],  // ADR-15: surfaced on results DTO so the review screen renders options in the same shuffled order the user saw during the exam and reverse-maps correctAnswer/yourAnswer to the display letter
       "correctAnswer": ["B"],     // ADR-13: unified array shape (length 1 for single, ≥ 1 for multi)
       "yourAnswer": ["A"],
       "outcome": "incorrect",          // correct | incorrect | gave_up | revealed | unanswered

@@ -130,8 +130,11 @@ flowchart LR
  ├─ <DetailFilterBar/>           // all | incorrect | gave-up | revealed | flagged
  └─ <QuestionReviewList>
      └─ <QuestionReviewCard/>×n  // your answer, correct answer, all explanations, Tips
-     // ADR-15: options always in natural A, B, C, D order; the snapshot's
-     // `optionOrder` is ignored on the history view.
+     // ADR-15: review surface mirrors the live exam — chips in fixed A, B, C, D
+     // order, with the underlying key for each display position derived from
+     // `optionOrder`. `correctAnswer` / `yourAnswer` are reverse-mapped to the
+     // display letter the user clicked (e.g. "Correct answer: A") so the
+     // summary matches what the user saw on the live exam chips.
 ```
 - `<RetakeMenu>`: "Retake all" / "Retake incorrect only" → `POST /sessions/:id/retake` → `/exam/:newId`.
 - Same component serves post-exam and history detail; `mode` only tweaks the header/back affordance.
