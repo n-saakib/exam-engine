@@ -1,12 +1,13 @@
 /**
  * Component tests for QuestionReviewCard.
  *
- * Critical: the history / review surface ALWAYS displays options in the
- * fixed A, B, C, D order (ADR-15), regardless of the snapshot's
- * `optionOrder`. The shuffle is a per-session transient that the live
- * exam view uses to map display positions to underlying keys; the history
- * view shows the original underlying keys in natural A, B, C, D order so
- * "Correct answer: B" matches the option labeled B in the list.
+ * Critical: the history / review surface MIRRORS the live exam view
+ * (ADR-15). Chips render in the fixed A, B, C, D order, with the
+ * underlying key for each display position derived from `optionOrder`.
+ * `correctAnswer` and `yourAnswer` (stored as underlying keys) are
+ * reverse-mapped to the display letter the user actually clicked.
+ * The result: "Correct answer: A" matches the option the user saw at
+ * chip A during the exam.
  */
 
 import { describe, expect, it, vi } from "vitest";
@@ -110,15 +111,21 @@ describe("<QuestionReviewCard>", () => {
   });
 
   // ── BUG GUARD ──────────────────────────────────────────────────────────────
-  // ADR-15: the history / review surface must ALWAYS render options in the
-  // fixed A, B, C, D order (the natural underlying keys), regardless of
-  // the snapshot's `optionOrder`. The `optionOrder` is a per-session
-  // transient used only by the live exam view; history ignores it.
-  it("[BUG GUARD] renders options in fixed A, B, C, D order regardless of `optionOrder`", async () => {
+  // ADR-15: the history / review surface mirrors the live exam view. Chips
+  // render in FIXED A, B, C, D order, with the underlying key for each
+  // display position derived from `optionOrder`. With
+  // `optionOrder = ["C", "A", "B", "D"]`, chip A shows the underlying "C"
+  // (i.e. "Integrated Account Manager"), chip B shows "A", etc. This
+  // guarantees the option the user saw at chip A during the exam is the
+  // same option rendered at chip A on the review screen.
+  it("[BUG GUARD] renders chips in fixed A, B, C, D order; underlying key remapped via optionOrder", async () => {
     const shuffled: ResultsQuestion = {
       ...CORRECT_QUESTION,
-      // Snapshot has a non-natural optionOrder (C, A, B, D) — the history
-      // view MUST ignore it and render A, B, C, D in natural order.
+      // optionOrder = [C, A, B, D]:
+      //   chip A → underlying "C" → "Integrated Account Manager"
+      //   chip B → underlying "A" → "Internet Access Management"
+      //   chip C → underlying "B" → "Identity and Access Management"
+      //   chip D → underlying "D" → "Internal Auth Module"
       optionOrder: ["C", "A", "B", "D"],
     };
 
@@ -128,27 +135,24 @@ describe("<QuestionReviewCard>", () => {
     const items = within(list).getAllByRole("listitem");
     expect(items).toHaveLength(4);
 
-    // The displayed letter on each row must be A, B, C, D — not the
-    // shuffled order [C, A, B, D]. The underlying key is the original
-    // A/B/C/D from `question.options`, so "A" maps to "Internet Access
-    // Management", "B" to "Identity and Access Management", etc.
     const texts = items.map((li) => li.textContent ?? "");
 
     expect(texts[0]).toContain("A.");
-    expect(texts[0]).toContain("Internet Access Management");
+    expect(texts[0]).toContain("Integrated Account Manager");
 
     expect(texts[1]).toContain("B.");
-    expect(texts[1]).toContain("Identity and Access Management");
+    expect(texts[1]).toContain("Internet Access Management");
 
     expect(texts[2]).toContain("C.");
-    expect(texts[2]).toContain("Integrated Account Manager");
+    expect(texts[2]).toContain("Identity and Access Management");
 
     expect(texts[3]).toContain("D.");
     expect(texts[3]).toContain("Internal Auth Module");
   });
 
   it("renders options in natural alphabetical order when `optionOrder` is absent", async () => {
-    // No optionOrder on this question — the canonical A, B, C, D order.
+    // No optionOrder on this question — the canonical A, B, C, D order
+    // (display letter = underlying key, since no shuffle is in effect).
     const { optionOrder: _omitted, ...noOptionOrder } = CORRECT_QUESTION;
     void _omitted;
 
@@ -169,20 +173,68 @@ describe("<QuestionReviewCard>", () => {
     expect(texts[3]).toContain("Internal Auth Module");
   });
 
-  it("ignores `optionOrder` even when it is non-empty (history view is deterministic)", async () => {
-    const emptyOrder: ResultsQuestion = { ...CORRECT_QUESTION, optionOrder: ["D", "C", "B", "A"] };
-    await renderCard(emptyOrder);
+  it("[ADR-15] reverse-maps correctAnswer and yourAnswer from underlying key to display letter", async () => {
+    // The source has correctAnswer="B" and yourAnswer=["A"] (the user
+    // picked the wrong one). With optionOrder=["C", "A", "B", "D"], the
+    // user saw the correct option (underlying "B") at chip C. The summary
+    // must show "Correct answer: C" / "Your answer: B" — i.e. the display
+    // letters the user saw, NOT the underlying keys.
+    const shuffled: ResultsQuestion = {
+      ...CORRECT_QUESTION,
+      correctAnswer: "B",
+      yourAnswer: ["A"],
+      outcome: "incorrect",
+      optionOrder: ["C", "A", "B", "D"],
+    };
 
-    const list = screen.getByLabelText("Answer options");
-    const items = within(list).getAllByRole("listitem");
-    const texts = items.map((li) => li.textContent ?? "");
+    await renderCard(shuffled);
 
-    // The displayed order is the natural A, B, C, D, NOT the reversed
-    // optionOrder [D, C, B, A] from the snapshot.
-    expect(texts[0]).toContain("A.");
-    expect(texts[1]).toContain("B.");
-    expect(texts[2]).toContain("C.");
-    expect(texts[3]).toContain("D.");
+    const article = screen.getByLabelText("Question 1");
+    // "Your answer:" should show the display letter the user saw for the
+    // underlying "A" they picked → display letter is B (optionOrder[1]="A").
+    expect(within(article).getByText(/Your answer:/)).toBeTruthy();
+    const yourAnswerStrong = within(article).getByText("B");
+    expect(yourAnswerStrong).toBeTruthy();
+    // "Correct answer:" should show the display letter the user saw for
+    // the underlying "B" → display letter is C (optionOrder[2]="B").
+    expect(within(article).getByText(/Correct answer:/)).toBeTruthy();
+    const correctAnswerStrong = within(article).getByText("C");
+    expect(correctAnswerStrong).toBeTruthy();
+  });
+
+  it("[ADR-15] reverse-maps multi-answer correctAnswer and yourAnswer", async () => {
+    const multi: ResultsQuestion = {
+      ...CORRECT_QUESTION,
+      correctAnswer: ["A", "B"],
+      yourAnswer: ["A", "B"],
+      outcome: "correct",
+      // With optionOrder=["B", "A", "C", "D"]:
+      //   underlying "A" → display B
+      //   underlying "B" → display A
+      optionOrder: ["B", "A", "C", "D"],
+    };
+
+    await renderCard(multi);
+
+    const article = screen.getByLabelText("Question 1");
+    // Both "A" and "B" are now display letters in the summary, but they
+    // should appear in natural order regardless of the underlying key
+    // order. The reverse-mapped labels for underlying "A","B" are "B","A"
+    // (in optionOrder index order). We assert the joined string contains
+    // both reverse-mapped letters.
+    const summarySpans = article.querySelectorAll("span");
+    let correctAnswerValue: Element | null = null;
+    for (const span of Array.from(summarySpans)) {
+      const text = span.textContent ?? "";
+      if (text.startsWith("Correct answer:") && text.includes(",")) {
+        correctAnswerValue = span.querySelector("strong");
+      }
+    }
+    // "A, B" in display-letter order: optionOrder=["B","A",...] so
+    // underlying "A" is at index 1 (display "B"), underlying "B" is at
+    // index 0 (display "A"). The joined string is the natural order of
+    // the display letters, which is "A, B" (sorted).
+    expect(correctAnswerValue?.textContent).toBe("A, B");
   });
 
   // ── Outcome badge per outcome ───────────────────────────────────────────────

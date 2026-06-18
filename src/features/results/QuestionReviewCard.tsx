@@ -34,6 +34,44 @@ const OUTCOME_STYLES: Record<Outcome, { border: string; badge: string; label: st
   },
 };
 
+// ── Display letter ↔ underlying key mapping (ADR-15) ─────────────────────────
+
+/** Display letters used as chip labels, in canonical order. */
+const DISPLAY_LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
+
+/** Display letters that exist on this question, in display order. */
+function displayLetters(question: ResultsQuestion): string[] {
+  const total = Object.keys(question.options).length;
+  return DISPLAY_LETTERS.slice(0, total);
+}
+
+/**
+ * Reverse-map an underlying option key to the display letter the user saw
+ * during the exam. With `optionOrder = [B, C, A, D]`, the underlying "B"
+ * was shown at chip A, so this returns "A" for input "B". When the
+ * snapshot has no `optionOrder` (or the key is missing from it) we fall
+ * back to natural alphabetical mapping via the sorted option map.
+ */
+function displayLetterFor(
+  question: ResultsQuestion,
+  underlyingKey: string,
+): string {
+  const order = question.optionOrder;
+  if (order) {
+    const idx = order.indexOf(underlyingKey);
+    if (idx >= 0 && idx < DISPLAY_LETTERS.length) {
+      return DISPLAY_LETTERS[idx]!;
+    }
+  }
+  // Fallback: natural alphabetical order (sorted option keys).
+  const sorted = Object.keys(question.options).sort();
+  const idx = sorted.indexOf(underlyingKey);
+  if (idx >= 0 && idx < DISPLAY_LETTERS.length) {
+    return DISPLAY_LETTERS[idx]!;
+  }
+  return underlyingKey;
+}
+
 // ── QuestionReviewCard ────────────────────────────────────────────────────────
 
 interface QuestionReviewCardProps {
@@ -43,26 +81,50 @@ interface QuestionReviewCardProps {
 /**
  * Per-question review card: your answer vs correct answer, all per-option
  * explanations, Tips, and outcome styling.
+ *
+ * ADR-15: the review surface mirrors the live exam view. Options render in
+ * the same shuffled order the user saw during the exam, with chip labels
+ * A, B, C, D and the underlying-key→display-letter reverse map applied to
+ * `correctAnswer` and `yourAnswer`. This way "Correct answer: A" matches
+ * the option the user actually clicked.
  */
 export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
   const [showExplanations, setShowExplanations] = useState(false);
   const { outcome } = question;
   const style = OUTCOME_STYLES[outcome];
 
-  const correctAnswerStr = Array.isArray(question.correctAnswer)
-    ? question.correctAnswer.join(", ")
-    : question.correctAnswer;
+  // Reverse-map underlying keys → display letters (A, B, C, D) so the
+  // "Correct answer" / "Your answer" summary shows the same letter the user
+  // saw on the chip they clicked. Display letters are sorted alphabetically
+  // so multi-answer lists read naturally ("A, B, C" rather than the order
+  // they appeared in the underlying optionOrder array).
+  const correctAnswerDisplay = Array.isArray(question.correctAnswer)
+    ? question.correctAnswer
+        .map((k) => displayLetterFor(question, k))
+        .sort()
+        .join(", ")
+    : displayLetterFor(question, question.correctAnswer);
+  const yourAnswerDisplay =
+    question.yourAnswer.length > 0
+      ? question.yourAnswer
+          .map((k) => displayLetterFor(question, k))
+          .sort()
+          .join(", ")
+      : "—";
 
-  const yourAnswerStr =
-    question.yourAnswer.length > 0 ? question.yourAnswer.join(", ") : "—";
-
-  // History / review always displays options in natural A, B, C, D order
-  // (ADR-15) — i.e. the original underlying keys in alphabetical order. We
-  // intentionally ignore `question.optionOrder` here: the shuffle is a
-  // per-session transient used only by the live exam view; the history view
-  // shows the original key order so "Correct answer: B" on the summary
-  // matches the option labeled B in the list.
-  const optionKeys = Object.keys(question.options).sort();
+  // Build the option list in display order (A, B, C, D), with the underlying
+  // key for each display position derived from `optionOrder` (same as
+  // OptionList.tsx on the live exam). This guarantees the option the user
+  // saw at chip A during the exam is the same option rendered at chip A
+  // here.
+  const rows = displayLetters(question).map((displayLetter, i) => {
+    const order = question.optionOrder;
+    const underlying =
+      order && i < order.length && order[i] && order[i]! in question.options
+        ? order[i]!
+        : displayLetter;
+    return { displayLetter, underlying };
+  });
 
   return (
     <article
@@ -98,11 +160,11 @@ export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
 
       {/* Options */}
       <ul className="flex flex-col gap-1.5" aria-label="Answer options">
-        {optionKeys.map((key) => {
+        {rows.map(({ displayLetter, underlying }) => {
           const isCorrect = Array.isArray(question.correctAnswer)
-            ? question.correctAnswer.includes(key)
-            : question.correctAnswer === key;
-          const wasSelected = question.yourAnswer.includes(key);
+            ? question.correctAnswer.includes(underlying)
+            : question.correctAnswer === underlying;
+          const wasSelected = question.yourAnswer.includes(underlying);
 
           let optionStyle = "border-border text-muted";
           let indicator = null;
@@ -120,14 +182,14 @@ export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
 
           return (
             <li
-              key={key}
+              key={displayLetter}
               className={cn(
                 "flex items-center gap-2 rounded border px-3 py-2 text-sm",
                 optionStyle,
               )}
             >
-              <span className="font-mono font-semibold shrink-0">{key}.</span>
-              <span className="flex-1">{question.options[key]}</span>
+              <span className="font-mono font-semibold shrink-0">{displayLetter}.</span>
+              <span className="flex-1">{question.options[underlying]}</span>
               {indicator}
             </li>
           );
@@ -139,12 +201,12 @@ export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
         <span>
           Your answer:{" "}
           <strong className={outcome === "correct" ? "text-correct" : "text-incorrect"}>
-            {yourAnswerStr}
+            {yourAnswerDisplay}
           </strong>
         </span>
         <span>
           Correct answer:{" "}
-          <strong className="text-correct">{correctAnswerStr}</strong>
+          <strong className="text-correct">{correctAnswerDisplay}</strong>
         </span>
       </div>
 
@@ -166,17 +228,17 @@ export function QuestionReviewCard({ question }: QuestionReviewCardProps) {
               id={`explanations-${question.id}-${question.order}`}
               className="mt-2 flex flex-col gap-2"
             >
-              {optionKeys.map((key) => {
-                const exp = question.explanations[key];
+              {rows.map(({ displayLetter, underlying }) => {
+                const exp = question.explanations[underlying];
                 if (!exp) return null;
                 const isCorrectOpt = Array.isArray(question.correctAnswer)
-                  ? question.correctAnswer.includes(key)
-                  : question.correctAnswer === key;
+                  ? question.correctAnswer.includes(underlying)
+                  : question.correctAnswer === underlying;
 
                 return (
-                  <div key={key} className="text-xs rounded bg-bg border border-border p-2">
+                  <div key={displayLetter} className="text-xs rounded bg-bg border border-border p-2">
                     <p className="font-semibold text-fg mb-0.5">
-                      {key}.{" "}
+                      {displayLetter}.{" "}
                       <span className={isCorrectOpt ? "text-correct" : "text-muted"}>
                         {exp.description}
                       </span>
