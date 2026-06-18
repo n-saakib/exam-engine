@@ -62,7 +62,29 @@ export class AppError extends Error {
   }
 }
 
-/** Type guard for `AppError`. */
+/**
+ * Type guard for `AppError`.
+ *
+ * IMPORTANT: We do NOT use `instanceof AppError` here. The production build
+ * (Next.js / Webpack / Turbopack) can emit the `AppError` class into MORE
+ * THAN ONE server chunk, so a thrown `AppError` from one module and the
+ * `AppError` imported by `defineHandler` can be DIFFERENT class objects.
+ * `instanceof` then returns false, the error is misclassified as unknown,
+ * and the route returns a generic 500 INTERNAL — losing the real status
+ * (e.g. 404 SET_NOT_FOUND) and the actionable code/message.
+ *
+ * Duck-typing on the structural shape (`code` from `ErrorCode` + `httpStatus`
+ * number) is robust across bundler chunking. Every `AppError` instance has
+ * both fields, and the `code` value is constrained to the canonical
+ * `ErrorCode` set so we don't accidentally match a non-AppError that
+ * happens to carry a `code` property.
+ */
 export function isAppError(err: unknown): err is AppError {
-  return err instanceof AppError;
+  if (err === null || typeof err !== "object") return false;
+  const e = err as { code?: unknown; httpStatus?: unknown; name?: unknown };
+  if (e.name !== "AppError") return false;
+  if (typeof e.httpStatus !== "number") return false;
+  // Reject non-canonical codes defensively (e.g. a plain Error with name set).
+  if (typeof e.code !== "string") return false;
+  return (ERROR_CODES as readonly string[]).includes(e.code);
 }

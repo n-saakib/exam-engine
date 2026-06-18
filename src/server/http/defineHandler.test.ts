@@ -99,6 +99,45 @@ describe("defineHandler error envelope", () => {
     );
     expect(res.status).toBe(400);
   });
+
+  // Regression: a real Next.js production build emits the AppError class
+  // into more than one server chunk. The throw site (e.g. setCatalog.loadSet
+  // → "SET_NOT_FOUND") and the catch site (defineHandler.mapError) can end
+  // up with DIFFERENT class objects, so `instanceof AppError` is false on
+  // the caught value. The guard is duck-typed on `.name === "AppError"` +
+  // a numeric `.httpStatus` + a canonical `.code`, so it still recognises
+  // the error and surfaces the correct 404 + envelope instead of a generic
+  // 500 INTERNAL.
+  it("maps an AppError-shaped value from a 'different' class to its status (cross-chunk guard)", async () => {
+    // Construct an object that looks like an AppError but is NOT instanceof
+    // the imported AppError class — this mirrors what a duplicate class in
+    // a different server chunk looks like at runtime.
+    class CrossChunkAppError extends Error {
+      readonly code: string;
+      readonly httpStatus: number;
+      constructor(code: string, message: string, httpStatus: number) {
+        super(message);
+        this.name = "AppError";
+        this.code = code;
+        this.httpStatus = httpStatus;
+      }
+    }
+    const fake = new CrossChunkAppError("SET_NOT_FOUND", "no such set", 404);
+    expect(fake instanceof AppError).toBe(false);
+
+    const GET = defineHandler({
+      handler: async () => {
+        throw fake;
+      },
+    });
+    const res = await GET(new Request("http://localhost/x"), ctx);
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as {
+      error: { code: string; message: string };
+    };
+    expect(body.error.code).toBe("SET_NOT_FOUND");
+    expect(body.error.message).toBe("no such set");
+  });
 });
 
 describe("respond helpers", () => {
