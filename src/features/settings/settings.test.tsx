@@ -300,6 +300,73 @@ describe("DataManagement", () => {
     // POST should NOT have been called
     expect(mockPost).not.toHaveBeenCalled();
   });
+
+  it("full reset posts { scope: 'all', confirm: true } after confirmation", async () => {
+    // HIGH-5: destructive scopes require explicit confirm: true server-side.
+    const { DataManagement } = await import("./DataManagement");
+
+    render(
+      <Wrapper client={queryClient}>
+        <DataManagement />
+      </Wrapper>,
+    );
+
+    const fullResetBtn = screen.getByRole("button", {
+      name: /delete all exam history/i,
+    });
+    await act(async () => {
+      fireEvent.click(fullResetBtn);
+    });
+
+    // Confirm button matches confirmLabel "Delete all history"
+    const confirmBtn = screen.getByRole("button", { name: /delete all history/i });
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith(
+        "/progress/reset",
+        expect.objectContaining({
+          json: expect.objectContaining({ scope: "all", confirm: true }),
+        }),
+      );
+    });
+  });
+
+  it("factory reset posts { scope: 'factory', confirm: true } after confirmation", async () => {
+    // Regression: factory reset previously omitted `confirm: true`, causing
+    // a 400 VALIDATION_ERROR ("Request validation failed") from the API.
+    const { DataManagement } = await import("./DataManagement");
+
+    render(
+      <Wrapper client={queryClient}>
+        <DataManagement />
+      </Wrapper>,
+    );
+
+    const factoryResetBtn = screen.getByRole("button", {
+      name: /factory reset.*delete all data/i,
+    });
+    await act(async () => {
+      fireEvent.click(factoryResetBtn);
+    });
+
+    // Confirm button matches confirmLabel "Factory reset"
+    const confirmBtn = screen.getByRole("button", { name: /^factory reset$/i });
+    await act(async () => {
+      fireEvent.click(confirmBtn);
+    });
+
+    await waitFor(() => {
+      expect(mockPost).toHaveBeenCalledWith(
+        "/progress/reset",
+        expect.objectContaining({
+          json: expect.objectContaining({ scope: "factory", confirm: true }),
+        }),
+      );
+    });
+  });
 });
 
 // ── Tests: CatalogDiagnostics ─────────────────────────────────────────────────

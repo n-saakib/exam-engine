@@ -131,7 +131,7 @@ export function DataManagement() {
     setIsResetting(true);
     try {
       const result = await apiClient.post<ResetResponse>("/progress/reset", {
-        json: { scope: "factory" },
+        json: { scope: "factory", confirm: true },
       });
       toast({
         title: "Factory reset complete",
