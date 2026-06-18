@@ -147,8 +147,11 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       questionType: q.questionType,
       questionText: q.questionText,
       options: q.options,
-      // The history view ignores `optionOrder` and renders options in natural
-      // A, B, C, D order (ADR-15), so the mapper does NOT surface it here.
+      // Surface the snapshot's optionOrder (ADR-15) so the review screen can
+      // render options in the SAME order the user saw during the exam and
+      // reverse-map `correctAnswer` / `yourAnswer` (stored as underlying
+      // keys) to the display letter (A, B, C, D) the user actually clicked.
+      ...(q.optionOrder ? { optionOrder: q.optionOrder } : {}),
       correctAnswer: q.correctAnswer,
       yourAnswer: ans ? parseSelected(ans.selected_options) : [],
       outcome: outcomeById.get(q.id) ?? "unanswered",
