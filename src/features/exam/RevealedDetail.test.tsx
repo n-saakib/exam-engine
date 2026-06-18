@@ -87,6 +87,43 @@ describe("<RevealedDetail>", () => {
     expect(screen.getByText(/correct answer: a, b/i)).toBeInTheDocument();
   });
 
+  // BUG GUARD: ADR-15 — the "Correct answer" header in the post-reveal
+  // detail must show the display letter (A, B, C, D) the user saw on the
+  // option chips, NOT the underlying key. If the shuffle mapped
+  // underlying "B" to display "A", the header must read "Correct answer:
+  // A", not "Correct answer: B" — so it matches the chip the user
+  // actually clicked.
+  it("BUG GUARD: 'Correct answer' header reverse-maps underlying keys to display letters via optionOrder", () => {
+    // optionOrder = [B, C, A, D]:
+    //   chip A → underlying "B"
+    //   chip B → underlying "C"
+    //   chip C → underlying "A"
+    //   chip D → underlying "D"
+    // The correct underlying key is "A" (which is at chip C in the
+    // display), so the header should read "Correct answer: C".
+    const question = makeQuestion({
+      optionOrder: ["B", "C", "A", "D"],
+      correctAnswer: "A",
+    });
+    renderRevealed(question);
+    expect(screen.getByText(/correct answer: c/i)).toBeInTheDocument();
+    // And the underlying key must NOT leak through.
+    expect(screen.queryByText(/correct answer: a/i)).toBeNull();
+  });
+
+  it("'Correct answer' header sorts multi-answer display letters alphabetically", () => {
+    // With optionOrder=[B, A, C, D], underlying "A" is at display B and
+    // underlying "B" is at display A. The header should read "A, B" in
+    // natural display-letter order, not "B, A" in optionOrder index
+    // order.
+    const question = makeQuestion({
+      optionOrder: ["B", "A", "C", "D"],
+      correctAnswer: ["A", "B"],
+    });
+    renderRevealed(question);
+    expect(screen.getByText(/correct answer: a, b/i)).toBeInTheDocument();
+  });
+
   it("BUG GUARD: renders explanations in fixed A, B, C, D order, remapping descriptions via optionOrder", () => {
     // ADR-15: the chip letter on each explanation is always A, B, C, D — the
     // description text, however, comes from the underlying key mapped via

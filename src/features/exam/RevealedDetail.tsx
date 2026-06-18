@@ -39,6 +39,32 @@ function underlyingKey(
   return displayLetter;
 }
 
+/**
+ * Reverse-map an underlying option key to the display letter the user saw
+ * during the exam. With `optionOrder = [B, C, A, D]`, the underlying "B"
+ * was shown at chip A, so this returns "A" for input "B". When the
+ * snapshot has no `optionOrder` (or the key is missing from it) we fall
+ * back to natural alphabetical mapping via the sorted option map.
+ */
+function displayLetterFor(
+  question: LiveQuestion,
+  underlyingKey: string,
+): string {
+  const order = question.optionOrder;
+  if (order) {
+    const idx = order.indexOf(underlyingKey);
+    if (idx >= 0 && idx < DISPLAY_LETTERS.length) {
+      return DISPLAY_LETTERS[idx]!;
+    }
+  }
+  const sorted = Object.keys(question.options).sort();
+  const idx = sorted.indexOf(underlyingKey);
+  if (idx >= 0 && idx < DISPLAY_LETTERS.length) {
+    return DISPLAY_LETTERS[idx]!;
+  }
+  return underlyingKey;
+}
+
 export function RevealedDetail({
   question,
   progressive,
@@ -52,6 +78,14 @@ export function RevealedDetail({
   const correct = Array.isArray(question.correctAnswer)
     ? question.correctAnswer
     : [question.correctAnswer];
+  // ADR-15: reverse-map underlying keys to display letters (A, B, C, D) so
+  // the "Correct answer" header matches the chip letter on the option
+  // button above (and on each explanation row). Sorted alphabetically so
+  // multi-answer lists read naturally ("A, B, C").
+  const correctDisplay = correct
+    .map((k) => displayLetterFor(question, k))
+    .sort()
+    .join(", ");
   const explanations = question.explanations ?? {};
   // Iterate display positions in FIXED A, B, C, D order (ADR-15), then drop
   // any display letter whose underlying key has no explanation. This keeps
@@ -73,7 +107,7 @@ export function RevealedDetail({
       aria-label="Answer details"
     >
       <p className="text-sm font-semibold text-revealed">
-        Correct answer: {correct.join(", ")}
+        Correct answer: {correctDisplay}
       </p>
 
       {progressive ? (
