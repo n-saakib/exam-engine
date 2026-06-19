@@ -41,8 +41,7 @@ describe("gradeSession — outcomes", () => {
     expect(totals).toMatchObject({
       correct: 3,
       incorrect: 0,
-      revealed: 0,
-      unanswered: 0,
+      gaveUp: 0,
       total: 3,
       scorePercent: 100,
     });
@@ -72,27 +71,27 @@ describe("gradeSession — outcomes", () => {
     });
   });
 
-  it("unanswered (empty selection, not revealed) counts as unanswered, not incorrect", () => {
+  it("blank-at-submit (empty selection) counts as gave_up, not incorrect", () => {
     const snap = [q(1, ["A"]), q(2, ["B"])];
     const answers = [ans(1, ["A"]), ans(2, [])];
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals).toMatchObject({
       correct: 1,
       incorrect: 0,
-      unanswered: 1,
+      gaveUp: 1,
       total: 2,
       scorePercent: 50,
     });
-    expect(perQuestion[1]!.outcome).toBe("unanswered");
+    expect(perQuestion[1]!.outcome).toBe("gave_up");
     expect(perQuestion[1]!.isCorrect).toBeNull();
   });
 
-  it("a missing answer row is treated as unanswered", () => {
+  it("a missing answer row is treated as gave_up (blank)", () => {
     const snap = [q(1, ["A"]), q(2, ["B"])];
     const answers = [ans(1, ["A"])]; // no row for q2
     const { totals, perQuestion } = gradeSession(snap, answers);
-    expect(totals.unanswered).toBe(1);
-    expect(perQuestion[1]!.outcome).toBe("unanswered");
+    expect(totals.gaveUp).toBe(1);
+    expect(perQuestion[1]!.outcome).toBe("gave_up");
   });
 
   it("accepts the legacy string-shaped correctAnswer (backward-compat shim) and grades correctly", () => {
@@ -105,52 +104,69 @@ describe("gradeSession — outcomes", () => {
   });
 });
 
-describe("gradeSession — revealed ('gave up') semantics", () => {
-  it("revealed counts as revealed, NOT incorrect, and is excluded from correct", () => {
-    const snap = [q(1, ["A"]), q(2, ["B"]), q(3, ["C"])];
-    const answers = [
-      ans(1, ["A"]), // correct
-      ans(2, [], true), // revealed, no selection
-      ans(3, ["X"], true), // revealed even though it had a (wrong) selection
-    ];
+describe("gradeSession — gave_up semantics (replaces old 'revealed' outcome)", () => {
+  // `revealed` is no longer a post-submit outcome. Revealed-without-picking
+  // is classified as `gave_up`, alongside explicit give-ups and blank-at-submit.
+  // Revealed-with-a-(wrong-)selection becomes `incorrect` (the user actually
+  // committed an answer).
+
+  it("revealed-empty counts as gave_up (was 'revealed')", () => {
+    const snap = [q(1, ["A"]), q(2, ["B"])];
+    const answers = [ans(1, ["A"]), ans(2, [], true)]; // revealed, no selection
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals).toMatchObject({
       correct: 1,
       incorrect: 0,
-      revealed: 2,
-      unanswered: 0,
-      total: 3,
+      gaveUp: 1,
+      total: 2,
     });
-    expect(perQuestion[1]!.outcome).toBe("revealed");
-    expect(perQuestion[2]!.outcome).toBe("revealed");
+    expect(perQuestion[1]!.outcome).toBe("gave_up");
   });
 
-  it("revealed pulls the percentage down (denominator is full total, not just graded)", () => {
-    // 1 correct out of 2 questions, the other revealed → 1/2 = 50%, NOT 100%.
+  it("revealed-with-a-wrong-selection counts as incorrect (was 'revealed')", () => {
+    const snap = [q(1, ["A"]), q(2, ["B"]), q(3, ["C"])];
+    const answers = [
+      ans(1, ["A"]), // correct
+      ans(2, ["X"], true), // revealed, had a (wrong) selection
+      ans(3, [], true), // revealed, no selection → gave_up
+    ];
+    const { totals, perQuestion } = gradeSession(snap, answers);
+    expect(totals).toMatchObject({
+      correct: 1,
+      incorrect: 1,
+      gaveUp: 1,
+      total: 3,
+    });
+    expect(perQuestion[1]!.outcome).toBe("incorrect");
+    expect(perQuestion[2]!.outcome).toBe("gave_up");
+  });
+
+  it("gave_up pulls the percentage down (denominator is full total, not just graded)", () => {
+    // 1 correct out of 2 questions, the other gave_up → 1/2 = 50%, NOT 100%.
     const snap = [q(1, ["A"]), q(2, ["B"])];
-    const answers = [ans(1, ["A"]), ans(2, ["B"], true)];
+    const answers = [ans(1, ["A"]), ans(2, [], false, true)]; // explicit give-up
     const { totals } = gradeSession(snap, answers);
     expect(totals.scorePercent).toBe(50);
     expect(totals.correct).toBe(1);
-    expect(totals.revealed).toBe(1);
+    expect(totals.gaveUp).toBe(1);
   });
 
-  it("revealed-but-correct-guess still does not count as correct", () => {
+  it("explicit gave_up with a correct selection still does not count as correct", () => {
     const snap = [q(1, ["A"])];
-    const answers = [ans(1, ["A"], true)]; // would be correct, but gave up
+    const answers = [ans(1, ["A"], false, true)]; // would be correct, but user gave up
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals.correct).toBe(0);
-    expect(totals.revealed).toBe(1);
-    expect(perQuestion[0]!.outcome).toBe("revealed");
-    // raw correctness is still exposed for retake/transparency
-    expect(perQuestion[0]!.isCorrect).toBe(true);
+    expect(totals.gaveUp).toBe(1);
+    expect(perQuestion[0]!.outcome).toBe("gave_up");
+    // raw correctness is still null when the user gave up (no selection was committed)
+    expect(perQuestion[0]!.isCorrect).toBeNull();
   });
 });
 
 describe("gradeSession — selection edge cases", () => {
-  it("empty selection array is unanswered", () => {
+  it("empty selection array is gave_up", () => {
     const { totals } = gradeSession([q(1)], [ans(1, [])]);
-    expect(totals.unanswered).toBe(1);
+    expect(totals.gaveUp).toBe(1);
     expect(totals.scorePercent).toBe(0);
   });
 
@@ -169,8 +185,6 @@ describe("gradeSession — selection edge cases", () => {
       correct: 0,
       incorrect: 0,
       gaveUp: 0,
-      revealed: 0,
-      unanswered: 0,
       total: 0,
       scorePercent: 0,
     });
@@ -245,12 +259,12 @@ describe("gradeSession — multi (set equality, ADR-13)", () => {
     expect(perQuestion[0]!.outcome).toBe("correct");
   });
 
-  it("an empty selection on a multi question is unanswered", () => {
+  it("an empty selection on a multi question is gave_up", () => {
     const { totals, perQuestion } = gradeSession(
       [multiQ(1, ["A", "B"])],
       [ans(1, [])],
     );
-    expect(perQuestion[0]!.outcome).toBe("unanswered");
+    expect(perQuestion[0]!.outcome).toBe("gave_up");
     expect(perQuestion[0]!.isCorrect).toBeNull();
     expect(totals.scorePercent).toBe(0);
   });

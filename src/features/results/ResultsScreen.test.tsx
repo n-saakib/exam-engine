@@ -50,8 +50,8 @@ const MOCK_RESULTS: Results = {
   summary: {
     scorePercent: 50,
     correct: 2,
-    incorrect: 2,
-    gaveUp: 0,
+    incorrect: 1,
+    gaveUp: 1,
     flagged: 1,
     total: 4,
     timeTakenMs: 120000,
@@ -107,7 +107,7 @@ const MOCK_RESULTS: Results = {
       correctAnswer: "C",
       yourAnswer: [],
       gaveUp: false,
-      outcome: "revealed",
+      outcome: "gave_up",
       flagged: false,
       explanations: {
         A: { description: "Compute", reason: "That is EC2" },
@@ -237,17 +237,26 @@ describe("<DetailFilterBar> — filtering", () => {
     expect(screen.queryByText("What is VPC?")).toBeNull();
   });
 
-  it("Incorrect filter includes both wrong picks and revealed questions (treated as wrong)", async () => {
-    // MOCK_RESULTS has q2 (incorrect, picked A when correct is C) and q3
-    // (revealed, no selection). The "Incorrect" tab must show BOTH — revealed
-    // is folded into the "incorrect" outcome for the user-facing UI.
+  it("Correct filter shows only the 2 correct questions (q1 IAM, q4 VPC)", async () => {
     await renderResultsScreen();
     await screen.findByText(/50%/);
 
-    const incorrectTab = screen.getByRole("tab", { name: /incorrect/i });
-    fireEvent.click(incorrectTab);
+    const correctTab = screen.getByRole("tab", { name: /^correct/i });
+    fireEvent.click(correctTab);
 
-    expect(screen.getByText("Which EC2 type is cheapest?")).toBeTruthy();
+    expect(screen.getByText("What is VPC?")).toBeTruthy();
+    expect(screen.getByText("What does IAM stand for?")).toBeTruthy();
+    expect(screen.queryByText("Which EC2 type is cheapest?")).toBeNull();
+    expect(screen.queryByText("What is S3?")).toBeNull();
+  });
+
+  it("Gave up filter shows the gave-up question (q3 was a blank-at-submit)", async () => {
+    await renderResultsScreen();
+    await screen.findByText(/50%/);
+
+    const gaveUpTab = screen.getByRole("tab", { name: /gave up/i });
+    fireEvent.click(gaveUpTab);
+
     expect(screen.getByText("What is S3?")).toBeTruthy();
     expect(screen.queryByText("What does IAM stand for?")).toBeNull();
     expect(screen.queryByText("What is VPC?")).toBeNull();
@@ -332,7 +341,8 @@ describe("<BookmarkToggle>", () => {
 // ────────────────────────────────────────────────────────────────────────────
 describe("<RetakeMenu>", () => {
   it("Retake incorrect only is enabled when there are incorrect/gave-up questions", async () => {
-    // MOCK_RESULTS has incorrect=2 (q2 wrong, q3 revealed) so the button is enabled.
+    // MOCK_RESULTS has incorrect=1 (q2 wrong) and gaveUp=1 (q3 blank) so the
+    // button is enabled.
     await renderResultsScreen();
     await screen.findByText(/50%/);
 

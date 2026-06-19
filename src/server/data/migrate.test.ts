@@ -7,7 +7,7 @@ describe("migration runner", () => {
   let t: TestDb;
   afterEach(() => t?.cleanup());
 
-  it("applies 0001_init, 0002_drop_confidence, 0003_add_gave_up, and 0004_add_gave_up_count; a second run is a no-op (one row per version)", () => {
+  it("applies all registered migrations (0001-0005); a second run is a no-op (one row per version)", () => {
     t = makeTestDb(); // makeTestDb already ran migrate once
 
     // schema_migrations exists and has one row per registered version.
@@ -19,18 +19,19 @@ describe("migration runner", () => {
       { version: 2 },
       { version: 3 },
       { version: 4 },
+      { version: 5 },
     ]);
-    expect(getSchemaVersion(t.db)).toBe(4);
+    expect(getSchemaVersion(t.db)).toBe(5);
 
     // Re-running applies nothing new and does not duplicate the version row.
     const result = migrate(t.db);
     expect(result.applied).toEqual([]);
-    expect(result.currentVersion).toBe(4);
+    expect(result.currentVersion).toBe(5);
 
     const after = t.db
       .prepare("SELECT COUNT(*) AS c FROM schema_migrations")
       .get() as { c: number };
-    expect(after.c).toBe(4);
+    expect(after.c).toBe(5);
   });
 
   /**
@@ -115,9 +116,11 @@ describe("migration runner", () => {
         .run(),
     ).toThrow(/no such column: gave_up_count/);
 
-    // Run the full registry; only 0004 should apply.
+    // Run the full registry. Only 0004 + 0005 apply (0005 drops the legacy
+    // revealed_count and unanswered_count columns that this fixture still
+    // carries from the old 0001 schema).
     const result = migrate(t.db);
-    expect(result.applied).toEqual([4]);
+    expect(result.applied).toEqual([4, 5]);
 
     // Now the UPDATE must succeed.
     expect(() =>
@@ -132,6 +135,9 @@ describe("migration runner", () => {
       .prepare("PRAGMA table_info('exam_sessions')")
       .all() as Array<{ name: string }>;
     expect(cols.map((c) => c.name)).toContain("gave_up_count");
+    // 0005 dropped the legacy aggregates.
+    expect(cols.map((c) => c.name)).not.toContain("revealed_count");
+    expect(cols.map((c) => c.name)).not.toContain("unanswered_count");
   });
 
   it("creates all MVP tables with the enum CHECK constraints", () => {

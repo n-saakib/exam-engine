@@ -68,8 +68,6 @@ beforeAll(async () => {
     scorePercent: 100,
     correctCount: 1,
     incorrectCount: 0,
-    revealedCount: 0,
-    unansweredCount: 0,
     completedAt: now,
   });
 
@@ -94,8 +92,6 @@ beforeAll(async () => {
     scorePercent: 0,
     correctCount: 0,
     incorrectCount: 1,
-    revealedCount: 0,
-    unansweredCount: 0,
     completedAt: now,
   });
 });

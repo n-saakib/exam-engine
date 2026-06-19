@@ -332,7 +332,8 @@ describe("submit + 409 + resume", () => {
       questions: Array<{ id: number; outcome: string; correctAnswer: unknown }>;
     };
     expect(results.status).toBe("completed");
-    expect(results.summary).toMatchObject({ correct: 1, incorrect: 2, total: 3, scorePercent: 33 });
+    // q1 correct, q2 wrong (incorrect), q3 blank-at-submit (now gave_up).
+    expect(results.summary).toMatchObject({ correct: 1, incorrect: 1, gaveUp: 1, total: 3, scorePercent: 33 });
     // Answers shown in results.
     expect(results.questions.every((q) => q.correctAnswer !== undefined)).toBe(true);
 
@@ -350,18 +351,16 @@ describe("submit + 409 + resume", () => {
     expect(cols.map((c) => c.name)).toContain("gave_up_count");
     const row = db
       .prepare(
-        "SELECT gave_up_count, correct_count, incorrect_count, unanswered_count FROM exam_sessions WHERE id = ?",
+        "SELECT gave_up_count, correct_count, incorrect_count FROM exam_sessions WHERE id = ?",
       )
       .get(s.id) as {
       gave_up_count: number | null;
       correct_count: number | null;
       incorrect_count: number | null;
-      unanswered_count: number | null;
     };
-    expect(row.gave_up_count).toBe(0); // no give-ups in this fixture
+    expect(row.gave_up_count).toBe(1); // the blank-at-submit question now counts as gave_up
     expect(row.correct_count).toBe(1);
     expect(row.incorrect_count).toBe(1);
-    expect(row.unanswered_count).toBe(1);
 
     // set_completion recorded for this path+set.
     const completed = getContainer().repos.completion.listCompletedSetIds(QUES_PATH);

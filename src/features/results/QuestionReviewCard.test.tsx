@@ -248,9 +248,7 @@ describe("<QuestionReviewCard>", () => {
     }> = [
       { outcome: "correct", label: "Correct", expectedClass: "text-correct" },
       { outcome: "incorrect", label: "Incorrect", expectedClass: "text-incorrect" },
-      // "revealed" is folded into the "Incorrect" badge in the UI.
-      { outcome: "revealed", label: "Incorrect", expectedClass: "text-incorrect" },
-      { outcome: "unanswered", label: "Unanswered", expectedClass: "text-muted" },
+      { outcome: "gave_up", label: "Gave up", expectedClass: "text-warning" },
     ];
 
     for (const { outcome, label, expectedClass } of outcomes) {
@@ -259,7 +257,7 @@ describe("<QuestionReviewCard>", () => {
         id: 1000 + outcomes.indexOf({ outcome, label, expectedClass } as never),
         order: 10 + outcomes.indexOf({ outcome, label, expectedClass } as never),
         outcome,
-        yourAnswer: outcome === "unanswered" ? [] : ["B"],
+        yourAnswer: outcome === "gave_up" ? [] : ["B"],
       };
 
       const { unmount } = await renderCard(q);
@@ -290,16 +288,16 @@ describe("<QuestionReviewCard>", () => {
   });
 
   it("renders an em-dash for 'Your answer' when the user did not answer", async () => {
-    const unanswered: ResultsQuestion = {
+    const gaveUp: ResultsQuestion = {
       ...CORRECT_QUESTION,
-      outcome: "unanswered",
+      outcome: "gave_up",
       yourAnswer: [],
     };
-    await renderCard(unanswered);
+    await renderCard(gaveUp);
 
     const article = screen.getByLabelText("Question 1");
     expect(within(article).getByText(/Your answer:/)).toBeTruthy();
-    // The "value" portion of the unanswered answer is the em-dash.
+    // The "value" portion of a gave-up (blank-at-submit) answer is the em-dash.
     expect(within(article).getByText("—")).toBeTruthy();
   });
 
@@ -522,52 +520,48 @@ describe("<QuestionReviewCard>", () => {
     expect(selected?.textContent).toBe("✓");
   });
 
-  it("renders the 'revealed' outcome with the 'Incorrect' badge and border (folded into wrong)", async () => {
-    // The user-facing UI no longer distinguishes "revealed" from "incorrect"
-    // — both are wrong. The component maps `outcome: "revealed"` to the
-    // same badge / border as `outcome: "incorrect"` so the user only sees
-    // a single "Incorrect" label in the review list.
-    const revealed: ResultsQuestion = {
+  it("renders the 'gave_up' outcome with the 'Gave up' badge and warning border", async () => {
+    // The post-submit outcome 'gave_up' covers three cases (explicit give-up,
+    // blank-at-submit, revealed-without-picking) — they all share the same
+    // badge / border so the user sees a single "Gave up" label in the
+    // review list.
+    const gaveUp: ResultsQuestion = {
       ...CORRECT_QUESTION,
-      outcome: "revealed",
-      yourAnswer: ["A"],
-    };
-
-    await renderCard(revealed);
-
-    const article = screen.getByLabelText("Question 1");
-
-    // Badge text is "Incorrect" — the same as a wrong pick.
-    const badge = within(article).getByText("Incorrect");
-    expect(badge).toBeTruthy();
-
-    // Badge class is the incorrect style, not the revealed/correct style.
-    expect(badge.className).toContain("text-incorrect");
-    expect(badge.className).not.toContain("text-revealed");
-    expect(badge.className).not.toContain("text-correct");
-
-    // The wrapper article carries the incorrect border.
-    expect(article.className).toContain("border-incorrect/40");
-    expect(article.className).not.toContain("border-revealed/40");
-    expect(article.className).not.toContain("border-correct/40");
-  });
-
-  it("renders the 'Unanswered' outcome with the muted-style badge and em-dash for 'Your answer'", async () => {
-    const unanswered: ResultsQuestion = {
-      ...CORRECT_QUESTION,
-      outcome: "unanswered",
+      outcome: "gave_up",
       yourAnswer: [],
     };
 
-    await renderCard(unanswered);
+    await renderCard(gaveUp);
+
+    const article = screen.getByLabelText("Question 1");
+
+    const badge = within(article).getByText("Gave up");
+    expect(badge).toBeTruthy();
+    expect(badge.className).toContain("text-warning");
+    expect(badge.className).not.toContain("text-correct");
+    expect(badge.className).not.toContain("text-incorrect");
+
+    expect(article.className).toContain("border-warning/40");
+    expect(article.className).not.toContain("border-correct/40");
+    expect(article.className).not.toContain("border-incorrect/40");
+  });
+
+  it("renders the 'gave_up' outcome with the warning badge and em-dash for 'Your answer'", async () => {
+    const gaveUp: ResultsQuestion = {
+      ...CORRECT_QUESTION,
+      outcome: "gave_up",
+      yourAnswer: [],
+    };
+
+    await renderCard(gaveUp);
 
     const article = screen.getByLabelText("Question 1");
 
     // Badge text.
-    const badge = within(article).getByText("Unanswered");
+    const badge = within(article).getByText("Gave up");
     expect(badge).toBeTruthy();
-    // Unanswered uses bg-surface text-muted per OUTCOME_STYLES.
-    expect(badge.className).toContain("text-muted");
+    // gave_up uses bg-warning/10 text-warning per OUTCOME_STYLES.
+    expect(badge.className).toContain("text-warning");
 
     // "Your answer:" summary should show the em-dash placeholder.
     expect(within(article).getByText(/Your answer:/)).toBeTruthy();

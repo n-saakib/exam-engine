@@ -78,8 +78,6 @@ async function seedData() {
     scorePercent: 80,
     correctCount: 1,
     incorrectCount: 0,
-    revealedCount: 0,
-    unansweredCount: 0,
     completedAt: now,
   });
   repos.completion.record("Exams/Cloud/Test", "set-a", "sess-reset-1");
@@ -105,8 +103,6 @@ async function seedData() {
     scorePercent: 60,
     correctCount: 0,
     incorrectCount: 1,
-    revealedCount: 0,
-    unansweredCount: 0,
     completedAt: now,
   });
   repos.completion.record("Exams/Cloud/OtherPath", "set-b", "sess-reset-2");

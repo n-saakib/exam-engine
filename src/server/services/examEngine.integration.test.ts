@@ -194,12 +194,13 @@ describe("ExamEngine — full lifecycle", () => {
     const results = h.engine.submit(live.id);
     expect(results.status).toBe("completed");
     expect(results.summary.total).toBe(4);
-    // q1=A correct, q2/q3/q4 unanswered → 1/4 = 25%. Unanswered count is
-    // folded into "incorrect" in the UI (unanswered is just wrong), but we
-    // can still derive it: correct + incorrect + gaveUp = total ⇒ 4 - 1 - 0 = 3.
+    // q1=A correct, q2/q3/q4 left blank → 1/4 = 25%. Blank-at-submit is
+    // classified as `gave_up` post-submit (the post-submit outcome enum
+    // collapsed unanswered into gave_up), so it lands in `gaveUp` not
+    // `incorrect`.
     expect(results.summary.correct).toBe(1);
-    expect(results.summary.incorrect).toBe(3); // includes 3 unanswered (all counted as wrong)
-    expect(results.summary.gaveUp).toBe(0);
+    expect(results.summary.incorrect).toBe(0);
+    expect(results.summary.gaveUp).toBe(3);
     expect(results.summary.scorePercent).toBe(25);
 
     // Answers are SHOWN on the results DTO.
@@ -314,8 +315,9 @@ describe("ExamEngine — retake", () => {
     h.engine.submit(origin.id);
 
     const retake = h.engine.retake(origin.id, { scope: "incorrect" });
-    // q1 correct, q5 unanswered → 5 - 2 = 3 qualifying. Of those, q2 (wrong) +
-    // q3 (revealed) + q4 (wrong) = 3.
+    // q1 correct, q5 blank (now classified as `gave_up`, NOT in retake
+    // pool) → 5 - 2 = 3 qualifying. Of those, q2 (wrong) + q3 (revealed
+    // in-exam → qualifies for retake) + q4 (wrong) = 3.
     expect(retake.totalQuestions).toBe(3);
     expect(retake.mode).toBe("retake_incorrect");
     const ids = retake.questions.map((q) => q.id).sort((a, b) => a - b);

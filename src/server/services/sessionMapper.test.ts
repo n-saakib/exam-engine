@@ -65,9 +65,7 @@ function row(over: Partial<SessionRow> = {}): SessionRow {
     score_percent: null,
     correct_count: null,
     incorrect_count: null,
-    revealed_count: null,
     gave_up_count: null,
-    unanswered_count: null,
     is_bookmarked: 0,
     note: null,
     created_at: "t0",
@@ -217,9 +215,7 @@ describe("toResults — answers shown", () => {
       score_percent: 50,
       correct_count: 1,
       incorrect_count: 1,
-      revealed_count: 0,
       gave_up_count: 0,
-      unanswered_count: 0,
       completed_at: "t1",
     });
     const results = toResults(completed, [
@@ -236,28 +232,26 @@ describe("toResults — answers shown", () => {
     expect(q9.explanations).toBeDefined();
   });
 
-  it("folds revealed_count and unanswered_count into the summary.incorrect tally", () => {
-    // The UI breakdown only has 4 columns (correct / incorrect / gave up /
-    // flagged). Revealed-without-correct and unanswered are both "wrong"
-    // in the score (none count toward `correct`), so they get folded into
-    // `incorrect` to keep the breakdown additive.
+  it("counts summary.incorrect from the persisted incorrect_count only (no folding)", () => {
+    // The UI breakdown has 4 columns (correct / incorrect / gave up / flagged).
+    // After the post-submit outcome refactor, `incorrect` is exact (no folding):
+    // revealed-without-picking and blank-at-submit are tallied into `gaveUp`
+    // by ScoreCalculator before the counts hit the DB.
     const completed = row({
       status: "completed",
       score_percent: 25,
       correct_count: 1,
-      incorrect_count: 0,
-      revealed_count: 1, // 1 revealed → folded into `incorrect`
-      gave_up_count: 0,
-      unanswered_count: 1, // 1 unanswered → also folded into `incorrect`
+      incorrect_count: 1, // one explicit wrong pick only
+      gave_up_count: 1, // the formerly-revealed/unanswered question now lives here
       completed_at: "t1",
     });
     const results = toResults(completed, [
       answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }), // correct
-      answer({ question_id: 9, is_revealed: 1 }), // revealed → counted as incorrect
-      answer({ question_id: 11 }), // unanswered → counted as incorrect
+      answer({ question_id: 9, is_revealed: 1 }), // revealed → gave_up
+      answer({ question_id: 11 }), // blank → gave_up
     ]);
-    // 0 (explicit incorrect) + 1 (revealed) + 1 (unanswered) = 2.
-    expect(results.summary.incorrect).toBe(2);
+    expect(results.summary.incorrect).toBe(1);
+    expect(results.summary.gaveUp).toBe(1);
     expect(results.summary.flagged).toBe(0);
   });
 
@@ -267,9 +261,7 @@ describe("toResults — answers shown", () => {
       score_percent: 100,
       correct_count: 2,
       incorrect_count: 0,
-      revealed_count: 0,
       gave_up_count: 0,
-      unanswered_count: 0,
       completed_at: "t1",
     });
     const results = toResults(completed, [
@@ -280,16 +272,14 @@ describe("toResults — answers shown", () => {
   });
 
   it("does not include `revealed` or `unanswered` in the new summary shape", () => {
-    // The schema intentionally dropped those keys — `revealed` is folded
-    // into `incorrect` and `unanswered` is no longer surfaced.
+    // The schema intentionally dropped those keys — post-submit outcomes are
+    // now correct | incorrect | gave_up.
     const completed = row({
       status: "completed",
       score_percent: 100,
       correct_count: 1,
       incorrect_count: 0,
-      revealed_count: 0,
       gave_up_count: 0,
-      unanswered_count: 0,
       completed_at: "t1",
     });
     const results = toResults(completed, [
@@ -314,9 +304,7 @@ describe("toResults — answers shown", () => {
       score_percent: 50,
       correct_count: 1,
       incorrect_count: 1,
-      revealed_count: 0,
       gave_up_count: 0,
-      unanswered_count: 0,
       completed_at: "t1",
       question_snapshot: JSON.stringify(shuffled),
     });
@@ -341,9 +329,7 @@ describe("toResults — answers shown", () => {
       score_percent: 50,
       correct_count: 1,
       incorrect_count: 1,
-      revealed_count: 0,
       gave_up_count: 0,
-      unanswered_count: 0,
       completed_at: "t1",
       question_snapshot: JSON.stringify(noOrder),
     });
@@ -370,9 +356,7 @@ describe("toResults — answers shown", () => {
       score_percent: 50,
       correct_count: 1,
       incorrect_count: 1,
-      revealed_count: 0,
       gave_up_count: 0,
-      unanswered_count: 0,
       completed_at: "t1",
       question_snapshot: JSON.stringify(mixed),
     });

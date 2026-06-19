@@ -62,8 +62,6 @@ function seedCompleted(
     scorePercent: 100,
     correctCount: 1,
     incorrectCount: 0,
-    revealedCount: 0,
-    unansweredCount: 0,
     completedAt: "2026-06-10T00:00:00.000Z",
   });
   if (opts.note !== undefined) sessions.patch(id, { note: opts.note });
@@ -100,8 +98,6 @@ describe("exportService — JSON", () => {
       scorePercent: 0,
       correctCount: 0,
       incorrectCount: 1,
-      revealedCount: 0,
-      unansweredCount: 0,
       completedAt: "2026-06-10T00:00:00.000Z",
     });
     answers.insertBlanks("s-bad", [1]);
@@ -157,7 +153,12 @@ describe("exportService — JSON", () => {
     expect(payload.sessions.length).toBe(1);
   });
 
-  it("JSON output round-trips answers (selected, revealed, flagged)", () => {
+  it("JSON output round-trips answers (selected, revealed-as-gave-up, flagged)", () => {
+    // Post-submit outcomes are correct | incorrect | gave_up. A question that
+    // was revealed-in-exam with a non-empty selection becomes `incorrect`
+    // (the user committed an answer); revealed-in-exam with no selection
+    // becomes `gave_up`. The `rev` seed selects "B" while revealing, so it
+    // now lands in `incorrect`.
     t = makeTestDb();
     seedCompleted(t, "sel", "A");
     seedCompleted(t, "rev", "B", { revealed: true });
@@ -175,8 +176,10 @@ describe("exportService — JSON", () => {
     expect(byId.get("sel")?.questions[0]?.outcome).toBe("correct");
     expect(byId.get("sel")?.questions[0]?.flagged).toBe(false);
 
+    // "rev" was revealed in-exam with selection "B" (correctAnswer=A) →
+    // outcome is `incorrect` (the user committed a wrong pick).
     expect(byId.get("rev")?.questions[0]?.yourAnswer).toEqual(["B"]);
-    expect(byId.get("rev")?.questions[0]?.outcome).toBe("revealed");
+    expect(byId.get("rev")?.questions[0]?.outcome).toBe("incorrect");
 
     expect(byId.get("flag")?.questions[0]?.yourAnswer).toEqual(["C"]);
     expect(byId.get("flag")?.questions[0]?.outcome).toBe("incorrect");
