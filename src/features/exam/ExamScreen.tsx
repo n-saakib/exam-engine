@@ -61,13 +61,20 @@ export function ExamScreen({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const submittingRef = useRef(false);
+  // Tracks the sessionId of the last DTO we hydrated from. The store is a
+  // process-wide singleton that survives a navigation away & back (e.g. pause →
+  // /resume → resume). On a fresh mount we MUST re-hydrate, otherwise the
+  // previous mount's `running: false` (from pause) leaks across navigation
+  // and the timer stays paused.
+  const hydratedForRef = useRef<string | null>(null);
 
-  // ── Hydrate the store once per fetched session ───────────────────────────
+  // ── Hydrate the store on every fresh mount with matching data ────────────
   useEffect(() => {
-    if (data && data.id === sessionId && storeSessionId !== data.id) {
+    if (data && data.id === sessionId && hydratedForRef.current !== data.id) {
       loadFromDTO(data);
+      hydratedForRef.current = data.id;
     }
-  }, [data, sessionId, storeSessionId, loadFromDTO]);
+  }, [data, sessionId, loadFromDTO]);
 
   // ── Guard: non-in-progress sessions redirect to results ──────────────────
   useEffect(() => {

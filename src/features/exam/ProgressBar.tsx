@@ -19,12 +19,12 @@ export function ProgressBar({ store }: { store: ExamStore }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between text-xs text-muted">
-        <span>
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted">
+        <span className="whitespace-nowrap tabular-nums">
           Question {Math.min(currentIndex + 1, total)} of {total}
         </span>
-        <span className="flex items-center gap-3">
-          <span>{percent}% answered</span>
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 whitespace-nowrap">
+          <span className="tabular-nums">{percent}% answered</span>
           <span className="text-flagged">⚑ {flagged} flagged</span>
         </span>
       </div>
