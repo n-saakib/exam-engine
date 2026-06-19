@@ -280,7 +280,7 @@ describe("SetCatalogService — validation", () => {
 // ─── Completion / repeat-avoidance tests ─────────────────────────────────────
 
 describe("SetCatalogService — pickNextUnattempted", () => {
-  it("returns the first unattempted set", async () => {
+  it("returns one of the unattempted sets", async () => {
     const subDir = path.join(tmpDir, "Easy");
     fs.mkdirSync(subDir);
     writeSet(subDir, "alpha");
@@ -289,8 +289,41 @@ describe("SetCatalogService — pickNextUnattempted", () => {
     const quesPath = path.relative(process.cwd(), subDir);
     await setCatalogService.scan();
 
+    const all = setCatalogService.listForPath(quesPath);
+    const availableIds = new Set(all.items.map((i) => i.setId));
+
     const row = setCatalogService.pickNextUnattempted(quesPath);
-    expect(row.set_id).toBeDefined();
+    expect(availableIds.has(row.set_id)).toBe(true);
+  });
+
+  it("picks randomly across the available pool (uniform distribution)", async () => {
+    // Three sets, all unattempted. Over many picks, each set should be
+    // chosen at least once — that proves the pick isn't pinned to a single
+    // entry (e.g. always the first by set_title). 200 trials on a 3-set pool
+    // makes a "only first ever picked" failure effectively impossible:
+    // P(all 200 are the same set) ≈ 3 · (1/3)^200 ≈ 0.
+    const subDir = path.join(tmpDir, "Easy");
+    fs.mkdirSync(subDir);
+    writeSet(subDir, "alpha");
+    writeSet(subDir, "beta");
+    writeSet(subDir, "gamma");
+
+    const quesPath = path.relative(process.cwd(), subDir);
+    await setCatalogService.scan();
+
+    const all = setCatalogService.listForPath(quesPath);
+    const allIds = new Set(all.items.map((i) => i.setId));
+    expect(allIds.size).toBe(3);
+
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) {
+      seen.add(setCatalogService.pickNextUnattempted(quesPath).set_id);
+    }
+    // All three sets must appear at least once across the 200 picks.
+    expect(seen.size).toBe(3);
+    for (const id of allIds) {
+      expect(seen.has(id)).toBe(true);
+    }
   });
 
   it("skips completed sets", async () => {

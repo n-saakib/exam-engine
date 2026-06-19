@@ -438,6 +438,13 @@ export function createSetCatalogService(
      * Pick the next unattempted (not completed) set for a path.
      * Skips sets with `status: 'error'` (can't be started).
      * Throws `SETS_EXHAUSTED (409)` when all sets have been completed.
+     *
+     * The pick is uniform-random across all available (unattempted + non-error)
+     * sets — users who land on the same path see a different set each time
+     * until they've worked through the whole pool. This makes repeat practice
+     * less predictable and avoids "always set A first, then B, then C…"
+     * ordering bias (which the catalogue's `ORDER BY set_title ASC` would
+     * otherwise produce).
      */
     pickNextUnattempted(quesPath: string): CatalogRow {
       const rows = catalogRepo.listByQuesPath(quesPath);
@@ -462,8 +469,14 @@ export function createSetCatalogService(
         );
       }
 
-      // Return the first unattempted set (catalogue is ordered by setTitle).
-      return available[0]!;
+      // Uniform random pick across all available sets. We use Math.random()
+      // (not the seeded RNG) because this pick has no deterministic seed —
+      // it's the "which set does the user get this time" decision, and it
+      // should be fresh on every call. Per-question shuffling inside the
+      // chosen set is still seeded by the session's `seed` (F4-T3) so the
+      // question/option order within a session remains reproducible.
+      const idx = Math.floor(Math.random() * available.length);
+      return available[idx]!;
     },
 
     /**
