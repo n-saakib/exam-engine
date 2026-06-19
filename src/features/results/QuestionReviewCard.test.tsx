@@ -248,7 +248,8 @@ describe("<QuestionReviewCard>", () => {
     }> = [
       { outcome: "correct", label: "Correct", expectedClass: "text-correct" },
       { outcome: "incorrect", label: "Incorrect", expectedClass: "text-incorrect" },
-      { outcome: "revealed", label: "Revealed", expectedClass: "text-revealed" },
+      // "revealed" is folded into the "Incorrect" badge in the UI.
+      { outcome: "revealed", label: "Incorrect", expectedClass: "text-incorrect" },
       { outcome: "unanswered", label: "Unanswered", expectedClass: "text-muted" },
     ];
 
@@ -521,12 +522,14 @@ describe("<QuestionReviewCard>", () => {
     expect(selected?.textContent).toBe("✓");
   });
 
-  it("renders the 'Revealed' outcome with the revealed-style badge and border", async () => {
+  it("renders the 'revealed' outcome with the 'Incorrect' badge and border (folded into wrong)", async () => {
+    // The user-facing UI no longer distinguishes "revealed" from "incorrect"
+    // — both are wrong. The component maps `outcome: "revealed"` to the
+    // same badge / border as `outcome: "incorrect"` so the user only sees
+    // a single "Incorrect" label in the review list.
     const revealed: ResultsQuestion = {
       ...CORRECT_QUESTION,
       outcome: "revealed",
-      // 'revealed' is its own outcome (e.g. exam-mode where answers are
-      // shown after submission regardless of correctness).
       yourAnswer: ["A"],
     };
 
@@ -534,20 +537,19 @@ describe("<QuestionReviewCard>", () => {
 
     const article = screen.getByLabelText("Question 1");
 
-    // Badge text.
-    const badge = within(article).getByText("Revealed");
+    // Badge text is "Incorrect" — the same as a wrong pick.
+    const badge = within(article).getByText("Incorrect");
     expect(badge).toBeTruthy();
 
-    // Badge class — should have text-revealed, not text-correct or
-    // text-incorrect. The component uses `bg-revealed/10 text-revealed`.
-    expect(badge.className).toContain("text-revealed");
+    // Badge class is the incorrect style, not the revealed/correct style.
+    expect(badge.className).toContain("text-incorrect");
+    expect(badge.className).not.toContain("text-revealed");
     expect(badge.className).not.toContain("text-correct");
-    expect(badge.className).not.toContain("text-incorrect");
 
-    // The wrapper article carries the border-revealed/40 class.
-    expect(article.className).toContain("border-revealed/40");
+    // The wrapper article carries the incorrect border.
+    expect(article.className).toContain("border-incorrect/40");
+    expect(article.className).not.toContain("border-revealed/40");
     expect(article.className).not.toContain("border-correct/40");
-    expect(article.className).not.toContain("border-incorrect/40");
   });
 
   it("renders the 'Unanswered' outcome with the muted-style badge and em-dash for 'Your answer'", async () => {

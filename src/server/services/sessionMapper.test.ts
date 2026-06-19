@@ -218,6 +218,7 @@ describe("toResults — answers shown", () => {
       correct_count: 1,
       incorrect_count: 1,
       revealed_count: 0,
+      gave_up_count: 0,
       unanswered_count: 0,
       completed_at: "t1",
     });
@@ -233,6 +234,69 @@ describe("toResults — answers shown", () => {
     expect(q7.yourAnswer).toEqual(["B"]);
     expect(q9.outcome).toBe("incorrect");
     expect(q9.explanations).toBeDefined();
+  });
+
+  it("folds revealed_count and unanswered_count into the summary.incorrect tally", () => {
+    // The UI breakdown only has 4 columns (correct / incorrect / gave up /
+    // flagged). Revealed-without-correct and unanswered are both "wrong"
+    // in the score (none count toward `correct`), so they get folded into
+    // `incorrect` to keep the breakdown additive.
+    const completed = row({
+      status: "completed",
+      score_percent: 25,
+      correct_count: 1,
+      incorrect_count: 0,
+      revealed_count: 1, // 1 revealed → folded into `incorrect`
+      gave_up_count: 0,
+      unanswered_count: 1, // 1 unanswered → also folded into `incorrect`
+      completed_at: "t1",
+    });
+    const results = toResults(completed, [
+      answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }), // correct
+      answer({ question_id: 9, is_revealed: 1 }), // revealed → counted as incorrect
+      answer({ question_id: 11 }), // unanswered → counted as incorrect
+    ]);
+    // 0 (explicit incorrect) + 1 (revealed) + 1 (unanswered) = 2.
+    expect(results.summary.incorrect).toBe(2);
+    expect(results.summary.flagged).toBe(0);
+  });
+
+  it("computes summary.flagged from the answer rows (is_flagged = 1)", () => {
+    const completed = row({
+      status: "completed",
+      score_percent: 100,
+      correct_count: 2,
+      incorrect_count: 0,
+      revealed_count: 0,
+      gave_up_count: 0,
+      unanswered_count: 0,
+      completed_at: "t1",
+    });
+    const results = toResults(completed, [
+      answer({ question_id: 7, selected_options: JSON.stringify(["B"]), is_flagged: 1 }),
+      answer({ question_id: 9, selected_options: JSON.stringify(["A"]) }),
+    ]);
+    expect(results.summary.flagged).toBe(1);
+  });
+
+  it("does not include `revealed` or `unanswered` in the new summary shape", () => {
+    // The schema intentionally dropped those keys — `revealed` is folded
+    // into `incorrect` and `unanswered` is no longer surfaced.
+    const completed = row({
+      status: "completed",
+      score_percent: 100,
+      correct_count: 1,
+      incorrect_count: 0,
+      revealed_count: 0,
+      gave_up_count: 0,
+      unanswered_count: 0,
+      completed_at: "t1",
+    });
+    const results = toResults(completed, [
+      answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }),
+    ]);
+    expect((results.summary as Record<string, unknown>).revealed).toBeUndefined();
+    expect((results.summary as Record<string, unknown>).unanswered).toBeUndefined();
   });
 
   it("[ADR-15] surfaces optionOrder on the results DTO so the review screen can mirror the live exam", () => {
@@ -251,6 +315,7 @@ describe("toResults — answers shown", () => {
       correct_count: 1,
       incorrect_count: 1,
       revealed_count: 0,
+      gave_up_count: 0,
       unanswered_count: 0,
       completed_at: "t1",
       question_snapshot: JSON.stringify(shuffled),
@@ -277,6 +342,7 @@ describe("toResults — answers shown", () => {
       correct_count: 1,
       incorrect_count: 1,
       revealed_count: 0,
+      gave_up_count: 0,
       unanswered_count: 0,
       completed_at: "t1",
       question_snapshot: JSON.stringify(noOrder),
@@ -305,6 +371,7 @@ describe("toResults — answers shown", () => {
       correct_count: 1,
       incorrect_count: 1,
       revealed_count: 0,
+      gave_up_count: 0,
       unanswered_count: 0,
       completed_at: "t1",
       question_snapshot: JSON.stringify(mixed),

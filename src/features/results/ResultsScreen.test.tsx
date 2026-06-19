@@ -50,10 +50,9 @@ const MOCK_RESULTS: Results = {
   summary: {
     scorePercent: 50,
     correct: 2,
-    incorrect: 1,
-    revealed: 1,
+    incorrect: 2,
     gaveUp: 0,
-    unanswered: 0,
+    flagged: 1,
     total: 4,
     timeTakenMs: 120000,
     timerLimitMs: 600000,
@@ -238,15 +237,20 @@ describe("<DetailFilterBar> — filtering", () => {
     expect(screen.queryByText("What is VPC?")).toBeNull();
   });
 
-  it("Revealed filter shows only the 1 revealed question", async () => {
+  it("Incorrect filter includes both wrong picks and revealed questions (treated as wrong)", async () => {
+    // MOCK_RESULTS has q2 (incorrect, picked A when correct is C) and q3
+    // (revealed, no selection). The "Incorrect" tab must show BOTH — revealed
+    // is folded into the "incorrect" outcome for the user-facing UI.
     await renderResultsScreen();
     await screen.findByText(/50%/);
 
-    const revealedTab = screen.getByRole("tab", { name: /revealed/i });
-    fireEvent.click(revealedTab);
+    const incorrectTab = screen.getByRole("tab", { name: /incorrect/i });
+    fireEvent.click(incorrectTab);
 
+    expect(screen.getByText("Which EC2 type is cheapest?")).toBeTruthy();
     expect(screen.getByText("What is S3?")).toBeTruthy();
-    expect(screen.queryByText("Which EC2 type is cheapest?")).toBeNull();
+    expect(screen.queryByText("What does IAM stand for?")).toBeNull();
+    expect(screen.queryByText("What is VPC?")).toBeNull();
   });
 
   it("Flagged filter shows only the 1 flagged question", async () => {
@@ -327,7 +331,8 @@ describe("<BookmarkToggle>", () => {
 // RetakeMenu — button states and navigation
 // ────────────────────────────────────────────────────────────────────────────
 describe("<RetakeMenu>", () => {
-  it("Retake incorrect only is enabled when there are incorrect/revealed questions", async () => {
+  it("Retake incorrect only is enabled when there are incorrect/gave-up questions", async () => {
+    // MOCK_RESULTS has incorrect=2 (q2 wrong, q3 revealed) so the button is enabled.
     await renderResultsScreen();
     await screen.findByText(/50%/);
 
@@ -335,7 +340,7 @@ describe("<RetakeMenu>", () => {
     expect(btn).not.toBeDisabled();
   });
 
-  it("Retake incorrect only is disabled when no incorrect/revealed (score = 100%)", async () => {
+  it("Retake incorrect only is disabled when no incorrect/gave-up (score = 100%)", async () => {
     const allCorrect: Results = {
       ...MOCK_RESULTS,
       summary: {
@@ -343,8 +348,7 @@ describe("<RetakeMenu>", () => {
         scorePercent: 100,
         correct: 4,
         incorrect: 0,
-        revealed: 0,
-        unanswered: 0,
+        gaveUp: 0,
       },
     };
     mockGet.mockResolvedValueOnce(allCorrect);

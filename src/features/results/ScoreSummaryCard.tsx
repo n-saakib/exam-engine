@@ -37,12 +37,17 @@ interface ScoreSummaryCardProps {
 }
 
 /**
- * Shows the score percentage, four-way breakdown (correct/incorrect/revealed/
- * unanswered), time taken vs limit, and the domain/difficulty header.
+ * Shows the score percentage, four-way breakdown (correct / incorrect /
+ * gave up / flagged), time taken vs limit, and the domain/difficulty header.
+ *
+ * "Revealed" is intentionally NOT shown as its own column — a revealed
+ * question is treated as wrong (the user revealed without picking correctly),
+ * so it is folded into the `incorrect` count. `flagged` is purely informational
+ * and does NOT affect the score.
  */
 export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
   const { summary, domainLabel, difficulty } = results;
-  const { scorePercent, correct, incorrect, gaveUp, revealed, unanswered, timeTakenMs, timerLimitMs } = summary;
+  const { scorePercent, correct, incorrect, gaveUp, flagged, timeTakenMs, timerLimitMs } = summary;
 
   // Colour-code the score.
   const scoreColor =
@@ -81,9 +86,9 @@ export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
         </span>
       </div>
 
-      {/* Five-way breakdown */}
+      {/* Four-way breakdown */}
       <div
-        className="grid grid-cols-2 sm:grid-cols-5 divide-x divide-border border border-border rounded-card"
+        className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-border border border-border rounded-card"
         role="list"
         aria-label="Question breakdown"
       >
@@ -97,10 +102,7 @@ export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
           <BreakdownItem label="Gave up" value={gaveUp} colorClass="text-warning" />
         </div>
         <div role="listitem" className="p-3 flex flex-col items-center gap-0.5">
-          <BreakdownItem label="Revealed" value={revealed} colorClass="text-revealed" />
-        </div>
-        <div role="listitem" className="p-3 flex flex-col items-center gap-0.5">
-          <BreakdownItem label="Skipped" value={unanswered} colorClass="text-muted" />
+          <BreakdownItem label="Flagged" value={flagged} colorClass="text-flagged" />
         </div>
       </div>
 

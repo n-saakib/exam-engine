@@ -37,13 +37,13 @@ vi.mock("@/lib/apiClient", () => ({
 
 import { RetakeMenu } from "./ResultsActions";
 
-function renderMenu(hasIncorrectOrRevealed = true) {
+function renderMenu(hasRetakeableQuestions = true) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={qc}>
       <ToastProvider>
         <GlobalDialogsProvider>
-          <RetakeMenu sessionId="sess-1" hasIncorrectOrRevealed={hasIncorrectOrRevealed} />
+          <RetakeMenu sessionId="sess-1" hasRetakeableQuestions={hasRetakeableQuestions} />
         </GlobalDialogsProvider>
       </ToastProvider>
     </QueryClientProvider>,

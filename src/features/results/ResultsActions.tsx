@@ -166,15 +166,17 @@ export function NoteEditor({ sessionId, initialNote }: NoteEditorProps) {
 
 interface RetakeMenuProps {
   sessionId: string;
-  hasIncorrectOrRevealed: boolean;
+  hasRetakeableQuestions: boolean;
 }
 
 /**
  * Retake actions: "Retake all" and the primary CTA "Retake incorrect only"
- * (disabled when no incorrect/revealed exist). Navigates to the new exam on
- * success (F5-T9, F5-T11).
+ * (disabled when no retakeable questions exist). Retakeable = questions
+ * answered incorrectly (including revealed-without-correct) OR gave up —
+ * all are wrong and benefit from a second pass. Navigates to the new exam
+ * on success (F5-T9, F5-T11).
  */
-export function RetakeMenu({ sessionId, hasIncorrectOrRevealed }: RetakeMenuProps) {
+export function RetakeMenu({ sessionId, hasRetakeableQuestions }: RetakeMenuProps) {
   const { toast } = useToast();
   const retake = useRetake(sessionId);
 
@@ -204,12 +206,12 @@ export function RetakeMenu({ sessionId, hasIncorrectOrRevealed }: RetakeMenuProp
       <Button
         variant="primary"
         size="md"
-        disabled={!hasIncorrectOrRevealed || retake.isPending}
+        disabled={!hasRetakeableQuestions || retake.isPending}
         onClick={() => handleRetake("incorrect")}
-        aria-label="Retake only the incorrect and revealed questions"
+        aria-label="Retake only the incorrect and gave-up questions"
         title={
-          !hasIncorrectOrRevealed
-            ? "No incorrect or revealed questions to retake"
+          !hasRetakeableQuestions
+            ? "No incorrect or gave-up questions to retake"
             : undefined
         }
       >
@@ -243,8 +245,12 @@ interface ResultsActionsProps {
 export function ResultsActions({ results }: ResultsActionsProps) {
   const router = useRouter();
 
-  const hasIncorrectOrRevealed =
-    results.summary.incorrect > 0 || results.summary.revealed > 0;
+  // "Retake incorrect only" applies to anything wrong: explicit wrong picks,
+  // revealed-without-correct, AND gave-up. All are wrong in the score and all
+  // are eligible for a retake per the examEngine retake logic. The UI
+  // breakdown folds revealed into `incorrect`, so we use `incorrect + gaveUp`.
+  const hasRetakeableQuestions =
+    results.summary.incorrect > 0 || results.summary.gaveUp > 0;
 
   return (
     <section
@@ -273,7 +279,7 @@ export function ResultsActions({ results }: ResultsActionsProps) {
       {/* Retake */}
       <RetakeMenu
         sessionId={results.id}
-        hasIncorrectOrRevealed={hasIncorrectOrRevealed}
+        hasRetakeableQuestions={hasRetakeableQuestions}
       />
     </section>
   );

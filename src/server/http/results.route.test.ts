@@ -146,9 +146,11 @@ describe("GET /api/sessions/:id/results", () => {
         scorePercent: number;
         correct: number;
         incorrect: number;
-        revealed: number;
-        unanswered: number;
+        gaveUp: number;
+        flagged: number;
         total: number;
+        timeTakenMs: number;
+        timerLimitMs: number | null;
       };
       questions: Array<{
         id: number;
@@ -166,9 +168,12 @@ describe("GET /api/sessions/:id/results", () => {
     expect(dto.status).toBe("completed");
     expect(dto.summary).toMatchObject({
       correct: 1,
-      incorrect: 1,
-      revealed: 1,
-      unanswered: 1,
+      // incorrect includes 1 wrong + 1 revealed + 1 unanswered = 3
+      // (UI breakdown collapses "wrong picks / revealed / unanswered"
+      // into a single "Incorrect" tally).
+      incorrect: 3,
+      gaveUp: 0,
+      flagged: 0,
       total: 4,
       scorePercent: 25,
     });

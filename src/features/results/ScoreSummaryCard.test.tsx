@@ -5,7 +5,8 @@
  *   - The header (setTitle, domainLabel, difficulty pill) renders.
  *   - The score percentage colour-codes by threshold (>=80 / >=50 / <50).
  *   - The score span has the right aria-label.
- *   - The four-way breakdown renders the 4 values with the right colours.
+ *   - The four-way breakdown (correct / incorrect / gave up / flagged)
+ *     renders the 4 values with the right colours.
  *   - The "X of Y correct" subtext renders.
  *   - The time-taken formatter (`formatMs`) for the documented cases.
  *   - The "of <n> limit" suffix only appears when `timerLimitMs` is non-null.
@@ -56,9 +57,8 @@ function makeResults(overrides: Partial<Results> = {}): Results {
       scorePercent: 80,
       correct: 8,
       incorrect: 1,
-      revealed: 0,
       gaveUp: 0,
-      unanswered: 1,
+      flagged: 1,
       total: 10,
       timeTakenMs: 0,
       timerLimitMs: null,
@@ -122,9 +122,8 @@ describe("<ScoreSummaryCard>", () => {
               scorePercent,
               correct: 0,
               incorrect: 0,
-              revealed: 0,
               gaveUp: 0,
-              unanswered: 0,
+              flagged: 0,
               total: 10,
               timeTakenMs: 0,
               timerLimitMs: null,
@@ -159,9 +158,8 @@ describe("<ScoreSummaryCard>", () => {
           scorePercent: 75,
           correct: 6,
           incorrect: 1,
-          revealed: 0,
           gaveUp: 0,
-          unanswered: 1,
+          flagged: 0,
           total: 8,
           timeTakenMs: 0,
           timerLimitMs: null,
@@ -173,18 +171,17 @@ describe("<ScoreSummaryCard>", () => {
     expect(within(section).getByText("6 of 8 correct")).toBeTruthy();
   });
 
-  // ── Five-way breakdown ─────────────────────────────────────────────────────
-  it("renders the five-way breakdown with the right values and colours", async () => {
+  // ── Four-way breakdown (correct / incorrect / gave up / flagged) ──────────
+  it("renders the four-way breakdown with the right values and colours", async () => {
     await renderCard(
       makeResults({
         summary: {
           scorePercent: 60,
           correct: 6,
           incorrect: 2,
-          revealed: 1,
           gaveUp: 1,
-          unanswered: 1,
-          total: 11,
+          flagged: 1,
+          total: 10,
           timeTakenMs: 0,
           timerLimitMs: null,
         },
@@ -194,34 +191,55 @@ describe("<ScoreSummaryCard>", () => {
     const list = screen.getByLabelText("Question breakdown");
     expect(list).toBeTruthy();
     const items = within(list).getAllByRole("listitem");
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(4);
 
-    // Labels (in order: Correct / Incorrect / Gave up / Revealed / Skipped).
+    // Labels (in order: Correct / Incorrect / Gave up / Flagged).
     expect(within(items[0]).getByText("Correct")).toBeTruthy();
     expect(within(items[1]).getByText("Incorrect")).toBeTruthy();
     expect(within(items[2]).getByText("Gave up")).toBeTruthy();
-    expect(within(items[3]).getByText("Revealed")).toBeTruthy();
-    expect(within(items[4]).getByText("Skipped")).toBeTruthy();
+    expect(within(items[3]).getByText("Flagged")).toBeTruthy();
 
     // Values
     expect(within(items[0]).getByText("6")).toBeTruthy();
     expect(within(items[1]).getByText("2")).toBeTruthy();
     expect(within(items[2]).getByText("1")).toBeTruthy();
     expect(within(items[3]).getByText("1")).toBeTruthy();
-    expect(within(items[4]).getByText("1")).toBeTruthy();
 
     // Colours
     const correctValueSpan = within(items[0]).getByText("6");
     const incorrectValueSpan = within(items[1]).getByText("2");
     const gaveUpValueSpan = within(items[2]).getByText("1");
-    const revealedValueSpan = within(items[3]).getByText("1");
-    const skippedValueSpan = within(items[4]).getByText("1");
+    const flaggedValueSpan = within(items[3]).getByText("1");
 
     expect(correctValueSpan.className).toContain("text-correct");
     expect(incorrectValueSpan.className).toContain("text-incorrect");
     expect(gaveUpValueSpan.className).toContain("text-warning");
-    expect(revealedValueSpan.className).toContain("text-revealed");
-    expect(skippedValueSpan.className).toContain("text-muted");
+    expect(flaggedValueSpan.className).toContain("text-flagged");
+  });
+
+  it("does NOT render a 'Revealed' column in the breakdown", async () => {
+    // The user-facing summary has no "Revealed" column. Revealed questions
+    // are folded into the "Incorrect" tally (they're wrong) and surfaced only
+    // through the per-question review list.
+    await renderCard(
+      makeResults({
+        summary: {
+          scorePercent: 50,
+          correct: 5,
+          incorrect: 3,
+          gaveUp: 1,
+          flagged: 1,
+          total: 10,
+          timeTakenMs: 0,
+          timerLimitMs: null,
+        },
+      }),
+    );
+
+    const section = screen.getByLabelText("Score summary");
+    // The whole section must contain no "Revealed" label.
+    expect(within(section).queryByText("Revealed")).toBeNull();
+    expect(within(section).queryByText("Skipped")).toBeNull();
   });
 
   // ── Time taken formatting ──────────────────────────────────────────────────
@@ -241,9 +259,8 @@ describe("<ScoreSummaryCard>", () => {
               scorePercent: 0,
               correct: 0,
               incorrect: 0,
-              revealed: 0,
               gaveUp: 0,
-              unanswered: 0,
+              flagged: 0,
               total: 0,
               timeTakenMs,
               timerLimitMs: null,
@@ -271,9 +288,8 @@ describe("<ScoreSummaryCard>", () => {
             scorePercent: 50,
             correct: 5,
             incorrect: 5,
-            revealed: 0,
             gaveUp: 0,
-            unanswered: 0,
+            flagged: 0,
             total: 10,
             timeTakenMs: 60_000,
             timerLimitMs: null,
@@ -294,9 +310,8 @@ describe("<ScoreSummaryCard>", () => {
             scorePercent: 50,
             correct: 5,
             incorrect: 5,
-            revealed: 0,
             gaveUp: 0,
-            unanswered: 0,
+            flagged: 0,
             total: 10,
             timeTakenMs: 60_000,
             // Cast: the schema says nullable; undefined is treated identically
@@ -318,9 +333,8 @@ describe("<ScoreSummaryCard>", () => {
             scorePercent: 50,
             correct: 5,
             incorrect: 5,
-            revealed: 0,
             gaveUp: 0,
-            unanswered: 0,
+            flagged: 0,
             total: 10,
             timeTakenMs: 60_000,
             timerLimitMs: 600_000,

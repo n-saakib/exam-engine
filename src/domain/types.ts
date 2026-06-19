@@ -128,11 +128,16 @@ export type LiveSession = z.infer<typeof LiveSessionSchema>;
 export const ResultsSummarySchema = z.object({
   scorePercent: z.number(),
   correct: z.number().int(),
+  /**
+   * Count of wrong answers. Includes both explicit wrong picks and "revealed"
+   * (the user revealed the answer without picking correctly) — both count as
+   * wrong in the UI breakdown.
+   */
   incorrect: z.number().int(),
-  /** Count of questions the user explicitly gave up on. */
+  /** Count of questions the user explicitly gave up on (also counts as wrong in scoring). */
   gaveUp: z.number().int(),
-  revealed: z.number().int(),
-  unanswered: z.number().int(),
+  /** Count of questions the user flagged for review. Pure annotation — does NOT affect scoring. */
+  flagged: z.number().int(),
   total: z.number().int(),
   timeTakenMs: z.number().int(),
   timerLimitMs: z.number().int().nullable(),

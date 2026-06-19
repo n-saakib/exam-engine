@@ -194,9 +194,12 @@ describe("ExamEngine — full lifecycle", () => {
     const results = h.engine.submit(live.id);
     expect(results.status).toBe("completed");
     expect(results.summary.total).toBe(4);
-    // q1=A correct, q2/q3/q4 unanswered → 1/4 = 25%.
+    // q1=A correct, q2/q3/q4 unanswered → 1/4 = 25%. Unanswered count is
+    // folded into "incorrect" in the UI (unanswered is just wrong), but we
+    // can still derive it: correct + incorrect + gaveUp = total ⇒ 4 - 1 - 0 = 3.
     expect(results.summary.correct).toBe(1);
-    expect(results.summary.unanswered).toBe(3);
+    expect(results.summary.incorrect).toBe(3); // includes 3 unanswered (all counted as wrong)
+    expect(results.summary.gaveUp).toBe(0);
     expect(results.summary.scorePercent).toBe(25);
 
     // Answers are SHOWN on the results DTO.

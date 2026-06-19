@@ -22,10 +22,14 @@ const OUTCOME_STYLES: Record<Outcome, { border: string; badge: string; label: st
     badge: "bg-warning/10 text-warning",
     label: "Gave up",
   },
+  // "Revealed" is intentionally NOT shown as a separate badge — a revealed
+  // question is treated as wrong (the user revealed without picking correctly),
+  // so the per-question card displays the "Incorrect" badge. The outcome is
+  // still stored on the data model for backwards compatibility with old DB rows.
   revealed: {
-    border: "border-revealed/40",
-    badge: "bg-revealed/10 text-revealed",
-    label: "Revealed",
+    border: "border-incorrect/40",
+    badge: "bg-incorrect/10 text-incorrect",
+    label: "Incorrect",
   },
   unanswered: {
     border: "border-border",

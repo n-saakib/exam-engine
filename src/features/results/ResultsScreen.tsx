@@ -19,11 +19,14 @@ import type { ResultsQuestion } from "@/domain/types";
 function applyFilter(questions: ResultsQuestion[], filter: ReviewFilter): ResultsQuestion[] {
   switch (filter) {
     case "incorrect":
-      return questions.filter((q) => q.outcome === "incorrect");
+      // "Incorrect" includes both explicit wrong picks AND revealed-but-not-correct
+      // (the user revealed the answer without picking correctly). Both count as
+      // wrong in the breakdown and are surfaced together here.
+      return questions.filter(
+        (q) => q.outcome === "incorrect" || q.outcome === "revealed",
+      );
     case "gave_up":
       return questions.filter((q) => q.outcome === "gave_up");
-    case "revealed":
-      return questions.filter((q) => q.outcome === "revealed");
     case "flagged":
       return questions.filter((q) => q.flagged);
     case "all":
@@ -36,7 +39,6 @@ const FILTER_LABELS: Record<ReviewFilter, string> = {
   all: "All",
   incorrect: "Incorrect",
   gave_up: "Gave up",
-  revealed: "Revealed",
   flagged: "Flagged",
 };
 
@@ -76,12 +78,14 @@ export function ResultsScreen({ sessionId, mode = "post-exam" }: ResultsScreenPr
   );
 
   const filterCounts = useMemo(() => {
-    if (!data) return { all: 0, incorrect: 0, gaveUp: 0, revealed: 0, flagged: 0 };
+    if (!data) return { all: 0, incorrect: 0, gaveUp: 0, flagged: 0 };
     return {
       all: data.questions.length,
-      incorrect: data.questions.filter((q) => q.outcome === "incorrect").length,
+      // "Incorrect" includes revealed-but-not-correct — both are wrong in the UI.
+      incorrect: data.questions.filter(
+        (q) => q.outcome === "incorrect" || q.outcome === "revealed",
+      ).length,
       gaveUp: data.questions.filter((q) => q.outcome === "gave_up").length,
-      revealed: data.questions.filter((q) => q.outcome === "revealed").length,
       flagged: data.questions.filter((q) => q.flagged).length,
     };
   }, [data]);

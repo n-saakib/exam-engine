@@ -174,10 +174,18 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       // freshly graded totals if they're somehow absent.
       scorePercent: row.score_percent ?? graded.totals.scorePercent,
       correct: row.correct_count ?? graded.totals.correct,
-      incorrect: row.incorrect_count ?? graded.totals.incorrect,
-      revealed: row.revealed_count ?? graded.totals.revealed,
+      // "Incorrect" in the UI breakdown is the single "wrong" tally: explicit
+      // wrong picks + revealed-without-correct + unanswered. All three are
+      // not-correct in the score (none count toward `correct`) and the
+      // breakdown collapses them into one number so the user sees a simple
+      // 4-column view (correct / incorrect / gave up / flagged). The DB
+      // still persists the granular counts for export/legacy.
+      incorrect:
+        (row.incorrect_count ?? graded.totals.incorrect) +
+        (row.revealed_count ?? graded.totals.revealed) +
+        (row.unanswered_count ?? graded.totals.unanswered),
       gaveUp: row.gave_up_count ?? graded.totals.gaveUp,
-      unanswered: row.unanswered_count ?? graded.totals.unanswered,
+      flagged: answers.reduce((n, a) => (a.is_flagged === 1 ? n + 1 : n), 0),
       total: row.total_questions,
       timeTakenMs: row.time_elapsed_ms,
       timerLimitMs: row.timer_limit_ms,

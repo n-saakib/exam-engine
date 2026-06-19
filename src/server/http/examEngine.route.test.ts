@@ -328,11 +328,11 @@ describe("submit + 409 + resume", () => {
     expect(res.status).toBe(200);
     const results = (await res.json()) as {
       status: string;
-      summary: { scorePercent: number; correct: number; incorrect: number; unanswered: number; total: number };
+      summary: { scorePercent: number; correct: number; incorrect: number; gaveUp: number; flagged: number; total: number };
       questions: Array<{ id: number; outcome: string; correctAnswer: unknown }>;
     };
     expect(results.status).toBe("completed");
-    expect(results.summary).toMatchObject({ correct: 1, incorrect: 1, unanswered: 1, total: 3, scorePercent: 33 });
+    expect(results.summary).toMatchObject({ correct: 1, incorrect: 2, total: 3, scorePercent: 33 });
     // Answers shown in results.
     expect(results.questions.every((q) => q.correctAnswer !== undefined)).toBe(true);
 
