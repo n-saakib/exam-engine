@@ -291,17 +291,14 @@ test.describe("spine", () => {
       const scoreSummary = page.getByLabel("Score summary");
       await expect(scoreSummary).toBeVisible();
 
-      // Five-way breakdown is present (Correct / Incorrect / Gave up /
-      // Revealed / Skipped) — the "Gave up" outcome is a first-class state
-      // distinct from "Revealed", reflected both here and in the filter bar.
+      // Four-way breakdown is present (Correct / Incorrect / Gave up / Flagged).
       const breakdown = scoreSummary.getByLabel("Question breakdown");
       await expect(breakdown).toBeVisible();
       // Use exact: true to avoid "Correct" matching "Incorrect" substring
       await expect(breakdown.getByText("Correct", { exact: true })).toBeVisible();
       await expect(breakdown.getByText("Incorrect", { exact: true })).toBeVisible();
       await expect(breakdown.getByText("Gave up", { exact: true })).toBeVisible();
-      await expect(breakdown.getByText("Revealed", { exact: true })).toBeVisible();
-      await expect(breakdown.getByText("Skipped", { exact: true })).toBeVisible();
+      await expect(breakdown.getByText("Flagged", { exact: true })).toBeVisible();
 
       // ── Step 16: Per-question detail is shown ───────────────────────────────
       const reviewSection = page.getByLabel("Detailed question review");
@@ -310,17 +307,15 @@ test.describe("spine", () => {
       // "Question review" heading
       await expect(page.getByRole("heading", { name: /Question review/i })).toBeVisible();
 
-      // The filter bar (tablist) is visible with All / Incorrect / Gave up /
-      // Revealed / Flagged — the new "Gave up" tab is between Incorrect and
-      // Revealed so it visually flows from "wrong" → "I gave up" → "I submitted
-      // for review".
+      // The filter bar (tablist) is visible with All / Correct / Incorrect /
+      // Gave up / Flagged — the post-submit outcome set is now {correct,
+      // incorrect, gave_up}, so "Correct" is a first-class filter alongside
+      // "Incorrect" and "Gave up".
       const filterBar = page.getByRole("tablist", { name: /Filter questions by outcome/i });
       await expect(filterBar).toBeVisible();
 
       // ── Step 17: Filter by "Gave up" — the gave-up question (Q3) shows ──────
-      // Q3 was a give-up, so it must now appear under its own "Gave up" filter
-      // (NOT under "Revealed" — the user gave up rather than submitted for
-      // review, so the outcome is "gave_up" not "revealed").
+      // Q3 was a give-up, so it must appear under its own "Gave up" filter.
       const gaveUpFilterBtn = filterBar.getByRole("tab", { name: /Gave up/i });
       await expect(gaveUpFilterBtn).toBeVisible();
       await gaveUpFilterBtn.click();
@@ -369,8 +364,7 @@ test.describe("spine", () => {
         await waitForExamScreen(page);
 
         // The navigator in the retake exam should have fewer than 10 questions
-        // (only incorrect + gave-up + revealed questions are included — gave-up
-        // questions are now part of the retake pool alongside incorrect+revealed).
+        // (only incorrect + gave-up + revealed-in-exam questions are included).
         const retakeNav = page.getByTestId("question-navigator");
         const retakeNavBtns = retakeNav.getByRole("button");
         // There should be at least 1 and at most 9 (definitely fewer than 10,

@@ -154,7 +154,7 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       ...(q.optionOrder ? { optionOrder: q.optionOrder } : {}),
       correctAnswer: q.correctAnswer,
       yourAnswer: ans ? parseSelected(ans.selected_options) : [],
-      outcome: outcomeById.get(q.id) ?? "unanswered",
+      outcome: outcomeById.get(q.id) ?? "gave_up",
       flagged: ans?.is_flagged === 1,
       gaveUp: ans?.is_gave_up === 1,
       explanations: q.explanations ?? {},
@@ -174,16 +174,12 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       // freshly graded totals if they're somehow absent.
       scorePercent: row.score_percent ?? graded.totals.scorePercent,
       correct: row.correct_count ?? graded.totals.correct,
-      // "Incorrect" in the UI breakdown is the single "wrong" tally: explicit
-      // wrong picks + revealed-without-correct + unanswered. All three are
-      // not-correct in the score (none count toward `correct`) and the
-      // breakdown collapses them into one number so the user sees a simple
-      // 4-column view (correct / incorrect / gave up / flagged). The DB
-      // still persists the granular counts for export/legacy.
-      incorrect:
-        (row.incorrect_count ?? graded.totals.incorrect) +
-        (row.revealed_count ?? graded.totals.revealed) +
-        (row.unanswered_count ?? graded.totals.unanswered),
+      // "Incorrect" is the count of explicit wrong picks only. All other
+      // wrong-by-policy questions (explicit give-ups, blank-at-submit,
+      // revealed-without-picking) are tallied into `gaveUp` below — the
+      // user sees a clean 4-column view (correct / incorrect / gave up /
+      // flagged).
+      incorrect: row.incorrect_count ?? graded.totals.incorrect,
       gaveUp: row.gave_up_count ?? graded.totals.gaveUp,
       flagged: answers.reduce((n, a) => (a.is_flagged === 1 ? n + 1 : n), 0),
       total: row.total_questions,

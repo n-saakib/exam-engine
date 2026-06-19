@@ -111,7 +111,7 @@ CREATE TABLE session_answers (
   question_id      INTEGER NOT NULL,                  -- matches question.id in the snapshot
   selected_options TEXT    NOT NULL DEFAULT '[]',     -- JSON array (single = one element)
   is_flagged       INTEGER NOT NULL DEFAULT 0,
-  is_revealed      INTEGER NOT NULL DEFAULT 0,        -- "gave up"
+  is_revealed      INTEGER NOT NULL DEFAULT 0,        -- user revealed the solution in-exam (live-exam flag; not a post-submit outcome)
   is_correct       INTEGER,                           -- null until graded
   confidence       TEXT    CHECK (confidence IS NULL OR confidence IN ('easy', 'medium', 'hard')),
   time_spent_ms    INTEGER NOT NULL DEFAULT 0,
@@ -167,10 +167,28 @@ const M0004_ADD_GAVE_UP_COUNT = `-- 0004_add_gave_up_count — add the \`gave_up
 ALTER TABLE exam_sessions ADD COLUMN gave_up_count INTEGER;
 `;
 
+const M0005_DROP_REVEALED_UNANSWERED_COUNTS = `-- 0005_drop_revealed_unanswered_counts — fold "revealed" and "unanswered"
+-- into the post-submit outcome model (now: correct | incorrect | gave_up).
+--
+-- The per-question live-exam flag \`session_answers.is_revealed\` is kept —
+-- it controls answer visibility during the exam and remains a first-class
+-- exam interaction. Only the aggregate count columns on \`exam_sessions\`
+-- are dropped here, since the post-submit outcomes they tallied no longer
+-- exist as first-class values.
+--
+-- Forward-only: ALTER TABLE … DROP COLUMN requires SQLite ≥ 3.35; the
+-- project ships better-sqlite3 12.x which bundles SQLite 3.45+. No backfill
+-- is needed — sessions in flight simply grade under the new 3-outcome model
+-- when submitted.
+ALTER TABLE exam_sessions DROP COLUMN revealed_count;
+ALTER TABLE exam_sessions DROP COLUMN unanswered_count;
+`;
+
 /** All migrations, ascending by version. */
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: "0001_init", sql: M0001_INIT },
   { version: 2, name: "0002_drop_confidence", sql: M0002_DROP_CONFIDENCE },
   { version: 3, name: "0003_add_gave_up", sql: M0003_ADD_GAVE_UP },
   { version: 4, name: "0004_add_gave_up_count", sql: M0004_ADD_GAVE_UP_COUNT },
+  { version: 5, name: "0005_drop_revealed_unanswered_counts", sql: M0005_DROP_REVEALED_UNANSWERED_COUNTS },
 ];

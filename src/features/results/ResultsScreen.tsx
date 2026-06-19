@@ -18,13 +18,13 @@ import type { ResultsQuestion } from "@/domain/types";
 
 function applyFilter(questions: ResultsQuestion[], filter: ReviewFilter): ResultsQuestion[] {
   switch (filter) {
+    case "correct":
+      return questions.filter((q) => q.outcome === "correct");
     case "incorrect":
-      // "Incorrect" includes both explicit wrong picks AND revealed-but-not-correct
-      // (the user revealed the answer without picking correctly). Both count as
-      // wrong in the breakdown and are surfaced together here.
-      return questions.filter(
-        (q) => q.outcome === "incorrect" || q.outcome === "revealed",
-      );
+      // "Incorrect" is explicit wrong picks only. Revealed-without-picking is
+      // folded into "gave_up" post-submit (see ScoreCalculator); questions the
+      // user left blank at submit time are likewise "gave_up".
+      return questions.filter((q) => q.outcome === "incorrect");
     case "gave_up":
       return questions.filter((q) => q.outcome === "gave_up");
     case "flagged":
@@ -37,6 +37,7 @@ function applyFilter(questions: ResultsQuestion[], filter: ReviewFilter): Result
 
 const FILTER_LABELS: Record<ReviewFilter, string> = {
   all: "All",
+  correct: "Correct",
   incorrect: "Incorrect",
   gave_up: "Gave up",
   flagged: "Flagged",
@@ -78,13 +79,13 @@ export function ResultsScreen({ sessionId, mode = "post-exam" }: ResultsScreenPr
   );
 
   const filterCounts = useMemo(() => {
-    if (!data) return { all: 0, incorrect: 0, gaveUp: 0, flagged: 0 };
+    if (!data) return { all: 0, correct: 0, incorrect: 0, gaveUp: 0, flagged: 0 };
     return {
       all: data.questions.length,
-      // "Incorrect" includes revealed-but-not-correct — both are wrong in the UI.
-      incorrect: data.questions.filter(
-        (q) => q.outcome === "incorrect" || q.outcome === "revealed",
-      ).length,
+      correct: data.questions.filter((q) => q.outcome === "correct").length,
+      // "Incorrect" is explicit wrong picks only — revealed-without-picking
+      // and blank-at-submit are tallied into gaveUp by ScoreCalculator.
+      incorrect: data.questions.filter((q) => q.outcome === "incorrect").length,
       gaveUp: data.questions.filter((q) => q.outcome === "gave_up").length,
       flagged: data.questions.filter((q) => q.flagged).length,
     };

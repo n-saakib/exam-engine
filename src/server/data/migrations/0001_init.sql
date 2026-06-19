@@ -90,7 +90,7 @@ CREATE TABLE session_answers (
   question_id      INTEGER NOT NULL,                  -- matches question.id in the snapshot
   selected_options TEXT    NOT NULL DEFAULT '[]',     -- JSON array (single = one element)
   is_flagged       INTEGER NOT NULL DEFAULT 0,
-  is_revealed      INTEGER NOT NULL DEFAULT 0,        -- "gave up"
+  is_revealed      INTEGER NOT NULL DEFAULT 0,        -- user revealed the solution in-exam (live-exam flag; not a post-submit outcome)
   is_correct       INTEGER,                           -- null until graded
   confidence       TEXT    CHECK (confidence IS NULL OR confidence IN ('easy', 'medium', 'hard')),
   time_spent_ms    INTEGER NOT NULL DEFAULT 0,

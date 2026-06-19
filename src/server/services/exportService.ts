@@ -41,8 +41,12 @@ interface ExportSessionEntry {
   scorePercent: number;
   correct: number;
   incorrect: number;
-  revealed: number;
-  unanswered: number;
+  /**
+   * Count of questions that did not score correctly: explicit give-ups,
+   * blank-at-submit, AND revealed-without-picking. Mirrors the on-screen
+   * "Gave up" tally (these three are folded together post-submit).
+   */
+  gaveUp: number;
   total: number;
   timeTakenMs: number;
   isBookmarked: boolean;
@@ -81,8 +85,7 @@ const CSV_HEADERS = [
   "scorePercent",
   "correct",
   "incorrect",
-  "revealed",
-  "unanswered",
+  "gaveUp",
   "total",
   "timeTakenMs",
   "isBookmarked",
@@ -110,17 +113,19 @@ export function createExportService(db: Database) {
     selected_options: string;
     is_flagged: number;
     is_revealed: number;
+    is_gave_up: number;
     time_spent_ms: number;
   }> {
     return db
       .prepare(
-        "SELECT question_id, selected_options, is_flagged, is_revealed, time_spent_ms FROM session_answers WHERE session_id = ? ORDER BY question_id ASC",
+        "SELECT question_id, selected_options, is_flagged, is_revealed, is_gave_up, time_spent_ms FROM session_answers WHERE session_id = ? ORDER BY question_id ASC",
       )
       .all(sessionId) as Array<{
       question_id: number;
       selected_options: string;
       is_flagged: number;
       is_revealed: number;
+      is_gave_up: number;
       time_spent_ms: number;
     }>;
   }
@@ -136,8 +141,7 @@ export function createExportService(db: Database) {
       scorePercent: row.score_percent ?? 0,
       correct: row.correct_count ?? 0,
       incorrect: row.incorrect_count ?? 0,
-      revealed: row.revealed_count ?? 0,
-      unanswered: row.unanswered_count ?? 0,
+      gaveUp: row.gave_up_count ?? 0,
       total: row.total_questions,
       timeTakenMs: row.time_elapsed_ms,
       isBookmarked: row.is_bookmarked === 1,
@@ -166,13 +170,15 @@ export function createExportService(db: Database) {
         // safeParseArray: a single corrupt selected_options row must not
         // abort the entire export. Returns [] on parse failure / non-array.
         const selected: string[] = ans ? safeParseArray(ans.selected_options) : [];
-        const isRevealed = (ans?.is_revealed ?? 0) === 1;
+        const isGaveUp = (ans?.is_gave_up ?? 0) === 1;
 
-        let outcome = "unanswered";
-        if (isRevealed) {
-          outcome = "revealed";
-        } else if (selected.length === 0) {
-          outcome = "unanswered";
+        // Outcome is one of correct | incorrect | gave_up. `gave_up` covers:
+        // explicit give-ups, blank-at-submit, AND revealed-without-picking
+        // (the live-exam "view the solution" flag has no graded outcome — a
+        // revealed question with no selection counts as a give-up).
+        let outcome: "correct" | "incorrect" | "gave_up";
+        if (isGaveUp || selected.length === 0) {
+          outcome = "gave_up";
         } else {
           const correct = q.correctAnswer;
           const correctArr = Array.isArray(correct) ? correct : [correct];
@@ -248,8 +254,7 @@ export function createExportService(db: Database) {
             escapeCSV(e.scorePercent),
             escapeCSV(e.correct),
             escapeCSV(e.incorrect),
-            escapeCSV(e.revealed),
-            escapeCSV(e.unanswered),
+            escapeCSV(e.gaveUp),
             escapeCSV(e.total),
             escapeCSV(e.timeTakenMs),
             escapeCSV(e.isBookmarked),

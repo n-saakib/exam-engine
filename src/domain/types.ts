@@ -41,7 +41,19 @@ export type SessionStatus = z.infer<typeof SessionStatusSchema>;
 export const SessionModeSchema = z.enum(["full", "retake_all", "retake_incorrect"]);
 export type SessionMode = z.infer<typeof SessionModeSchema>;
 
-export const OutcomeSchema = z.enum(["correct", "incorrect", "gave_up", "revealed", "unanswered"]);
+/**
+ * Post-submit question outcome. The set is intentionally minimal:
+ *   - `correct`: the user's selection matched the correct answer.
+ *   - `incorrect`: the user picked a wrong answer.
+ *   - `gave_up`: the user explicitly gave up, OR left the question without
+ *     answering, OR revealed the solution without picking (reveal is a
+ *     live-exam viewing action, not a graded outcome).
+ *
+ * The per-question LIVE-exam `AnswerState.revealed: boolean` flag (see
+ * `LiveAnswerSchema`) is a separate concern — it controls answer visibility
+ * during the exam and is preserved on the wire; it is not an outcome.
+ */
+export const OutcomeSchema = z.enum(["correct", "incorrect", "gave_up"]);
 export type Outcome = z.infer<typeof OutcomeSchema>;
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -129,12 +141,18 @@ export const ResultsSummarySchema = z.object({
   scorePercent: z.number(),
   correct: z.number().int(),
   /**
-   * Count of wrong answers. Includes both explicit wrong picks and "revealed"
-   * (the user revealed the answer without picking correctly) — both count as
-   * wrong in the UI breakdown.
+   * Count of wrong answers — explicit wrong picks only. Questions the user
+   * revealed-without-picking are classified as `gave_up`, not `incorrect`,
+   * and are tallied into `gaveUp` below.
    */
   incorrect: z.number().int(),
-  /** Count of questions the user explicitly gave up on (also counts as wrong in scoring). */
+  /**
+   * Count of questions the user did not answer correctly: explicit give-ups
+   * PLUS questions left blank at submit PLUS revealed-without-picking (the
+   * user viewed the solution in-exam but did not commit an answer).
+   * All three contribute to this single tally and all three count as wrong
+   * in scoring.
+   */
   gaveUp: z.number().int(),
   /** Count of questions the user flagged for review. Pure annotation — does NOT affect scoring. */
   flagged: z.number().int(),

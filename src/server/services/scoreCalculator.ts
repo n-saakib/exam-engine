@@ -12,14 +12,18 @@ import type { SnapshotQuestion } from "@/domain/schemas";
  * never computes the official score.
  *
  * Scoring rules (F4 / 03 §5.1):
- *   - `revealed` ("gave up") counts as its OWN outcome — NOT incorrect — and is
- *     excluded from the correct tally. It still counts toward `total`.
- *   - `unanswered` = not revealed and no option selected.
+ *   - Outcome is one of `correct | incorrect | gave_up`.
+ *   - `gave_up` covers three cases that all count as wrong: the user explicitly
+ *     gave up; the user left the question blank at submit; the user revealed
+ *     the solution in-exam without committing a selection. All three are
+ *     treated identically for scoring and for the UI breakdown.
+ *   - `revealed` is a LIVE-EXAM VIEWING FLAG on `AnswerState` only — it is not
+ *     a graded outcome and never appears on the wire as one.
  *   - `scorePercent = round(correct / total * 100)` — see ROUNDING below.
  *
  * ROUNDING: half-up to the nearest integer percent via `Math.round`. The
- * denominator is the FULL question count (`total`), so revealed/unanswered/wrong
- * all pull the percentage down equally (a "gave up" is not free). `total === 0`
+ * denominator is the FULL question count (`total`), so gave-up/incorrect all
+ * pull the percentage down equally (a "gave up" is not free). `total === 0`
  * yields `0` (no division by zero).
  *
  * EXTENSIBILITY: the per-question correctness check is dispatched on
@@ -33,11 +37,11 @@ import type { SnapshotQuestion } from "@/domain/schemas";
 /** The minimal answer shape ScoreCalculator needs (decoupled from the DB row). */
 export interface AnswerInput {
   questionId: number;
-  /** Selected option keys. Empty ⇒ unanswered (unless revealed). */
+  /** Selected option keys. Empty ⇒ gave_up (unless the user also gave up explicitly, which is the same outcome). */
   selected: string[];
-  /** "Gave up" — overrides correctness; counts as `revealed`. */
+  /** Live-exam "view the solution" flag. Affects answer visibility during the exam; does NOT drive the post-submit outcome. */
   revealed: boolean;
-  /** User explicitly gave up on this question (first-class outcome, distinct from per-question "submit for review" reveal). */
+  /** User explicitly gave up on this question — surfaces as `gave_up` outcome. */
   gaveUp: boolean;
 }
 
@@ -46,9 +50,10 @@ export interface QuestionResult {
   questionId: number;
   outcome: Outcome;
   /**
-   * Whether the selection matched the correct answer, IGNORING reveal. Useful for
-   * retake-incorrect (a revealed-but-correct guess is still "didn't earn it") and
-   * for transparency. `null` when unanswered.
+   * Whether the selection matched the correct answer, IGNORING give-up. Useful
+   * for retake-incorrect (a gave-up question can still have a correct selection
+   * to surface for transparency) and for the UI's "Your answer" comparison.
+   * `null` when the user did not commit a selection.
    */
   isCorrect: boolean | null;
 }
@@ -57,8 +62,6 @@ export interface QuestionResult {
 export interface ScoreTotals {
   correct: number;
   incorrect: number;
-  revealed: number;
-  unanswered: number;
   gaveUp: number;
   total: number;
   /** round(correct / total * 100); 0 when total === 0. */
@@ -120,8 +123,6 @@ export function gradeSession(
   const perQuestion: QuestionResult[] = [];
   let correct = 0;
   let incorrect = 0;
-  let revealed = 0;
-  let unanswered = 0;
   let gaveUp = 0;
 
   for (const q of snapshot) {
@@ -142,16 +143,15 @@ export function gradeSession(
 
     let outcome: Outcome;
     if (answer.gaveUp) {
-      // User explicitly gave up — first-class outcome, distinct from
-      // a per-question "submit for review" reveal.
+      // User explicitly gave up — outcome is `gave_up`.
       outcome = "gave_up";
       gaveUp++;
-    } else if (answer.revealed) {
-      outcome = "revealed";
-      revealed++;
     } else if (answer.selected.length === 0) {
-      outcome = "unanswered";
-      unanswered++;
+      // No selection committed. Covers two cases that are indistinguishable for
+      // grading: the user left the question blank, OR the user revealed the
+      // solution in-exam without committing an answer. Both count as `gave_up`.
+      outcome = "gave_up";
+      gaveUp++;
     } else if (isCorrect) {
       outcome = "correct";
       correct++;
@@ -163,12 +163,10 @@ export function gradeSession(
     perQuestion.push({
       questionId: q.id,
       outcome,
-      isCorrect:
-        answer.selected.length === 0 && !answer.revealed && !answer.gaveUp
-          ? null
-          : answer.gaveUp
-            ? null
-            : isCorrect,
+      // `isCorrect` is surfaced for UI transparency (e.g. the "didn't earn it"
+      // semantics of a gave-up-but-correct selection); null when there is
+      // no selection to grade.
+      isCorrect: answer.selected.length === 0 || answer.gaveUp ? null : isCorrect,
     });
   }
 
@@ -177,6 +175,6 @@ export function gradeSession(
 
   return {
     perQuestion,
-    totals: { correct, incorrect, revealed, unanswered, gaveUp, total, scorePercent },
+    totals: { correct, incorrect, gaveUp, total, scorePercent },
   };
 }

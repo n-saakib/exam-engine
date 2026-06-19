@@ -391,9 +391,7 @@ export function createExamEngine(deps: ExamEngineDeps) {
           scorePercent: graded.totals.scorePercent,
           correctCount: graded.totals.correct,
           incorrectCount: graded.totals.incorrect,
-          revealedCount: graded.totals.revealed,
           gaveUpCount: graded.totals.gaveUp,
-          unansweredCount: graded.totals.unanswered,
           completedAt: now,
         });
         for (const r of graded.perQuestion) {
@@ -420,8 +418,10 @@ export function createExamEngine(deps: ExamEngineDeps) {
      *
      * - `scope: "all"` → re-uses the origin snapshot unchanged (all questions fresh).
      * - `scope: "incorrect"` → filters the origin snapshot to keep only questions
-     *   whose session_answers.is_correct = 0 OR is_revealed = 1 (incorrect+revealed).
-     *   Throws 409 when no qualifying questions exist.
+     *   the learner should redo: explicit incorrect picks (is_correct = 0 with a
+     *   non-empty selection), explicit give-ups (is_gave_up = 1), and questions
+     *   the user revealed in-exam (is_revealed = 1). Throws 409 when no
+     *   qualifying questions exist.
      *
      * The new session records `origin_session_id = originId` and the appropriate
      * `mode` ("retake_all" | "retake_incorrect"). Works from the stored snapshot
@@ -447,10 +447,15 @@ export function createExamEngine(deps: ExamEngineDeps) {
         // origin was already a filtered retake.
         snapshot = originSnapshot.map((q, idx) => ({ ...q, order: idx + 1 }));
       } else {
-        // Keep only questions that are incorrect (is_correct = 0, not revealed, had a
-        // selection) or revealed (is_revealed = 1). Unanswered questions (is_correct = 0
-        // but selected_options = '[]') are excluded — the learner skipped them. A
-        // question with no answer row is excluded.
+        // Keep only questions the learner should redo. Three groups qualify:
+        //   - Incorrect picks: is_correct = 0 AND the learner actually answered
+        //     (selected_options non-empty).
+        //   - Explicit give-ups: is_gave_up = 1.
+        //   - Revealed-in-exam: is_revealed = 1 (the user viewed the solution;
+        //     they should re-attempt without peeking).
+        // Blank questions (is_correct = 0 with empty selected_options) are
+        // excluded — the learner skipped them, not failed them. A question
+        // with no answer row is also excluded.
         const qualifying = originSnapshot.filter((q) => {
           const ans = answerById.get(q.id);
           if (!ans) return false;
@@ -468,7 +473,7 @@ export function createExamEngine(deps: ExamEngineDeps) {
         if (qualifying.length === 0) {
           throw new AppError(
             "SETS_EXHAUSTED",
-            "No incorrect or revealed questions to retake in this session",
+            "No incorrect, gave-up, or revealed questions to retake in this session",
             409,
           );
         }

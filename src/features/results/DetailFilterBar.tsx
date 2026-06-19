@@ -2,13 +2,14 @@
 
 import { cn } from "@/lib/cn";
 
-export type ReviewFilter = "all" | "incorrect" | "gave_up" | "flagged";
+export type ReviewFilter = "all" | "correct" | "incorrect" | "gave_up" | "flagged";
 
 interface DetailFilterBarProps {
   activeFilter: ReviewFilter;
   onFilterChange: (filter: ReviewFilter) => void;
   counts: {
     all: number;
+    correct: number;
     incorrect: number;
     gaveUp: number;
     flagged: number;
@@ -17,6 +18,7 @@ interface DetailFilterBarProps {
 
 const FILTERS: Array<{ key: ReviewFilter; label: string }> = [
   { key: "all", label: "All" },
+  { key: "correct", label: "Correct" },
   { key: "incorrect", label: "Incorrect" },
   { key: "gave_up", label: "Gave up" },
   { key: "flagged", label: "Flagged" },
@@ -24,11 +26,7 @@ const FILTERS: Array<{ key: ReviewFilter; label: string }> = [
 
 /**
  * Client-side filter bar for the detailed question review list.
- * Tabs switch between All / Incorrect only / Gave up only / Flagged.
- *
- * "Revealed" is intentionally NOT a filter — revealed questions are treated
- * as wrong (folded into "Incorrect") so the user can find them in the
- * "Incorrect" tab.
+ * Tabs switch between All / Correct / Incorrect / Gave up / Flagged.
  */
 export function DetailFilterBar({
   activeFilter,
