@@ -152,3 +152,6 @@ test-results/
 
 # puku-cli personal preferences (loaded alongside PUKU.md, never committed)
 PUKU.local.md
+
+# puku-cli session/runtime scratch directory (harness state, not source)
+.puku-cli/
