@@ -123,3 +123,54 @@ body {
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
 }
+
+/*
+ * Half-and-half swatch for the "answered but not submitted" question state in
+ * the navigator. Communicates "answer is in flight, not finalised" by showing
+ * both possible outcomes simultaneously — half correct (green) and half
+ * incorrect (red) — diagonally. Both the border AND the inner background
+ * carry the split, matching the visual weight of the other swatch variants.
+ *
+ * Implemented as a custom class rather than Tailwind utilities because
+ * `<alpha-value>` channels can't express a two-color split gradient. The
+ * inner fill is a `linear-gradient` on the button itself; the gradient border
+ * is rendered by a `::before` pseudo-element masked to the border area
+ * (`mask-composite: exclude`). We avoid `border-image` because it ignores
+ * `border-radius` — and the navigator tiles are rounded — so the gradient
+ * would visibly clip at the corners. The button already has `position:
+ * relative` set via Tailwind, so the pseudo-element anchors correctly.
+ */
+.nav-pending {
+  border-color: transparent;
+  border-style: solid;
+  border-width: 1px;
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--incorrect) / 0.18) 0%,
+    rgb(var(--incorrect) / 0.18) 50%,
+    rgb(var(--correct) / 0.18) 50%,
+    rgb(var(--correct) / 0.18) 100%
+  );
+}
+
+.nav-pending::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background-image: linear-gradient(
+    135deg,
+    rgb(var(--incorrect)) 0%,
+    rgb(var(--incorrect)) 50%,
+    rgb(var(--correct)) 50%,
+    rgb(var(--correct)) 100%
+  );
+  /* Mask everything except the 1px border ring. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask-composite: exclude;
+  pointer-events: none;
+}

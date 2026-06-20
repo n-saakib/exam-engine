@@ -12,6 +12,12 @@ import { answerStatus, type NavStatus } from "./selectors";
  * The 7-state palette reflects the new `answerStatus` model:
  *   current | gave_up | answered_correct | answered_incorrect
  *   answered_pending | flagged | unanswered
+ *
+ * `answered_pending` is intentionally a half-and-half split (red + green)
+ * rather than a single neutral tone: it signals "the user has answered but
+ * the exam is still in progress", with the two outcomes visible at once.
+ * The split is implemented as a custom `.nav-pending` class in globals.css
+ * because `<alpha-value>` channels can't express a two-color gradient.
  */
 
 const STATUS_CLASSES: Record<NavStatus, string> = {
@@ -21,7 +27,7 @@ const STATUS_CLASSES: Record<NavStatus, string> = {
   gave_up: "border-revealed bg-revealed/15 text-fg",
   answered_correct: "border-correct bg-correct/15 text-fg",
   answered_incorrect: "border-incorrect bg-incorrect/15 text-fg",
-  answered_pending: "border-correct/40 bg-correct/5 text-muted",
+  answered_pending: "nav-pending text-fg",
   flagged: "border-flagged bg-flagged/15 text-fg",
   unanswered: "border-border bg-surface text-muted",
 };
@@ -118,7 +124,9 @@ export function QuestionNavigator({ store }: { store: ExamStore }) {
             <span
               aria-hidden="true"
               className={cn(
-                "inline-block h-3 w-3 rounded-sm border",
+                // `relative` lets the `.nav-pending::before` border-ring
+                // anchor here too (see globals.css).
+                "relative inline-block h-3 w-3 rounded-sm border",
                 STATUS_CLASSES[s],
               )}
             />
