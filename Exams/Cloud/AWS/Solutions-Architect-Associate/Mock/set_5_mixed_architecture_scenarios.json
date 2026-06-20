@@ -1,0 +1,167 @@
+{
+  "setId": "3e7c00d9-0823-414d-95a5-31a16373bd00",
+  "setTitle": "AWS SAA Exam Style - Mixed EC2 Scenarios",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company is running an application on an EC2 instance in `us-east-1`. The instance is backed by an EBS volume encrypted with a Customer Managed Key (CMK) in `us-east-1`. As part of a disaster recovery plan, the company needs to copy an AMI of this instance to `eu-west-1` and ensure the copied snapshot remains encrypted. Which process will achieve this?",
+      "options": {
+        "A": "Create the AMI in us-east-1. Copy the AMI to eu-west-1. The copy process automatically uses the CMK from us-east-1 to encrypt the volume in eu-west-1.",
+        "B": "Create the AMI in us-east-1. Copy the AMI to eu-west-1, and specify a Customer Managed Key (CMK) that was created in eu-west-1 to encrypt the target snapshot.",
+        "C": "Take an unencrypted snapshot of the EBS volume. Copy the snapshot to eu-west-1 and apply a CMK from eu-west-1. Finally, register the AMI from the snapshot.",
+        "D": "KMS keys are global resources. Copy the AMI to eu-west-1 using the console, and it will remain encrypted with the original key."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Auto-use us-east-1 key.",
+          "reason": "Incorrect — KMS keys are strictly regional. A key in `us-east-1` cannot be used to encrypt or decrypt data in `eu-west-1`."
+        },
+        "B": {
+          "description": "Specify target region key during copy.",
+          "reason": "Correct — When copying an encrypted AMI to a new region, you MUST specify a KMS key that exists in the target region (`eu-west-1`). The data is decrypted in memory using the source key and immediately re-encrypted using the target key."
+        },
+        "C": {
+          "description": "Unencrypt snapshot.",
+          "reason": "Incorrect — You cannot create an unencrypted snapshot from an encrypted volume."
+        },
+        "D": {
+          "description": "KMS is global.",
+          "reason": "Incorrect — AWS KMS keys are regional, not global."
+        }
+      },
+      "Tips": "KMS Keys are REGIONAL. When copying AMIs/Snapshots across regions, you MUST re-encrypt them with a key from the destination region."
+    },
+    {
+      "id": 2,
+      "questionText": "A data analytics pipeline runs on EC2 instances inside a VPC. The instances pull raw data from an S3 bucket, perform intensive local data transformations utilizing the high I/O of EC2 Instance Store volumes, and then write the final processed data back to a different S3 bucket. Currently, developers are providing S3 credentials via a `.env` file on the instances. What is the BEST architectural change to improve security and reliability?",
+      "options": {
+        "A": "Migrate the data to Amazon EFS because Instance Store data is ephemeral and unsafe. Store the IAM credentials in AWS Secrets Manager.",
+        "B": "Create an IAM Role with S3 read/write permissions. Attach it to an Instance Profile on the EC2 instances. Remove the `.env` file.",
+        "C": "Create an IAM user for the application. Use the AWS CLI on the instance to store the keys using `aws configure`. Keep using Instance Store for the transformations.",
+        "D": "Attach EBS Provisioned IOPS volumes instead of Instance Store volumes. Create a VPC Endpoint for S3 to allow secure IAM credential retrieval."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Migrate to EFS, use Secrets Manager.",
+          "reason": "Incorrect — Instance store is perfect for 'local data transformations' (temporary scratch space). Secrets Manager is not the primary way to give EC2 access to AWS services; IAM roles are."
+        },
+        "B": {
+          "description": "IAM Role on Instance Profile.",
+          "reason": "Correct — The primary issue is hardcoded credentials. Replacing them with an IAM Role attached via an Instance Profile is the AWS best practice. The use of Instance Store is already the correct architectural choice for high I/O temporary scratch data."
+        },
+        "C": {
+          "description": "aws configure.",
+          "reason": "Incorrect — This still relies on long-term IAM user credentials stored on the instance, which is a security risk."
+        },
+        "D": {
+          "description": "EBS io1 + VPC Endpoint.",
+          "reason": "Incorrect — Instance store provides better I/O for temporary data than EBS. A VPC Endpoint provides private network routing to S3, but doesn't solve the credential management issue."
+        }
+      },
+      "Tips": "Do not get distracted by storage options when the core problem is IAM security. EC2 + AWS Services = IAM Roles."
+    },
+    {
+      "id": 3,
+      "questionText": "A web application requires horizontal scaling. It uses a Network Load Balancer (NLB) to route TCP traffic to a target group of EC2 instances across multiple Availability Zones. An architect needs to ensure that clients' original IP addresses are passed through to the EC2 instances for logging and geographic analysis. How can this be accomplished?",
+      "options": {
+        "A": "Configure the Application Load Balancer to inject the `X-Forwarded-For` header.",
+        "B": "Do nothing. By default, an NLB preserves the client source IP when routing traffic to targets registered by instance ID.",
+        "C": "Enable Proxy Protocol v2 on the Target Group attributes.",
+        "D": "Create a VPC Flow Log and attach it to the EC2 network interfaces to capture the IP."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "ALB X-Forwarded-For.",
+          "reason": "Incorrect — The scenario explicitly states a Network Load Balancer (NLB) is being used for TCP traffic. `X-Forwarded-For` is an HTTP/7 layer feature."
+        },
+        "B": {
+          "description": "NLB preserves client IP by default.",
+          "reason": "Correct — An NLB operates at Layer 4. When targets are registered by Instance ID, the NLB acts as a pass-through and inherently preserves the client's original source IP address."
+        },
+        "C": {
+          "description": "Proxy Protocol v2.",
+          "reason": "Incorrect — Proxy Protocol v2 is required if you are registering targets by IP address or using AWS Global Accelerator, but for instance ID targets on an NLB, client IP preservation is on by default."
+        },
+        "D": {
+          "description": "VPC Flow Logs.",
+          "reason": "Incorrect — Flow logs capture network flow data for monitoring, but they do not pass the IP address to the application itself for immediate geographic analysis."
+        }
+      },
+      "Tips": "NLB + Target Type 'Instance' = Client IP preserved automatically. ALB = Client IP is masked, use X-Forwarded-For header."
+    },
+    {
+      "id": 4,
+      "questionText": "A company requires strict isolation of its Amazon EC2 compute resources to meet regulatory compliance. They must ensure that their instances are placed on physical servers that are entirely dedicated to their AWS account, preventing any other AWS customer from sharing the hardware. However, they also need to use their own physical core-based software licenses. Which EC2 feature should they use?",
+      "options": {
+        "A": "EC2 Dedicated Instances",
+        "B": "EC2 Dedicated Hosts",
+        "C": "EC2 Bare Metal Instances",
+        "D": "AWS Outposts"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Dedicated Instances.",
+          "reason": "Incorrect — Dedicated Instances provide hardware isolation at the account level, but they do NOT give you visibility or control over physical cores/sockets, meaning you cannot use them for BYOL (Bring Your Own License) tied to physical cores."
+        },
+        "B": {
+          "description": "Dedicated Hosts.",
+          "reason": "Correct — Dedicated Hosts provide physical servers dedicated to your account AND give you visibility into the physical host (sockets and physical cores). This is the only option that supports core-bound software licensing."
+        },
+        "C": {
+          "description": "Bare Metal.",
+          "reason": "Incorrect — Bare Metal instances give your applications direct access to the processor and memory without a hypervisor, but they don't inherently address the server-bound licensing requirement like Dedicated Hosts do."
+        },
+        "D": {
+          "description": "Outposts.",
+          "reason": "Incorrect — Outposts brings AWS infrastructure to your on-premises data center, which is beyond the scope of a simple EC2 isolation requirement."
+        }
+      },
+      "Tips": "Hardware Isolation ONLY = Dedicated Instances. Hardware Isolation + Software Licensing (BYOL/Core-bound) = Dedicated Hosts."
+    },
+    {
+      "id": 5,
+      "questionText": "A developer attempts to launch an EC2 instance in a public subnet. The subnet has the 'Auto-assign public IPv4 address' setting set to False. The developer attaches an Elastic Network Interface (ENI) to the instance during launch. When the instance boots, the developer realizes they cannot SSH into the instance from the internet. What is the quickest way to grant internet access to this instance?",
+      "options": {
+        "A": "Stop the instance, change the subnet setting 'Auto-assign public IPv4' to True, and restart the instance.",
+        "B": "Allocate an Elastic IP address and associate it with the ENI attached to the instance.",
+        "C": "Create an Internet Gateway and attach it directly to the EC2 instance's ENI.",
+        "D": "Assign a secondary private IPv4 address to the ENI and map it to the VPC router."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Subnet auto-assign change.",
+          "reason": "Incorrect — Changing the subnet's auto-assign setting only affects instances launched AFTER the change. It will not give a public IP to an already running instance."
+        },
+        "B": {
+          "description": "Allocate and associate Elastic IP.",
+          "reason": "Correct — If an instance is launched without a public IP address, the only way to assign it one post-launch is to allocate an Elastic IP (EIP) and associate it with the instance's ENI."
+        },
+        "C": {
+          "description": "IGW to ENI.",
+          "reason": "Incorrect — An Internet Gateway is attached to a VPC, not to an individual ENI or instance."
+        },
+        "D": {
+          "description": "Secondary private IP.",
+          "reason": "Incorrect — A private IP address cannot be routed over the public internet."
+        }
+      },
+      "Tips": "If an instance is already running without a public IP, you CANNOT force AWS to give it a random public IP. You MUST use an Elastic IP."
+    }
+  ]
+}

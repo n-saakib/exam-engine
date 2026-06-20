@@ -1,0 +1,167 @@
+{
+  "setId": "89323fcf-6eb0-41f6-91f0-5730a986538b",
+  "setTitle": "AWS SAA Exam Style - EC2 Advanced",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A media company is rendering high-resolution 3D animations using a tightly coupled High Performance Computing (HPC) application. The workload requires nodes to communicate with each other with the absolute lowest possible network latency and highest packet per second (PPS) performance. How should the solutions architect configure the EC2 instances?",
+      "options": {
+        "A": "Launch instances in a Partition Placement Group in multiple Availability Zones.",
+        "B": "Launch instances in a Spread Placement Group within a single Availability Zone.",
+        "C": "Launch instances in a Cluster Placement Group within a single Availability Zone using Enhanced Networking.",
+        "D": "Launch instances across multiple Availability Zones using Transit Gateway."
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Partition PG across AZs.",
+          "reason": "Incorrect — Partition PGs are for distributed big data (Hadoop, Kafka). While they provide fault tolerance, crossing AZs increases network latency, defeating the HPC goal."
+        },
+        "B": {
+          "description": "Spread PG.",
+          "reason": "Incorrect — Spread PGs place instances on distinct underlying hardware to reduce correlated failures, not to optimize network performance."
+        },
+        "C": {
+          "description": "Cluster PG with Enhanced Networking.",
+          "reason": "Correct — A Cluster Placement Group packs instances close together inside a single AZ to achieve low-latency, high-throughput network performance. Combined with Enhanced Networking, this is the optimal HPC architecture."
+        },
+        "D": {
+          "description": "Multi-AZ via Transit Gateway.",
+          "reason": "Incorrect — TGW and Multi-AZ deployments introduce significant network hops and latency, which is detrimental to tightly coupled HPC workloads."
+        }
+      },
+      "Tips": "HPC or 'low latency/high throughput network' = Cluster Placement Group. 'Distributed large workloads/Hadoop' = Partition. 'Strict fault tolerance/critical instances' = Spread."
+    },
+    {
+      "id": 2,
+      "questionText": "A company is migrating 10 mission-critical database instances to AWS. For compliance reasons, they must ensure that a failure of a single physical server rack in AWS does not take down more than one instance. The architect decides to use a Spread Placement Group. During deployment in a single Availability Zone, the architect successfully launches 7 instances, but the 8th instance fails to launch. What is the reason for this?",
+      "options": {
+        "A": "The account has reached its soft limit for EC2 instances in that specific Availability Zone.",
+        "B": "A Spread Placement Group is limited to a maximum of 7 running instances per Availability Zone.",
+        "C": "The underlying physical hardware in that Availability Zone does not have any more isolated racks available.",
+        "D": "Spread Placement Groups require instances to be launched simultaneously, not individually."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Account soft limits.",
+          "reason": "Incorrect — While vCPU limits exist, the specific failure after exactly 7 instances in a Spread Placement Group is a hard limit of the feature, not an account quota."
+        },
+        "B": {
+          "description": "Spread PG limits.",
+          "reason": "Correct — A Spread Placement Group can only have a maximum of 7 instances per Availability Zone. This is a strict AWS architectural limitation."
+        },
+        "C": {
+          "description": "Physical rack exhaustion.",
+          "reason": "Incorrect — While hardware capacity can theoretically be exhausted, AWS specifically enforces a hard software limit of 7 instances per AZ for Spread PGs."
+        },
+        "D": {
+          "description": "Simultaneous launch requirement.",
+          "reason": "Incorrect — You can add instances to a placement group sequentially over time."
+        }
+      },
+      "Tips": "Memorize this hard limit: Spread Placement Groups = Max 7 instances per AZ. If you need more, you must use multiple AZs (7 per AZ) or re-evaluate your architecture."
+    },
+    {
+      "id": 3,
+      "questionText": "A financial firm uses a legacy trading software licensed strictly to a specific Media Access Control (MAC) address. The software must be migrated to AWS. In the event of an EC2 instance hardware failure, the software must be restored on a new EC2 instance with the exact same MAC address within minutes. How can a solutions architect achieve this?",
+      "options": {
+        "A": "Use EC2 VM Import/Export to bring a local VM image. AWS will preserve the local MAC address permanently.",
+        "B": "Create an Elastic Network Interface (ENI) and attach it to the EC2 instance. Move the ENI to the new instance upon failure.",
+        "C": "Assign a dedicated MAC address to an Elastic IP and remap the Elastic IP to the new instance.",
+        "D": "Use EC2 Dedicated Hosts. Dedicated Hosts allow manual configuration of the underlying hypervisor MAC address."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "VM Import/Export MAC preservation.",
+          "reason": "Incorrect — AWS does not preserve legacy on-premises MAC addresses. An AWS-generated MAC will be assigned."
+        },
+        "B": {
+          "description": "Moving an ENI.",
+          "reason": "Correct — An ENI (Elastic Network Interface) maintains its private IP, Elastic IP, and MAC address regardless of the instance it is attached to. By moving the ENI to a new instance, the MAC address remains consistent."
+        },
+        "C": {
+          "description": "Elastic IP with MAC.",
+          "reason": "Incorrect — Elastic IPs are public IPv4 addresses; they do not have MAC addresses associated with them."
+        },
+        "D": {
+          "description": "Dedicated Hosts manual MAC.",
+          "reason": "Incorrect — You cannot manually configure hypervisor-level MAC addresses in AWS, even on Dedicated Hosts."
+        }
+      },
+      "Tips": "If you see a requirement for 'static MAC address' or 'licensing tied to MAC address', the answer is ALWAYS 'Elastic Network Interface (ENI)'."
+    },
+    {
+      "id": 4,
+      "questionText": "An application running on an EC2 instance requires 15 minutes to load 60 GB of machine learning datasets into memory (RAM) before it can serve requests. To save costs overnight, the team wants to stop the instance and resume it the next morning without waiting 15 minutes for the data to load into RAM again. Which solution meets this requirement?",
+      "options": {
+        "A": "Use the 'Stop' state. The RAM contents are persisted to the EBS root volume automatically upon stopping.",
+        "B": "Configure the instance for EC2 Hibernate. Ensure the instance RAM does not exceed 150 GB and the root EBS volume is encrypted.",
+        "C": "Create an EBS Snapshot of the root volume while the instance is running. Launch a new instance from this snapshot the next day.",
+        "D": "Use an EC2 Instance Store volume. Instance store volumes preserve data, including swap memory, across Stop/Start cycles."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Standard Stop state.",
+          "reason": "Incorrect — A standard 'Stop' clears the instance's RAM. The instance will boot up fresh, requiring the 15-minute load time."
+        },
+        "B": {
+          "description": "EC2 Hibernate.",
+          "reason": "Correct — EC2 Hibernate saves the contents of the RAM to the EBS root volume. When started, the instance resumes exactly where it left off, bypassing the OS boot process and preserving the memory state. It requires an encrypted root volume and supports instances with up to 150 GB of RAM."
+        },
+        "C": {
+          "description": "EBS Snapshot.",
+          "reason": "Incorrect — A snapshot captures the disk state, not the volatile RAM state."
+        },
+        "D": {
+          "description": "Instance Store.",
+          "reason": "Incorrect — Data on an Instance Store volume is LOST when an instance is stopped. It is ephemeral."
+        }
+      },
+      "Tips": "Memory state preservation = Hibernate. Important constraints for Hibernate: The root volume MUST be large enough to hold the RAM, the root volume MUST be encrypted, and RAM must be < 150 GB."
+    },
+    {
+      "id": 5,
+      "questionText": "A web server running on EC2 is experiencing periodic traffic spikes. The architect wants to configure a secondary private IP address on the primary Elastic Network Interface (ENI) to host a separate internal SSL application on the same instance. Can a secondary private IP address on the primary ENI be re-assigned to another EC2 instance in the same subnet if the primary instance fails?",
+      "options": {
+        "A": "No, secondary IP addresses are permanently bound to the primary ENI and the instance.",
+        "B": "Yes, secondary private IP addresses can be unassigned from one ENI and assigned to another ENI in the same subnet.",
+        "C": "No, you must detach the entire primary ENI to move the IP address to a new instance.",
+        "D": "Yes, but only if the secondary IP address has an Elastic IP mapped to it."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Secondary IPs are permanently bound.",
+          "reason": "Incorrect — Secondary private IPv4 addresses are flexible and can be dynamically reassigned."
+        },
+        "B": {
+          "description": "Secondary IPs can be reassigned.",
+          "reason": "Correct — You can unassign a secondary private IPv4 address from a network interface and assign it to another network interface on a different instance in the same subnet. This is a common pattern for fast internal failover."
+        },
+        "C": {
+          "description": "Must move primary ENI.",
+          "reason": "Incorrect — While you *can* move a secondary ENI, you cannot detach the *primary* ENI (eth0) from an instance. Reassigning the secondary IP is the correct approach."
+        },
+        "D": {
+          "description": "Requires Elastic IP.",
+          "reason": "Incorrect — A secondary private IP can be reassigned regardless of whether it has a public Elastic IP associated with it or not."
+        }
+      },
+      "Tips": "Primary ENI (eth0) cannot be detached. However, *secondary* private IPs assigned to any ENI CAN be migrated between instances for rapid failover."
+    }
+  ]
+}

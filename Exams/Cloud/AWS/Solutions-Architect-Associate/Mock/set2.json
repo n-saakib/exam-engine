@@ -1,0 +1,967 @@
+{
+  "setId": "97a76180-7cf2-436d-95b5-4e25f1f16d7c",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Practice Exam 2",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A company wants employees to sign in to the AWS Management Console using their existing corporate identity provider credentials, without creating separate IAM users for each employee. Which approach achieves this?",
+      "options": {
+        "A": "Create an IAM user for every employee and rotate their access keys weekly",
+        "B": "Store corporate passwords in an S3 bucket and have a script create IAM users",
+        "C": "Use identity federation so the external identity provider issues temporary AWS credentials via roles",
+        "D": "Create one shared IAM user and distribute the password to all employees"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An IAM user per employee with weekly key rotation.",
+          "reason": "Incorrect — this contradicts the requirement to avoid separate IAM users and adds heavy credential-management overhead."
+        },
+        "B": {
+          "description": "Scripting IAM user creation from stored passwords.",
+          "reason": "Incorrect — storing corporate passwords in S3 is insecure and still creates the IAM users the company wants to avoid."
+        },
+        "C": {
+          "description": "Federation that maps external identities to IAM roles and issues temporary credentials.",
+          "reason": "Correct — identity federation (SAML, OIDC, or IAM Identity Center) lets users authenticate with the corporate IdP and assume roles for temporary AWS access, avoiding per-user IAM users."
+        },
+        "D": {
+          "description": "One shared IAM user for all staff.",
+          "reason": "Incorrect — shared credentials destroy individual accountability and least privilege and do not use corporate identities."
+        }
+      },
+      "Tips": "When a question says 'use existing corporate credentials' or 'no separate IAM users', think federation: SAML 2.0 / OIDC / IAM Identity Center. Federated users assume an IAM role and receive temporary STS credentials rather than long-lived IAM users."
+    },
+    {
+      "id": 2,
+      "questionText": "An application running outside AWS needs short-lived credentials to call AWS APIs, and the credentials must automatically expire after a defined period. Which AWS service issues such temporary security credentials?",
+      "options": {
+        "A": "AWS KMS",
+        "B": "AWS Config",
+        "C": "Amazon Cognito Sync",
+        "D": "AWS STS (Security Token Service)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "KMS for temporary credentials.",
+          "reason": "Incorrect — KMS manages encryption keys; it does not issue IAM/session credentials for API calls."
+        },
+        "B": {
+          "description": "AWS Config.",
+          "reason": "Incorrect — Config records and evaluates resource configurations; it has nothing to do with issuing credentials."
+        },
+        "C": {
+          "description": "Cognito Sync.",
+          "reason": "Incorrect — Cognito Sync synchronized user data across devices (now legacy) and is not the general service for issuing temporary AWS credentials."
+        },
+        "D": {
+          "description": "STS, which vends temporary, expiring credentials.",
+          "reason": "Correct — STS issues temporary security credentials (access key, secret key, and session token) with a configurable expiration, used for roles, federation, and cross-account access."
+        }
+      },
+      "Tips": "STS = temporary, expiring credentials (access key + secret + session token). It underlies AssumeRole, federation, and cross-account access. Temporary credentials are preferred over long-lived access keys wherever possible."
+    },
+    {
+      "id": 3,
+      "questionText": "An S3 bucket policy is an example of which kind of policy, and how does it differ from an IAM identity-based policy?",
+      "options": {
+        "A": "It is a resource-based policy attached to the bucket and includes a Principal element",
+        "B": "It is an identity-based policy attached to a user",
+        "C": "It is a session policy passed during AssumeRole",
+        "D": "It is a permission boundary applied to the bucket"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A resource-based policy on the bucket that names a Principal.",
+          "reason": "Correct — a bucket policy is resource-based: it attaches to the resource and specifies which Principals are allowed/denied, enabling cross-account access without a role in some cases."
+        },
+        "B": {
+          "description": "Treating a bucket policy as identity-based.",
+          "reason": "Incorrect — identity-based policies attach to users/groups/roles, not to resources like a bucket."
+        },
+        "C": {
+          "description": "Calling it a session policy.",
+          "reason": "Incorrect — session policies are passed inline during role assumption to limit a session; they are not bucket policies."
+        },
+        "D": {
+          "description": "Calling it a permission boundary.",
+          "reason": "Incorrect — permission boundaries cap a principal's permissions; they are not resource policies attached to a bucket."
+        }
+      },
+      "Tips": "Identity-based policies attach to principals and have no Principal element. Resource-based policies (S3 bucket policy, SQS, SNS, KMS key policy, Lambda resource policy) attach to the resource and DO include a Principal. Resource-based policies can grant cross-account access directly."
+    },
+    {
+      "id": 4,
+      "questionText": "A security team wants to require that all IAM users set passwords with a minimum length of 14 characters, include symbols and numbers, and rotate every 90 days. Where is this enforced?",
+      "options": {
+        "A": "In the EC2 instance user data",
+        "B": "In the account-level IAM password policy",
+        "C": "In a Network ACL",
+        "D": "In each user's inline policy individually"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EC2 user data.",
+          "reason": "Incorrect — user data runs boot scripts on instances and cannot enforce IAM password policy."
+        },
+        "B": {
+          "description": "The account-wide IAM password policy.",
+          "reason": "Correct — the IAM password policy is a single account-level setting that enforces length, complexity, rotation/expiration, and reuse prevention for all IAM users."
+        },
+        "C": {
+          "description": "A Network ACL.",
+          "reason": "Incorrect — NACLs filter network traffic; they have nothing to do with password rules."
+        },
+        "D": {
+          "description": "Per-user inline policies for password rules.",
+          "reason": "Incorrect — password complexity and rotation are not configured through inline permission policies; this would be unmanageable and is not where the setting lives."
+        }
+      },
+      "Tips": "Password complexity, length, expiration/rotation, and reuse prevention are all set once in the account-level IAM password policy. This applies to IAM user console passwords (not access keys, and not the root user beyond MFA)."
+    },
+    {
+      "id": 5,
+      "questionText": "An IAM policy uses 'NotAction' with 'Effect: Allow' to allow all actions except a few. A reviewer warns this can be dangerous. Why?",
+      "options": {
+        "A": "NotAction can only be used in resource-based policies",
+        "B": "NotAction is invalid syntax and will be rejected",
+        "C": "Allow + NotAction grants every action not listed, which can unintentionally permit far broader access than intended",
+        "D": "NotAction always results in an implicit deny of everything"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Restricting NotAction to resource-based policies.",
+          "reason": "Incorrect — NotAction can be used in identity-based policies too; the risk is about its permissive semantics, not where it is allowed."
+        },
+        "B": {
+          "description": "Claiming NotAction is invalid.",
+          "reason": "Incorrect — NotAction is valid IAM syntax; it is just easy to misuse."
+        },
+        "C": {
+          "description": "Allow + NotAction permits everything not explicitly excluded.",
+          "reason": "Correct — with Effect Allow, NotAction grants all actions except those listed, so any new or unlisted action is allowed by default, which can be dangerously broad."
+        },
+        "D": {
+          "description": "Saying NotAction denies everything.",
+          "reason": "Incorrect — that is not its behavior; with Allow it permits the complement of the listed actions, not a blanket deny."
+        }
+      },
+      "Tips": "Allow + NotAction = 'allow everything EXCEPT these', which is implicitly very broad and grows as AWS adds new actions. Prefer explicit Allow lists for least privilege. NotAction is more safely used with Effect Deny to carve narrow exceptions."
+    },
+    {
+      "id": 6,
+      "questionText": "An EC2 instance uses an attached IAM role. A security team wants to prevent server-side request forgery (SSRF) attacks from trivially stealing the role credentials from the instance metadata service. What should they enforce?",
+      "options": {
+        "A": "Disable the IAM role on the instance",
+        "B": "Move the credentials into an environment variable",
+        "C": "Block all outbound traffic with a Security Group",
+        "D": "Require IMDSv2, which uses session tokens for metadata requests"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Disabling the role entirely.",
+          "reason": "Incorrect — the application legitimately needs the role; removing it breaks functionality and is not the targeted mitigation."
+        },
+        "B": {
+          "description": "Putting credentials in environment variables.",
+          "reason": "Incorrect — that reintroduces static credentials and does not address SSRF against the metadata service."
+        },
+        "C": {
+          "description": "Blocking all outbound traffic.",
+          "reason": "Incorrect — blocking outbound breaks the application and is not how metadata SSRF is mitigated."
+        },
+        "D": {
+          "description": "Enforcing IMDSv2 with token-based session requests.",
+          "reason": "Correct — IMDSv2 requires a PUT to obtain a session token before any metadata GET, which defeats many SSRF and reverse-proxy attacks that could otherwise read credentials via IMDSv1."
+        }
+      },
+      "Tips": "IMDSv1 = simple request/response (vulnerable to SSRF). IMDSv2 = session-oriented: PUT a token (with a hop limit), then send GETs with that token. Enforcing IMDSv2 (and a low hop limit) is the recommended defense for metadata-credential theft."
+    },
+    {
+      "id": 7,
+      "questionText": "A team needs an EC2 instance to run a configuration script automatically the first time it boots, installing packages and starting a service. Which EC2 feature provides this?",
+      "options": {
+        "A": "EC2 user data",
+        "B": "A placement group",
+        "C": "Instance metadata",
+        "D": "An Elastic IP"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "User data, executed at first boot.",
+          "reason": "Correct — EC2 user data lets you pass a script (e.g., a bash or cloud-init script) that runs at launch to bootstrap the instance, install packages, and start services."
+        },
+        "B": {
+          "description": "A placement group.",
+          "reason": "Incorrect — placement groups control physical placement for latency/availability, not boot-time provisioning."
+        },
+        "C": {
+          "description": "Instance metadata for boot scripts.",
+          "reason": "Incorrect — metadata exposes information about the instance (IDs, IP, role credentials); it does not run a provisioning script."
+        },
+        "D": {
+          "description": "An Elastic IP.",
+          "reason": "Incorrect — an Elastic IP is a static public IP; it does not run scripts."
+        }
+      },
+      "Tips": "User data = bootstrap script that runs at launch (by default only on first boot). Instance metadata = data ABOUT the instance retrievable from the metadata endpoint. Don't confuse the two: one provisions, the other informs."
+    },
+    {
+      "id": 8,
+      "questionText": "When a Spot Instance is interrupted because the Spot price exceeds your maximum or capacity is needed, what is the DEFAULT interruption behavior, and which alternatives can be configured?",
+      "options": {
+        "A": "Default is stop; no alternatives exist",
+        "B": "Default is terminate; alternatives are stop or hibernate",
+        "C": "Default is hibernate; alternatives are stop or terminate",
+        "D": "Spot Instances are never interrupted"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Stop with no alternatives.",
+          "reason": "Incorrect — stop is an option, not the default, and alternatives do exist."
+        },
+        "B": {
+          "description": "Terminate by default, with stop or hibernate as alternatives.",
+          "reason": "Correct — the default interruption behavior is to terminate the instance, but you can configure it to stop or hibernate instead (subject to requirements)."
+        },
+        "C": {
+          "description": "Claiming hibernate is the default.",
+          "reason": "Incorrect — hibernate is an option, not the default behavior for Spot interruptions."
+        },
+        "D": {
+          "description": "Saying Spot is never interrupted.",
+          "reason": "Incorrect — Spot capacity can be reclaimed by AWS at any time with a short warning; interruption is inherent to Spot."
+        }
+      },
+      "Tips": "Spot interruption behaviors: terminate (default), stop, or hibernate. AWS gives a two-minute interruption notice. Use Spot only for fault-tolerant/flexible workloads. Stop/hibernate options require a persistent Spot request and supported configuration."
+    },
+    {
+      "id": 9,
+      "questionText": "A company shares a custom AMI that is backed by an ENCRYPTED EBS snapshot with another AWS account. Beyond sharing the AMI, what additional step is required so the other account can launch instances from it?",
+      "options": {
+        "A": "Make the AMI public so the encryption is removed",
+        "B": "Nothing; encrypted AMIs are shared exactly like unencrypted ones",
+        "C": "Share the underlying KMS key used to encrypt the snapshot with the target account",
+        "D": "Copy the AMI to the other account's root volume manually"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Making the AMI public to drop encryption.",
+          "reason": "Incorrect — you cannot make an AMI with encrypted snapshots public, and making something public does not remove encryption."
+        },
+        "B": {
+          "description": "Treating encrypted AMI sharing as identical to unencrypted.",
+          "reason": "Incorrect — encrypted snapshots require the recipient to have access to the encryption key, so sharing the AMI alone is insufficient."
+        },
+        "C": {
+          "description": "Sharing the KMS key with the target account.",
+          "reason": "Correct — to launch from an AMI backed by an encrypted snapshot, the other account must be granted usage permissions on the customer managed KMS key that encrypted it."
+        },
+        "D": {
+          "description": "Manually copying to a root volume.",
+          "reason": "Incorrect — that is not how cross-account AMI sharing works; the mechanism is AMI sharing plus KMS key sharing."
+        }
+      },
+      "Tips": "Sharing an AMI backed by ENCRYPTED snapshots requires sharing the customer managed KMS key too (the recipient needs kms permissions). AMIs encrypted with the AWS-managed default key cannot be shared. AMIs with encrypted snapshots also cannot be made public."
+    },
+    {
+      "id": 10,
+      "questionText": "An EC2 instance is in the 'stopped' state (EBS-backed). Which statement about charges is correct?",
+      "options": {
+        "A": "Stopping an instance deletes its EBS volumes automatically",
+        "B": "You pay nothing at all, including for storage",
+        "C": "You continue to pay the full On-Demand instance hourly rate while stopped",
+        "D": "You do not pay for the instance's compute while stopped, but you still pay for attached EBS volumes and any Elastic IP not attached to a running instance"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Stopping deletes EBS volumes.",
+          "reason": "Incorrect — stopping does not delete EBS volumes; data persists. Termination may delete volumes per the DeleteOnTermination setting."
+        },
+        "B": {
+          "description": "Paying nothing including storage.",
+          "reason": "Incorrect — EBS volumes still cost money even when the instance is stopped."
+        },
+        "C": {
+          "description": "Paying full compute rate while stopped.",
+          "reason": "Incorrect — you are not charged for instance compute while an EBS-backed instance is stopped."
+        },
+        "D": {
+          "description": "No compute charge while stopped, but EBS and unattached EIP charges still apply.",
+          "reason": "Correct — stopped EBS-backed instances incur no compute charges, but you continue paying for EBS storage and for any Elastic IP that is not associated with a running instance."
+        }
+      },
+      "Tips": "Stopped EBS-backed instance: no compute charge, but you STILL pay for EBS volumes and for an Elastic IP that is allocated but not attached to a running instance. Instance store data is lost on stop. Terminating may delete EBS volumes depending on DeleteOnTermination."
+    },
+    {
+      "id": 11,
+      "questionText": "A burstable T-family instance (e.g., t3) has been running a sustained high-CPU workload for hours and performance has degraded. What is the most likely explanation?",
+      "options": {
+        "A": "The instance exhausted its CPU credits and is throttled to baseline performance (unless unlimited mode is enabled)",
+        "B": "The instance ran out of EBS storage",
+        "C": "T-family instances cannot run high CPU workloads at all",
+        "D": "The Security Group blocked CPU access"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "CPU credit exhaustion throttling to baseline.",
+          "reason": "Correct — T-family instances accrue CPU credits and burst above baseline by spending them; sustained high CPU depletes credits, throttling the instance to its baseline unless T Unlimited mode is enabled (which allows bursting for extra cost)."
+        },
+        "B": {
+          "description": "Blaming EBS storage exhaustion.",
+          "reason": "Incorrect — performance throttling on a sustained-CPU T instance is a CPU-credit issue, not storage capacity."
+        },
+        "C": {
+          "description": "Claiming T-family can't run high CPU.",
+          "reason": "Incorrect — T instances can burst high; the issue is sustained usage beyond accrued credits, not an absolute inability."
+        },
+        "D": {
+          "description": "Security Group blocking CPU.",
+          "reason": "Incorrect — Security Groups filter network traffic, not CPU usage."
+        }
+      },
+      "Tips": "Burstable T-instances run at a baseline and use CPU credits to burst. Sustained high CPU drains credits → throttled to baseline. 'Unlimited mode' lets them keep bursting (charged for surplus). For consistently high CPU, choose a compute-optimized (C-family) instance instead."
+    },
+    {
+      "id": 12,
+      "questionText": "Two VPCs in the same account are connected via VPC peering. An instance in VPC-A has a Security Group that needs to allow inbound traffic from instances in VPC-B by referencing VPC-B's Security Group ID. Under what condition is referencing a Security Group across the peering connection supported?",
+      "options": {
+        "A": "It requires the two VPCs to be in different Regions",
+        "B": "Security Group references across peered VPCs are supported when the VPCs are in the same Region",
+        "C": "It is never supported; only CIDR references work across peering",
+        "D": "It requires Transit Gateway only"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring different Regions.",
+          "reason": "Incorrect — cross-Region (inter-Region) peering does NOT support referencing peer Security Groups; same-Region is the requirement."
+        },
+        "B": {
+          "description": "Same-Region peered VPCs can reference each other's Security Groups.",
+          "reason": "Correct — you can reference a peer VPC's Security Group across a peering connection when both VPCs are in the same Region, allowing SG-ID-based rules instead of CIDRs."
+        },
+        "C": {
+          "description": "Claiming SG references never cross peering.",
+          "reason": "Incorrect — cross-VPC Security Group references are supported over peering under the right conditions, so 'never' is wrong."
+        },
+        "D": {
+          "description": "Requiring Transit Gateway only.",
+          "reason": "Incorrect — Transit Gateway is a different connectivity option; SG referencing over peering is supported same-Region without requiring TGW."
+        }
+      },
+      "Tips": "Security Group referencing across VPC peering works only for SAME-Region peering. For inter-Region peering, you must use CIDR-based rules. This subtlety appears in multi-VPC questions; watch for the Region condition."
+    },
+    {
+      "id": 13,
+      "questionText": "An HPC application uses MPI for tightly coupled inter-node communication and needs the lowest possible latency with OS-bypass networking. The instances are placed in a cluster placement group. Which networking component should be enabled?",
+      "options": {
+        "A": "A standard Elastic Network Interface (ENI)",
+        "B": "An Elastic IP address",
+        "C": "An Elastic Fabric Adapter (EFA)",
+        "D": "A NAT gateway"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A standard ENI for MPI/HPC.",
+          "reason": "Incorrect — a regular ENI provides standard networking but not the OS-bypass, ultra-low-latency path that tightly coupled MPI workloads need."
+        },
+        "B": {
+          "description": "An Elastic IP.",
+          "reason": "Incorrect — an Elastic IP is a static public IP and has nothing to do with low-latency inter-node MPI traffic."
+        },
+        "C": {
+          "description": "An Elastic Fabric Adapter for OS-bypass HPC networking.",
+          "reason": "Correct — EFA is a network device that supports OS-bypass (via libfabric) for low-latency, high-throughput inter-node communication, ideal for MPI-based HPC and ML training within a cluster placement group."
+        },
+        "D": {
+          "description": "A NAT gateway.",
+          "reason": "Incorrect — a NAT gateway provides outbound internet access for private subnets; it is unrelated to HPC inter-node networking."
+        }
+      },
+      "Tips": "EFA = HPC/ML OS-bypass networking (libfabric) for tightly coupled MPI workloads; pair with a cluster placement group and supported instances; Linux only. ENA = standard enhanced networking (high bandwidth). ENI = basic virtual NIC. For MPI low-latency, the answer is EFA."
+    },
+    {
+      "id": 14,
+      "questionText": "An engineer wants to enable enhanced networking on supported instances to achieve higher bandwidth, higher packet-per-second performance, and lower latency than traditional virtualized networking, without OS-bypass. Which technology provides this?",
+      "options": {
+        "A": "Internet Gateway",
+        "B": "VPC endpoint",
+        "C": "Elastic Fabric Adapter (EFA) only",
+        "D": "Elastic Network Adapter (ENA)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Internet Gateway.",
+          "reason": "Incorrect — an IGW provides VPC internet connectivity, not instance-level enhanced networking."
+        },
+        "B": {
+          "description": "VPC endpoint.",
+          "reason": "Incorrect — VPC endpoints provide private connectivity to AWS services, not enhanced networking performance for an instance."
+        },
+        "C": {
+          "description": "EFA only.",
+          "reason": "Incorrect — EFA adds OS-bypass for HPC on top of ENA capabilities; for general enhanced networking the baseline answer is ENA, so 'EFA only' is not the best fit."
+        },
+        "D": {
+          "description": "ENA for enhanced networking.",
+          "reason": "Correct — the Elastic Network Adapter provides enhanced networking (SR-IOV) for high bandwidth (up to 100+ Gbps on supported instances), higher PPS, and lower latency, without requiring OS-bypass."
+        }
+      },
+      "Tips": "Enhanced networking = ENA (SR-IOV) for high bandwidth/PPS/low latency on supported instances. EFA is ENA plus OS-bypass for HPC/MPI. If the question stresses general high-throughput networking without MPI, choose ENA; if it stresses tightly coupled MPI/OS-bypass, choose EFA."
+    },
+    {
+      "id": 15,
+      "questionText": "An engineer needs to move an existing running instance into a placement group, but the instance was launched without one. What must be done?",
+      "options": {
+        "A": "Stop the instance, then use the modify-instance-placement operation to add it to the placement group, then start it",
+        "B": "Resize the instance to automatically join a placement group",
+        "C": "Terminate the instance; placement group membership can never change",
+        "D": "Placement groups can be changed live with no downtime"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Stop, modify placement, then start.",
+          "reason": "Correct — you can add an existing instance to a placement group by stopping it, modifying its placement via the CLI/API (modify-instance-placement), and starting it again."
+        },
+        "B": {
+          "description": "Resizing to auto-join.",
+          "reason": "Incorrect — changing instance type does not place an instance into a placement group; you must explicitly modify placement while stopped."
+        },
+        "C": {
+          "description": "Claiming it can never change.",
+          "reason": "Incorrect — placement group membership can be changed for a stopped instance; termination is not required."
+        },
+        "D": {
+          "description": "Changing placement groups live.",
+          "reason": "Incorrect — you cannot move a running instance into a placement group while it is running."
+        }
+      },
+      "Tips": "To add/move/remove an instance to/from a placement group, the instance must be STOPPED, then modify-instance-placement, then start. You cannot change placement on a running instance. Plan for downtime."
+    },
+    {
+      "id": 16,
+      "questionText": "What is the maximum amount of time an EC2 instance can remain in the hibernated state before AWS may terminate it, and what happens to RAM contents during hibernation?",
+      "options": {
+        "A": "Unlimited time; RAM is discarded",
+        "B": "Up to 60 days hibernated; RAM contents are saved to the encrypted EBS root volume and restored on resume",
+        "C": "Up to 24 hours; RAM is copied to S3",
+        "D": "Up to 7 days; RAM is copied to an instance store"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Unlimited hibernation with discarded RAM.",
+          "reason": "Incorrect — hibernation specifically preserves RAM, and there is a documented maximum hibernation duration, so 'unlimited / discarded' is wrong."
+        },
+        "B": {
+          "description": "Up to 60 days, RAM saved to encrypted EBS root and restored.",
+          "reason": "Correct — a hibernated instance can remain hibernated for up to 60 days, with RAM written to the encrypted EBS root volume and reloaded on resume so the OS does not reboot."
+        },
+        "C": {
+          "description": "24 hours with RAM in S3.",
+          "reason": "Incorrect — RAM is saved to the EBS root volume, not S3, and the duration limit is longer."
+        },
+        "D": {
+          "description": "7 days with RAM on instance store.",
+          "reason": "Incorrect — RAM is saved to the EBS root volume, not instance store, and the limit is not 7 days."
+        }
+      },
+      "Tips": "Hibernate: RAM → encrypted EBS root volume; instance can stay hibernated up to 60 days; on resume the OS continues without a reboot. Requirements include an encrypted, sufficiently sized EBS root and supported instance family/RAM size."
+    },
+    {
+      "id": 17,
+      "questionText": "An EBS volume has had several snapshots taken over time. How does EBS store these snapshots to minimize storage cost?",
+      "options": {
+        "A": "Snapshots only store metadata and cannot restore data",
+        "B": "Snapshots are stored on the instance store",
+        "C": "Snapshots are incremental — only blocks changed since the previous snapshot are stored, though each snapshot can be used to restore the full volume",
+        "D": "Each snapshot is a full copy of the entire volume"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Metadata-only snapshots.",
+          "reason": "Incorrect — snapshots contain the actual data blocks needed to restore the volume, not just metadata."
+        },
+        "B": {
+          "description": "Snapshots on instance store.",
+          "reason": "Incorrect — EBS snapshots are stored durably (managed in S3), not on ephemeral instance store."
+        },
+        "C": {
+          "description": "Incremental snapshots that still restore the full volume.",
+          "reason": "Correct — after the first snapshot, EBS stores only changed blocks; each snapshot references prior data so any single snapshot can restore the complete volume, while you pay only for unique changed blocks."
+        },
+        "D": {
+          "description": "Full copy per snapshot.",
+          "reason": "Incorrect — that would waste storage; EBS snapshots are incremental, not full copies each time."
+        }
+      },
+      "Tips": "EBS snapshots are INCREMENTAL (only changed blocks after the first), stored durably in S3 (managed), and Region-scoped. Deleting one snapshot does not break others because retained blocks needed by remaining snapshots are preserved. Each snapshot can restore the whole volume."
+    },
+    {
+      "id": 18,
+      "questionText": "A company wants to automate the creation, retention, and deletion of EBS snapshots on a schedule across many volumes, using lifecycle policies and tags, without writing custom scripts. Which AWS service should they use?",
+      "options": {
+        "A": "AWS Backup only, with no EBS support",
+        "B": "Amazon EFS lifecycle management",
+        "C": "AWS Config rules",
+        "D": "Amazon Data Lifecycle Manager (DLM)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming AWS Backup has no EBS support.",
+          "reason": "Incorrect — that statement is false (AWS Backup does support EBS), but the feature purpose-built for scheduled EBS snapshot lifecycle by tags is DLM, making this option misleading."
+        },
+        "B": {
+          "description": "EFS lifecycle management.",
+          "reason": "Incorrect — EFS lifecycle management transitions files between EFS storage classes; it does not manage EBS snapshots."
+        },
+        "C": {
+          "description": "AWS Config rules.",
+          "reason": "Incorrect — Config evaluates resource compliance; it does not create or rotate EBS snapshots."
+        },
+        "D": {
+          "description": "Amazon Data Lifecycle Manager for scheduled snapshots.",
+          "reason": "Correct — DLM automates EBS snapshot (and AMI) creation, retention, and deletion on schedules using tag-based policies, eliminating custom scripting."
+        }
+      },
+      "Tips": "Amazon Data Lifecycle Manager (DLM) = tag-based, scheduled automation of EBS snapshots and EBS-backed AMIs (create/retain/delete). For broader cross-service backups, AWS Backup is the centralized option. For EBS-snapshot scheduling specifically, DLM is the classic answer."
+    },
+    {
+      "id": 19,
+      "questionText": "An application that reads from EBS volumes created from a snapshot experiences high latency on the very first read of each block (lazy loading). The team needs full performance immediately after creating volumes from a snapshot. Which feature eliminates this initialization penalty?",
+      "options": {
+        "A": "Fast Snapshot Restore (FSR)",
+        "B": "Provisioned IOPS only",
+        "C": "EBS encryption",
+        "D": "EBS Multi-Attach"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Fast Snapshot Restore for instant full performance.",
+          "reason": "Correct — FSR makes volumes created from a snapshot fully initialized and deliver full performance immediately, eliminating the first-touch lazy-load latency (enabled per snapshot per AZ, at additional cost)."
+        },
+        "B": {
+          "description": "Provisioned IOPS alone.",
+          "reason": "Incorrect — high provisioned IOPS does not remove the lazy-loading initialization penalty on snapshot-restored blocks; FSR is the specific remedy."
+        },
+        "C": {
+          "description": "EBS encryption.",
+          "reason": "Incorrect — encryption protects data at rest/in transit; it does not address snapshot first-read latency."
+        },
+        "D": {
+          "description": "Multi-Attach to remove init latency.",
+          "reason": "Incorrect — Multi-Attach lets multiple instances share an io1/io2 volume; it does not pre-warm snapshot-restored data."
+        }
+      },
+      "Tips": "Fast Snapshot Restore (FSR) eliminates the lazy-loading/first-touch latency for volumes restored from a snapshot, delivering full performance instantly. It is enabled per snapshot per AZ and incurs extra cost. The older manual workaround was reading every block to 'pre-warm' the volume."
+    },
+    {
+      "id": 20,
+      "questionText": "An engineer needs to create an encrypted copy of an existing UNENCRYPTED EBS volume. What is a valid sequence to achieve this?",
+      "options": {
+        "A": "Toggle an 'encrypt' switch directly on the existing volume in place",
+        "B": "Take a snapshot of the unencrypted volume, copy the snapshot with encryption enabled, then create a new volume from the encrypted snapshot",
+        "C": "Encryption cannot be added; you must recreate all data manually",
+        "D": "Detach the volume and re-attach it to enable encryption"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Toggling encryption in place.",
+          "reason": "Incorrect — you cannot encrypt an existing unencrypted EBS volume in place; there is no in-place toggle."
+        },
+        "B": {
+          "description": "Snapshot → copy with encryption → create new encrypted volume.",
+          "reason": "Correct — to encrypt existing data, snapshot the unencrypted volume, copy the snapshot with the encrypt option (selecting a KMS key), then create a new volume from the encrypted snapshot."
+        },
+        "C": {
+          "description": "Claiming it is impossible without manual recreation.",
+          "reason": "Incorrect — the snapshot-copy-with-encryption workflow handles it without manually recreating data."
+        },
+        "D": {
+          "description": "Detach/re-attach to encrypt.",
+          "reason": "Incorrect — attaching/detaching does not change encryption state."
+        }
+      },
+      "Tips": "To encrypt an existing unencrypted volume: snapshot → copy snapshot with encryption enabled (choose KMS key) → create new volume from the encrypted snapshot → swap. Snapshots of encrypted volumes are always encrypted, and volumes from encrypted snapshots are encrypted automatically."
+    },
+    {
+      "id": 21,
+      "questionText": "A data warehouse workload performs large, sequential reads and writes of big files and prioritizes high throughput (MB/s) at the lowest cost, rather than high random IOPS. Which EBS volume type is most appropriate?",
+      "options": {
+        "A": "sc1 cold HDD",
+        "B": "io2 provisioned IOPS SSD",
+        "C": "st1 throughput-optimized HDD",
+        "D": "gp3 general-purpose SSD"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "sc1 cold HDD.",
+          "reason": "Incorrect — sc1 targets infrequently accessed cold data with the lowest performance; a frequently accessed throughput workload should use st1, not sc1."
+        },
+        "B": {
+          "description": "io2 for sequential throughput.",
+          "reason": "Incorrect — io2 is high random-IOPS SSD and is overkill/expensive for sequential throughput-bound data-warehouse reads."
+        },
+        "C": {
+          "description": "st1 throughput-optimized HDD for sequential big-data.",
+          "reason": "Correct — st1 is designed for frequently accessed, throughput-intensive sequential workloads like big data and data warehouses, offering high MB/s at low cost (it cannot be a boot volume)."
+        },
+        "D": {
+          "description": "gp3 for sequential big-data throughput.",
+          "reason": "Incorrect — gp3 is general-purpose SSD optimized for IOPS; it is more expensive than st1 for large sequential throughput-bound workloads."
+        }
+      },
+      "Tips": "HDD EBS types: st1 = throughput-optimized, frequently accessed sequential big data / data warehouses / logs (high MB/s, low cost). sc1 = cold, infrequently accessed, lowest cost/perf. Neither can be a boot volume. For random IOPS use SSD (gp3/io1/io2)."
+    },
+    {
+      "id": 22,
+      "questionText": "An EFS file system supports a highly parallelized workload with thousands of EC2 instances performing concurrent operations and needs the highest possible aggregate throughput and IOPS, accepting slightly higher per-operation latency. Which EFS performance mode should be selected?",
+      "options": {
+        "A": "Provisioned throughput mode",
+        "B": "Bursting throughput mode",
+        "C": "General Purpose performance mode",
+        "D": "Max I/O performance mode"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Provisioned throughput mode.",
+          "reason": "Incorrect — that is a THROUGHPUT mode (decoupling throughput from size), not a PERFORMANCE mode; the question asks about performance mode."
+        },
+        "B": {
+          "description": "Bursting throughput mode.",
+          "reason": "Incorrect — bursting is also a throughput mode, not a performance mode; it scales throughput with stored data size."
+        },
+        "C": {
+          "description": "General Purpose mode for massive parallelism.",
+          "reason": "Incorrect — General Purpose offers the lowest latency but has a lower ceiling on operations per second; it is best for latency-sensitive, less massively parallel workloads."
+        },
+        "D": {
+          "description": "Max I/O for highly parallel, high-throughput workloads.",
+          "reason": "Correct — Max I/O performance mode scales to higher aggregate throughput and IOPS for highly parallelized workloads, trading slightly higher per-operation latency."
+        }
+      },
+      "Tips": "Don't confuse EFS PERFORMANCE modes (General Purpose vs Max I/O) with THROUGHPUT modes (Bursting, Provisioned, Elastic). Performance mode = latency vs parallel scalability. Throughput mode = how throughput is delivered. Highly parallel + max aggregate → Max I/O performance mode."
+    },
+    {
+      "id": 23,
+      "questionText": "An EFS file system's throughput needs are unpredictable and spiky, and the team wants throughput to scale automatically and pay only for what they use, without managing provisioned values or worrying about burst credits. Which EFS throughput mode fits best?",
+      "options": {
+        "A": "Elastic throughput mode",
+        "B": "Bursting throughput mode",
+        "C": "Provisioned throughput mode",
+        "D": "Max I/O performance mode"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Elastic throughput mode that auto-scales and bills per use.",
+          "reason": "Correct — Elastic throughput automatically scales up and down with demand and charges only for the throughput used, ideal for unpredictable, spiky workloads with no capacity planning."
+        },
+        "B": {
+          "description": "Bursting mode for spiky, hands-off throughput.",
+          "reason": "Incorrect — bursting scales with stored data size and relies on burst credits, which can be exhausted; it is not the pay-per-use, auto-scaling option."
+        },
+        "C": {
+          "description": "Provisioned throughput mode.",
+          "reason": "Incorrect — provisioned requires you to set a fixed throughput level (and pay for it regardless of size), which is the opposite of hands-off auto-scaling."
+        },
+        "D": {
+          "description": "Max I/O performance mode.",
+          "reason": "Incorrect — Max I/O is a performance mode, not a throughput mode, and does not describe pay-per-use auto-scaling throughput."
+        }
+      },
+      "Tips": "EFS throughput modes: Bursting (scales with size, uses credits), Provisioned (fixed throughput you pay for regardless of size), Elastic (auto-scales, pay-per-use, best for spiky/unpredictable). For unpredictable spiky usage with no planning → Elastic."
+    },
+    {
+      "id": 24,
+      "questionText": "A company stores large amounts of data on EFS, but most files are accessed only for the first few days and then rarely touched. The company wants to reduce storage costs automatically. Which EFS capability should be configured?",
+      "options": {
+        "A": "EFS Provisioned throughput",
+        "B": "EFS lifecycle management to transition infrequently accessed files to an Infrequent Access (IA) storage class",
+        "C": "EBS snapshots of the EFS file system",
+        "D": "Instance store tiering"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Provisioned throughput to cut storage cost.",
+          "reason": "Incorrect — provisioned throughput addresses performance, not storage-class cost optimization for cold files."
+        },
+        "B": {
+          "description": "Lifecycle management moving cold files to IA.",
+          "reason": "Correct — EFS lifecycle management automatically transitions files not accessed within a configured period to the lower-cost Infrequent Access storage class, reducing cost while keeping them accessible."
+        },
+        "C": {
+          "description": "EBS snapshots of EFS.",
+          "reason": "Incorrect — EFS is not EBS; you do not take EBS snapshots of an EFS file system, and that would not be a cost-tiering mechanism."
+        },
+        "D": {
+          "description": "Instance store tiering.",
+          "reason": "Incorrect — instance store is ephemeral local storage unrelated to EFS cost tiering."
+        }
+      },
+      "Tips": "EFS storage classes: Standard, Standard-IA, One Zone, One Zone-IA. EFS lifecycle management automatically moves files to IA after a no-access period (and can move them back on access). Use One Zone classes for non-critical data to save more (single-AZ durability)."
+    },
+    {
+      "id": 25,
+      "questionText": "A single EC2 instance needs maximum block-storage performance by combining the IOPS and throughput of multiple EBS volumes, and the application tolerates the loss of redundancy at the array level (relying on EBS's own in-AZ replication). Which RAID configuration is recommended?",
+      "options": {
+        "A": "RAID 1 (mirroring) for performance",
+        "B": "RAID 5 across EBS volumes",
+        "C": "RAID 0 (striping) to combine the performance of multiple EBS volumes",
+        "D": "RAID 6 across EBS volumes"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "RAID 1 for performance.",
+          "reason": "Incorrect — RAID 1 mirrors data for redundancy and does not increase aggregate performance the way striping does."
+        },
+        "B": {
+          "description": "RAID 5 on EBS.",
+          "reason": "Incorrect — AWS does not recommend RAID 5/6 on EBS due to parity write penalties and because EBS already provides in-AZ redundancy; they reduce performance."
+        },
+        "C": {
+          "description": "RAID 0 striping to aggregate EBS performance.",
+          "reason": "Correct — RAID 0 stripes across multiple EBS volumes to combine their IOPS and throughput for higher performance, at the cost of no array-level redundancy (each EBS volume is still replicated within its AZ)."
+        },
+        "D": {
+          "description": "RAID 6 on EBS.",
+          "reason": "Incorrect — same reasoning as RAID 5; parity-based RAID is not recommended on EBS and hurts performance."
+        }
+      },
+      "Tips": "On EBS, AWS recommends RAID 0 (striping) for higher performance and generally does not recommend parity RAID (5/6). RAID 1 is mirroring for redundancy. Since EBS already replicates within an AZ, array redundancy is usually unnecessary; stripe for performance with RAID 0."
+    },
+    {
+      "id": 26,
+      "questionText": "An EC2 instance with an instance store volume is rebooted (not stopped). What happens to the data on the instance store?",
+      "options": {
+        "A": "The data is moved to EFS during reboot",
+        "B": "The data is lost because instance store is always wiped on reboot",
+        "C": "The data is automatically backed up to EBS",
+        "D": "The data persists across a reboot, but is lost on stop, hibernate, termination, or underlying host failure"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Moving data to EFS on reboot.",
+          "reason": "Incorrect — no automatic movement to EFS occurs; instance store is ephemeral local storage."
+        },
+        "B": {
+          "description": "Claiming reboot wipes instance store.",
+          "reason": "Incorrect — a reboot does not wipe instance store; data survives reboots."
+        },
+        "C": {
+          "description": "Automatic backup to EBS.",
+          "reason": "Incorrect — instance store is not automatically backed up anywhere; persistence requires your own copy to durable storage."
+        },
+        "D": {
+          "description": "Persists on reboot; lost on stop/hibernate/terminate/host failure.",
+          "reason": "Correct — instance store data survives an OS/instance reboot but is lost whenever the instance is stopped, hibernated, terminated, or the underlying hardware fails."
+        }
+      },
+      "Tips": "Instance store lifecycle: survives REBOOT; lost on STOP, HIBERNATE, TERMINATE, or host failure. Because it is ephemeral, store only data you can afford to lose (cache/scratch) or replicate it to EBS/EFS/S3 for durability."
+    },
+    {
+      "id": 27,
+      "questionText": "An administrator wants to grant an AWS service (for example, allowing AWS to manage resources on your behalf) using a role that is predefined and managed by that service, with permissions the service requires. Which type of role is this?",
+      "options": {
+        "A": "A service-linked role",
+        "B": "An inline user policy",
+        "C": "A SAML federation role",
+        "D": "A permission boundary"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A service-linked role predefined by the service.",
+          "reason": "Correct — a service-linked role is a special IAM role linked to an AWS service, predefined with the permissions the service needs and managed by that service to perform actions on your behalf."
+        },
+        "B": {
+          "description": "An inline user policy.",
+          "reason": "Incorrect — inline policies attach to principals to grant permissions; they are not service-linked roles."
+        },
+        "C": {
+          "description": "A SAML federation role.",
+          "reason": "Incorrect — SAML roles are for federated human/identity-provider sign-in, not service-managed roles for AWS services."
+        },
+        "D": {
+          "description": "A permission boundary.",
+          "reason": "Incorrect — a permission boundary caps permissions for a principal; it is not a role that a service uses to act on your behalf."
+        }
+      },
+      "Tips": "Service-linked roles are predefined, service-managed roles that let an AWS service perform actions on your behalf with the exact permissions it needs. They simplify setup and are often created automatically by the service. Distinguish from generic service roles you create and pass."
+    },
+    {
+      "id": 28,
+      "questionText": "A company needs an instance type recommendation: the workload is memory-intensive, running large in-memory databases and caches that require a high ratio of RAM to vCPU. Which EC2 instance family is the best general fit?",
+      "options": {
+        "A": "T-family (burstable)",
+        "B": "R-family (memory optimized)",
+        "C": "I-family selected purely for compute",
+        "D": "C-family (compute optimized)"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "T-family for in-memory databases.",
+          "reason": "Incorrect — T-family is burstable and general purpose, not designed to provide the large memory footprints these workloads need."
+        },
+        "B": {
+          "description": "R-family memory optimized for high RAM-to-vCPU.",
+          "reason": "Correct — R-family instances are memory optimized, providing a high ratio of RAM to vCPU, ideal for in-memory databases, caches, and real-time big-data analytics."
+        },
+        "C": {
+          "description": "I-family chosen for compute.",
+          "reason": "Incorrect — I-family is storage optimized (high local NVMe I/O); choosing it 'for compute' misstates its purpose, and it is not the memory-optimized answer."
+        },
+        "D": {
+          "description": "C-family for memory-intensive workloads.",
+          "reason": "Incorrect — C-family is compute optimized (high vCPU relative to RAM), the wrong ratio for memory-heavy in-memory databases."
+        }
+      },
+      "Tips": "Match family to workload: C = compute optimized (CPU-bound), R/X = memory optimized (RAM-bound, in-memory DBs/caches), I/D = storage optimized (high local I/O), M/T = general purpose/burstable, P/G = accelerated/GPU. Memory-intensive → R-family."
+    },
+    {
+      "id": 29,
+      "questionText": "A compliance requirement states that all new EBS volumes created in an account must be encrypted by default, without relying on users to remember to enable encryption. How can this be enforced?",
+      "options": {
+        "A": "Use a Security Group rule to require encryption",
+        "B": "Encrypt volumes only after they are created using a reboot",
+        "C": "Enable EBS encryption by default at the account/Region level so all new volumes are automatically encrypted",
+        "D": "It cannot be enforced; encryption must be chosen per volume manually"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A Security Group rule for encryption.",
+          "reason": "Incorrect — Security Groups filter network traffic and cannot enforce storage encryption."
+        },
+        "B": {
+          "description": "Encrypting after creation via reboot.",
+          "reason": "Incorrect — rebooting does not encrypt a volume, and the requirement is to enforce encryption at creation automatically."
+        },
+        "C": {
+          "description": "Enabling EBS encryption by default per Region.",
+          "reason": "Correct — the 'EBS encryption by default' account setting (configured per Region) ensures every newly created EBS volume and snapshot is encrypted automatically, satisfying the compliance rule."
+        },
+        "D": {
+          "description": "Claiming it can't be enforced.",
+          "reason": "Incorrect — AWS provides an account-level setting that forces encryption on all new EBS volumes, so manual per-volume choice is not required."
+        }
+      },
+      "Tips": "Enable 'EBS encryption by default' at the account level per Region so all new volumes/snapshots are encrypted automatically (using a chosen KMS key). This is the enforcement mechanism. Note it is a per-Region setting and does not retroactively encrypt existing unencrypted volumes."
+    },
+    {
+      "id": 30,
+      "questionText": "An application needs durable block storage for a single EC2 instance that must persist independently of the instance's lifecycle (surviving stop/terminate if configured), be backed up via snapshots, and live in a single Availability Zone. Which storage option is the best fit?",
+      "options": {
+        "A": "Amazon EFS",
+        "B": "Instance Store",
+        "C": "Amazon S3 mounted as a block device",
+        "D": "Amazon EBS volume"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EFS for single-instance block storage.",
+          "reason": "Incorrect — EFS is a shared file (NFS) system, not block storage attached to a single instance; it is multi-AZ file storage."
+        },
+        "B": {
+          "description": "Instance Store for durable persistent block storage.",
+          "reason": "Incorrect — instance store is ephemeral and lost on stop/terminate; it cannot provide durable, independently persistent block storage."
+        },
+        "C": {
+          "description": "S3 as a block device.",
+          "reason": "Incorrect — S3 is object storage and is not mounted as a native block device for an instance; it does not provide block semantics."
+        },
+        "D": {
+          "description": "An EBS volume for durable, single-AZ, snapshot-backed block storage.",
+          "reason": "Correct — EBS provides durable network block storage for a single instance, persists independently (and can survive termination via DeleteOnTermination=false), supports snapshots, and lives in one AZ."
+        }
+      },
+      "Tips": "EBS = durable, single-AZ, network block storage for one instance (snapshot-backed, persists independently). Instance Store = ephemeral local block. EFS = shared multi-AZ file system. S3 = object storage. For persistent single-instance block storage, choose EBS."
+    }
+  ]
+}

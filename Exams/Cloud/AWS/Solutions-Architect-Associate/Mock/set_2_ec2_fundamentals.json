@@ -1,0 +1,167 @@
+{
+  "setId": "1fe05b53-41de-4666-8f98-928b0235b004",
+  "setTitle": "AWS SAA Exam Style - EC2 Fundamentals",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A web application runs on Amazon EC2 instances and relies on a fleet of background worker EC2 instances to process video files. The web instances are in Security Group `sg-web` and the worker instances are in Security Group `sg-worker`. Both sets of instances scale dynamically via Auto Scaling Groups. What is the MOST robust way to allow the web instances to send HTTP traffic (port 8080) to the worker instances?",
+      "options": {
+        "A": "In `sg-worker`, add an inbound rule allowing port 8080 from the VPC CIDR block.",
+        "B": "In `sg-worker`, add an inbound rule allowing port 8080 with the source set to the Security Group ID of `sg-web`.",
+        "C": "In `sg-web`, add an outbound rule allowing port 8080 to the Elastic IP addresses of the worker instances.",
+        "D": "Create a Network ACL that allows port 8080 between the web subnets and worker subnets."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Allowing from VPC CIDR.",
+          "reason": "Incorrect — This grants access to ANY resource within the VPC on port 8080, violating the principle of least privilege."
+        },
+        "B": {
+          "description": "Referencing Security Group ID.",
+          "reason": "Correct — By referencing the `sg-web` ID in the `sg-worker` inbound rules, AWS dynamically allows traffic from any instance associated with `sg-web`, no matter how many instances are added or removed by Auto Scaling. This is the optimal AWS architectural pattern."
+        },
+        "C": {
+          "description": "Using Elastic IPs.",
+          "reason": "Incorrect — Auto Scaling dynamically creates instances; maintaining EIPs and updating security groups manually would be an operational nightmare and doesn't scale."
+        },
+        "D": {
+          "description": "Using Network ACLs.",
+          "reason": "Incorrect — NACLs operate at the subnet level and are stateless, meaning you'd have to manage ephemeral ports. Security groups are stateful and instance-level, making them the better choice here."
+        }
+      },
+      "Tips": "Whenever instances scale dynamically, NEVER use static IPs in security groups. Always reference the Security Group ID of the source."
+    },
+    {
+      "id": 2,
+      "questionText": "A startup is migrating an internally developed batch processing application to AWS. The workload is highly parallel, fault-tolerant, and can be interrupted and resumed at any time without data loss. The startup's primary goal is to minimize compute costs. Which EC2 purchasing option is the BEST fit for this workload?",
+      "options": {
+        "A": "On-Demand Instances",
+        "B": "Reserved Instances",
+        "C": "Spot Instances",
+        "D": "Dedicated Hosts"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "On-Demand Instances.",
+          "reason": "Incorrect — On-Demand offers no long-term commitment but is the most expensive standard pricing model."
+        },
+        "B": {
+          "description": "Reserved Instances.",
+          "reason": "Incorrect — While RIs offer a discount for a 1 or 3-year commitment, they are designed for steady-state, predictable workloads, not strictly for maximizing cost savings on interruptible jobs."
+        },
+        "C": {
+          "description": "Spot Instances.",
+          "reason": "Correct — Spot Instances allow you to bid on spare EC2 capacity at discounts of up to 90%. Because the workload is fault-tolerant and can be interrupted, it is the perfect use case for Spot Instances to minimize costs."
+        },
+        "D": {
+          "description": "Dedicated Hosts.",
+          "reason": "Incorrect — Dedicated Hosts provide physical servers dedicated for your use (useful for server-bound software licenses) and are very expensive."
+        }
+      },
+      "Tips": "Keywords 'fault-tolerant', 'batch processing', 'can be interrupted', and 'minimize costs' practically scream Spot Instances."
+    },
+    {
+      "id": 3,
+      "questionText": "A company wants to share an Amazon Machine Image (AMI) with a partner organization in a different AWS account. The AMI is backed by an EBS snapshot that is encrypted using an AWS managed KMS key (aws/ebs). The company attempts to share the AMI via the EC2 console, but the partner account cannot access it. What is the reason for this failure?",
+      "options": {
+        "A": "AMIs backed by encrypted EBS volumes cannot be shared across AWS accounts under any circumstances.",
+        "B": "The partner account must create an IAM Role to assume ownership of the AMI before it can be shared.",
+        "C": "AWS managed KMS keys cannot be shared cross-account. A Customer Managed Key (CMK) must be used.",
+        "D": "The AMI must be copied to the target region in the source account before it can be shared with the partner account."
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "AMIs with encrypted volumes cannot be shared.",
+          "reason": "Incorrect — You can share AMIs backed by encrypted snapshots, provided the encryption key can also be shared."
+        },
+        "B": {
+          "description": "Partner must create an IAM role for ownership.",
+          "reason": "Incorrect — Sharing an AMI is an account-level attribute change; it does not require a cross-account IAM role assumption to initiate the share."
+        },
+        "C": {
+          "description": "AWS Managed Keys cannot be shared cross-account.",
+          "reason": "Correct — You cannot share AMIs encrypted with the default `aws/ebs` managed key. You must create a Customer Managed Key (CMK), encrypt the snapshot with it, share the CMK with the partner account, and then share the AMI."
+        },
+        "D": {
+          "description": "AMI must be copied to target region first.",
+          "reason": "Incorrect — While region is important, the failure described here is due to encryption key limitations, not region mis-match."
+        }
+      },
+      "Tips": "If an exam question mentions cross-account sharing with encryption, remember: AWS Managed Keys (`aws/service`) CANNOT be shared cross-account. You MUST use a Customer Managed Key (CMK)."
+    },
+    {
+      "id": 4,
+      "questionText": "You are deploying a custom-built software appliance on EC2 that validates traffic based on incoming source IP addresses. You notice that traffic arriving from other subnets in the VPC is occasionally being dropped. You verify the Security Groups and NACLs are entirely open. What EC2 feature must be disabled to allow this appliance to function correctly?",
+      "options": {
+        "A": "Enhanced Networking (ENA)",
+        "B": "Source/Destination Check",
+        "C": "EC2 Instance Metadata Service (IMDS)",
+        "D": "Placement Groups"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Enhanced Networking.",
+          "reason": "Incorrect — ENA provides higher bandwidth and lower latency. It does not drop traffic based on IP validation rules."
+        },
+        "B": {
+          "description": "Source/Destination Check.",
+          "reason": "Correct — By default, EC2 instances perform Source/Destination checks to ensure the instance is either the source or destination of the traffic. For appliances acting as a router, firewall, or NAT, this check must be disabled so the instance can accept traffic meant for other IPs."
+        },
+        "C": {
+          "description": "IMDS.",
+          "reason": "Incorrect — IMDS is used to retrieve metadata about the instance. It does not affect data plane network routing."
+        },
+        "D": {
+          "description": "Placement Groups.",
+          "reason": "Incorrect — Placement groups affect physical hardware placement of instances, not IP routing logic."
+        }
+      },
+      "Tips": "If an EC2 instance is acting as a Router, NAT instance, Firewall, or VPN appliance, you MUST disable the Source/Destination check."
+    },
+    {
+      "id": 5,
+      "questionText": "An application is hosted on an Amazon EC2 instance. The developers want to retrieve the public IPv4 address of the instance from within the application script itself during initialization. Which URL should the application query to obtain this information?",
+      "options": {
+        "A": "http://169.254.169.254/latest/meta-data/public-ipv4",
+        "B": "http://254.169.254.169/latest/user-data/",
+        "C": "http://169.254.169.254/latest/user-data/",
+        "D": "http://127.0.0.1/latest/meta-data/public-ipv4"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "meta-data/public-ipv4.",
+          "reason": "Correct — The special link-local IP `169.254.169.254` is the EC2 Instance Metadata Service. The `meta-data/` path contains system info like the public IP."
+        },
+        "B": {
+          "description": "Wrong IP address.",
+          "reason": "Incorrect — The IP address is transposed. It must be exactly 169.254.169.254."
+        },
+        "C": {
+          "description": "user-data/.",
+          "reason": "Incorrect — While the IP is correct, the `user-data/` endpoint retrieves the bootstrap scripts passed to the instance at launch, not dynamic attributes like the public IP."
+        },
+        "D": {
+          "description": "Localhost IP.",
+          "reason": "Incorrect — `127.0.0.1` is the loopback address, not the IMDS endpoint."
+        }
+      },
+      "Tips": "Memorize `169.254.169.254`. Metadata = info ABOUT the instance (IPs, instance ID, IAM role temp credentials). Userdata = bootstrap script."
+    }
+  ]
+}

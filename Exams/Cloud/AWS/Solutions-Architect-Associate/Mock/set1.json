@@ -1,0 +1,967 @@
+{
+  "setId": "e0ee7b68-953f-4df4-b950-4d540cccfec6",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Practice Exam 1",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A startup has just created its first AWS account and logged in with the root user to begin building infrastructure. The security lead wants to follow AWS best practices for securing the account from day one. Which combination of actions should be taken FIRST?",
+      "options": {
+        "A": "Enable MFA on the root user, create an individual IAM user with administrative permissions for daily work, and stop using the root user for routine tasks",
+        "B": "Share the root user password with all engineers so the team can collaborate quickly",
+        "C": "Generate access keys for the root user and store them in the application configuration for programmatic access",
+        "D": "Delete the root user account entirely and rely only on IAM users"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Protect root with MFA, then create a least-privileged-by-design admin IAM user for everyday operations.",
+          "reason": "Correct — this is the canonical AWS account-hardening sequence: secure root with MFA, lock it away, and perform daily work through IAM principals."
+        },
+        "B": {
+          "description": "Distributing the shared root password to the whole team.",
+          "reason": "Incorrect — sharing credentials destroys auditability and least privilege; each person should have their own IAM identity."
+        },
+        "C": {
+          "description": "Creating long-lived root access keys for application use.",
+          "reason": "Incorrect — root access keys grant unrestricted account access and should generally not be created; AWS recommends deleting any that exist and using IAM roles for applications."
+        },
+        "D": {
+          "description": "Deleting the root user.",
+          "reason": "Incorrect — the root user cannot be deleted; it is intrinsic to the account and should instead be secured and rarely used."
+        }
+      },
+      "Tips": "Day-one account hardening is a recurring exam theme. Memorize the order: enable MFA on root, create an admin IAM user/group, and stop using root for daily tasks. Root cannot be deleted, and root access keys should not exist."
+    },
+    {
+      "id": 2,
+      "questionText": "An administrator needs to grant the same set of permissions to 25 new developers who will all perform identical job functions. The administrator wants the most maintainable approach that minimizes repeated effort when permissions change later. What should the administrator do?",
+      "options": {
+        "A": "Add all 25 developers as members of the root user",
+        "B": "Create an IAM group, attach a managed policy to the group, and add all 25 users to the group",
+        "C": "Create 25 IAM roles and have each developer assume their own role",
+        "D": "Attach the same inline policy individually to each of the 25 IAM users"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Making users members of the root user.",
+          "reason": "Incorrect — the root user has no membership concept and represents unrestricted account access; this is not how permissions are delegated."
+        },
+        "B": {
+          "description": "A single group carrying a managed policy, with users as members.",
+          "reason": "Correct — groups exist precisely to manage permissions for many users at once; updating the group policy updates all members instantly."
+        },
+        "C": {
+          "description": "One role per developer for routine permissions.",
+          "reason": "Incorrect — roles are for assumed/temporary identities, not the primary way to assign standing permissions to known human users; this adds needless complexity."
+        },
+        "D": {
+          "description": "Duplicating an inline policy onto every individual user.",
+          "reason": "Incorrect — inline policies attached per user are not reusable and require editing 25 times whenever a permission changes."
+        }
+      },
+      "Tips": "When a question stresses 'same permissions for many users' plus 'maintainability', the answer is an IAM group with a managed policy. Groups are containers for users, cannot be nested, and cannot themselves be a principal."
+    },
+    {
+      "id": 3,
+      "questionText": "A web application running on an EC2 instance must read and write objects in an Amazon S3 bucket. The development team initially hard-coded an IAM user's access keys into the application code. A security audit flagged this. What is the recommended way to give the application access to S3?",
+      "options": {
+        "A": "Store the access keys in environment variables on the instance",
+        "B": "Embed the root user credentials in the application configuration file",
+        "C": "Attach an IAM role with an S3 access policy to the EC2 instance via an instance profile",
+        "D": "Encrypt the access keys and continue storing them in the application code"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Moving static keys into environment variables.",
+          "reason": "Incorrect — this is still long-lived static credentials; it merely changes the storage location and does not eliminate the leak/rotation risk."
+        },
+        "B": {
+          "description": "Using root credentials in the app.",
+          "reason": "Incorrect — root credentials are the most dangerous to expose and must never be embedded in applications."
+        },
+        "C": {
+          "description": "An IAM role attached to the instance, delivering temporary rotating credentials through the instance metadata service.",
+          "reason": "Correct — EC2 instance roles provide automatically rotated temporary credentials with no secrets in code, which is the AWS-recommended pattern."
+        },
+        "D": {
+          "description": "Encrypting hard-coded keys but keeping them in code.",
+          "reason": "Incorrect — encryption does not solve the core problem of long-lived static credentials living with the application; they still must be rotated and can leak."
+        }
+      },
+      "Tips": "Any scenario where an EC2 instance (or other AWS service) needs to call AWS APIs should use an IAM role, never static access keys. The role is delivered to EC2 through an instance profile and provides short-lived, auto-rotated credentials."
+    },
+    {
+      "id": 4,
+      "questionText": "An IAM user is a member of a group whose policy explicitly allows s3:GetObject on a bucket. The same user also has an attached identity policy that explicitly denies s3:GetObject on that bucket. When the user attempts to read an object, what is the result?",
+      "options": {
+        "A": "The request is allowed because user-attached policies take priority over group policies",
+        "B": "The result is undefined and depends on which policy was created first",
+        "C": "The request is allowed because an explicit Allow exists on the group",
+        "D": "The request is denied because an explicit Deny always overrides any Allow"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Assuming user policies outrank group policies.",
+          "reason": "Incorrect — IAM does not rank Allows by attachment location; all policies are combined and an explicit Deny anywhere wins."
+        },
+        "B": {
+          "description": "Treating order of creation as the tiebreaker.",
+          "reason": "Incorrect — policy evaluation is deterministic and order-independent; creation time is irrelevant."
+        },
+        "C": {
+          "description": "Assuming the group Allow wins.",
+          "reason": "Incorrect — an Allow never overrides a Deny; the presence of any explicit Deny is decisive regardless of where the Allow lives."
+        },
+        "D": {
+          "description": "Explicit Deny takes precedence in IAM policy evaluation.",
+          "reason": "Correct — IAM evaluation logic is: explicit Deny beats explicit Allow, and the absence of an Allow is an implicit deny. Any matching Deny blocks the action."
+        }
+      },
+      "Tips": "The single most-tested IAM rule: explicit Deny > explicit Allow > implicit (default) Deny. Policies attached to a principal are unioned together; one Deny anywhere overrides every Allow."
+    },
+    {
+      "id": 5,
+      "questionText": "A company uses IAM permission boundaries. A developer's IAM user has an identity policy granting full access to Amazon S3, EC2, and DynamoDB. However, the developer's permission boundary only permits actions on Amazon S3 and EC2. What can the developer actually do?",
+      "options": {
+        "A": "Only S3 and EC2 actions, because effective permissions are the intersection of the identity policy and the permission boundary",
+        "B": "Only DynamoDB actions, because the boundary blocks the others",
+        "C": "Full access to S3, EC2, and DynamoDB, because the identity policy is more permissive",
+        "D": "Nothing, because permission boundaries always deny all actions"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Effective permissions equal the overlap of identity policy and boundary.",
+          "reason": "Correct — an action must be allowed by BOTH the identity policy and the permission boundary; only S3 and EC2 appear in both, so DynamoDB is excluded."
+        },
+        "B": {
+          "description": "Assuming only DynamoDB is allowed.",
+          "reason": "Incorrect — this inverts the logic; the boundary permits S3 and EC2, not DynamoDB."
+        },
+        "C": {
+          "description": "Assuming the broader identity policy wins.",
+          "reason": "Incorrect — a permission boundary caps the maximum permissions; the identity policy alone cannot grant beyond the boundary."
+        },
+        "D": {
+          "description": "Treating boundaries as blanket denials.",
+          "reason": "Incorrect — boundaries do not deny everything; they set a permission ceiling within which identity policies still grant access."
+        }
+      },
+      "Tips": "Permission boundary = a ceiling, not a grant. Effective permissions are the INTERSECTION of the identity-based policy and the boundary. The same intersection logic applies to SCPs in AWS Organizations."
+    },
+    {
+      "id": 6,
+      "questionText": "A security team must produce a report listing every IAM user in the account along with the status of their passwords, access keys, MFA devices, and the last time each credential was used. Which native IAM feature provides this?",
+      "options": {
+        "A": "IAM Access Analyzer findings",
+        "B": "The IAM credential report",
+        "C": "AWS CloudTrail event history only",
+        "D": "The IAM policy simulator"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Access Analyzer for credential auditing.",
+          "reason": "Incorrect — Access Analyzer identifies resources shared externally and unused access, not a per-user credential status report."
+        },
+        "B": {
+          "description": "The credential report, a downloadable CSV of all users and their credential states.",
+          "reason": "Correct — the IAM credential report lists every user with password, access key, and MFA status plus last-used timestamps, exactly matching the requirement."
+        },
+        "C": {
+          "description": "CloudTrail event history alone.",
+          "reason": "Incorrect — CloudTrail logs API activity but does not produce a consolidated per-user credential status report."
+        },
+        "D": {
+          "description": "The policy simulator.",
+          "reason": "Incorrect — the simulator tests whether policies allow specific actions; it does not report credential status."
+        }
+      },
+      "Tips": "Two IAM auditing tools to keep straight: the credential report (account-wide CSV of all users' credential status) and Access Advisor / last-accessed data (per-principal service usage). For a full account credential inventory, it is the credential report."
+    },
+    {
+      "id": 7,
+      "questionText": "An organization wants to let users in its development AWS account access specific resources in its production AWS account, without creating duplicate IAM users in production. What is the most appropriate solution?",
+      "options": {
+        "A": "Share the production root user credentials with the development team",
+        "B": "Enable a VPC peering connection between the two accounts to share IAM users",
+        "C": "Create an IAM role in the production account with a trust policy allowing the development account, and have users assume the role via STS",
+        "D": "Create IAM users in the production account and email the access keys to developers"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Sharing production root credentials.",
+          "reason": "Incorrect — never share root credentials; this is the highest-risk possible action."
+        },
+        "B": {
+          "description": "VPC peering to share IAM users.",
+          "reason": "Incorrect — VPC peering connects networks, not identities; IAM is global to an account and not shared via networking."
+        },
+        "C": {
+          "description": "A cross-account IAM role with a trust policy, assumed through STS.",
+          "reason": "Correct — cross-account roles are the standard mechanism: production trusts the dev account, users call AssumeRole and receive temporary credentials, with no duplicated users."
+        },
+        "D": {
+          "description": "Duplicating IAM users into production.",
+          "reason": "Incorrect — this defeats the goal of avoiding duplicate identities and creates more long-lived credentials to manage and rotate."
+        }
+      },
+      "Tips": "Cross-account access = IAM role + trust policy + AssumeRole (STS). For third-party access, add an external ID to prevent the confused-deputy problem. VPC peering is networking and is unrelated to identity sharing."
+    },
+    {
+      "id": 8,
+      "questionText": "A company has several IAM policies that it wants to reuse and attach to multiple users, groups, and roles, while being able to update the policy in one place. Which type of policy should it use?",
+      "options": {
+        "A": "Resource-based policies only",
+        "B": "Session policies",
+        "C": "Inline policies",
+        "D": "Managed policies (AWS managed or customer managed)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Resource-based policies for this purpose.",
+          "reason": "Incorrect — resource-based policies attach to resources (like an S3 bucket), not reusable across principals as identity permissions."
+        },
+        "B": {
+          "description": "Session policies for reuse.",
+          "reason": "Incorrect — session policies are passed during role assumption to further limit a session and are not reusable attachable objects."
+        },
+        "C": {
+          "description": "Inline policies for reuse.",
+          "reason": "Incorrect — inline policies are embedded in a single principal and have a strict one-to-one relationship; they cannot be reused or centrally updated."
+        },
+        "D": {
+          "description": "Managed policies that exist as standalone objects attachable to many entities.",
+          "reason": "Correct — managed policies are reusable, versioned, and attachable to multiple users, groups, and roles, with a single edit propagating everywhere."
+        }
+      },
+      "Tips": "Managed (reusable, standalone, versioned, attach-to-many) vs inline (embedded, one-to-one, deleted with the principal). For 'reuse across many entities + update in one place', the answer is a managed policy."
+    },
+    {
+      "id": 9,
+      "questionText": "A policy must allow an IAM user to perform sensitive EC2 actions only when the user has authenticated with MFA. Which policy element enforces this condition?",
+      "options": {
+        "A": "A Condition element using aws:MultiFactorAuthPresent set to true",
+        "B": "A Principal element specifying the user",
+        "C": "An NotAction element excluding EC2",
+        "D": "A Resource element listing the EC2 ARNs"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A Condition with the aws:MultiFactorAuthPresent key.",
+          "reason": "Correct — Condition blocks evaluate context keys such as aws:MultiFactorAuthPresent, allowing the action only when MFA was used."
+        },
+        "B": {
+          "description": "Using Principal in an identity policy.",
+          "reason": "Incorrect — Principal is used in resource-based/trust policies to name who is allowed; it is not used in identity policies and does not enforce MFA."
+        },
+        "C": {
+          "description": "Using NotAction.",
+          "reason": "Incorrect — NotAction describes which actions are out of scope; it does not test for MFA."
+        },
+        "D": {
+          "description": "Using the Resource element to enforce MFA.",
+          "reason": "Incorrect — Resource scopes which objects the actions apply to; it cannot test authentication context."
+        }
+      },
+      "Tips": "Conditional logic in IAM lives in the Condition block. For MFA enforcement, use aws:MultiFactorAuthPresent. Other common keys: aws:SourceIp (IP restriction), aws:RequestedRegion, and aws:PrincipalTag."
+    },
+    {
+      "id": 10,
+      "questionText": "A developer configures the AWS CLI on a laptop using 'aws configure', entering an access key ID and secret access key. The same developer also manages EC2 instances that must run AWS CLI commands. What is the recommended credential approach for the EC2 instances (as opposed to the laptop)?",
+      "options": {
+        "A": "Run 'aws configure' on every instance with the root user's keys",
+        "B": "Attach an IAM role to the EC2 instances so the CLI automatically uses temporary credentials from instance metadata",
+        "C": "Copy the laptop's access keys into the ~/.aws/credentials file on each EC2 instance",
+        "D": "Disable credentials entirely; the CLI works without authentication inside a VPC"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Configuring root keys on instances.",
+          "reason": "Incorrect — root credentials must never be placed on instances; this maximizes blast radius."
+        },
+        "B": {
+          "description": "An IAM role on the instance, used transparently by the CLI via the metadata service.",
+          "reason": "Correct — the CLI and SDKs automatically retrieve temporary credentials from an attached instance role, so no keys are stored on the instance."
+        },
+        "C": {
+          "description": "Copying personal static keys onto instances.",
+          "reason": "Incorrect — distributing long-lived keys to instances is a security and rotation nightmare and is explicitly discouraged."
+        },
+        "D": {
+          "description": "Assuming no credentials are needed in a VPC.",
+          "reason": "Incorrect — AWS API calls always require credentials regardless of network location; being inside a VPC does not authenticate calls."
+        }
+      },
+      "Tips": "Static access keys are appropriate for a developer laptop (or use SSO). On EC2, always prefer an instance role — the CLI/SDK credential provider chain picks up role credentials from the metadata service automatically. No keys on disk."
+    },
+    {
+      "id": 11,
+      "questionText": "An engineer needs to select an EC2 instance type for a workload. The instance type m6i.2xlarge is proposed. In this name, what does the '2xlarge' portion indicate?",
+      "options": {
+        "A": "The instance family optimized for memory",
+        "B": "The AWS Region where the instance runs",
+        "C": "The size of the instance, which determines its vCPU and memory allocation within the family",
+        "D": "The number of Availability Zones the instance spans"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Reading 2xlarge as the family.",
+          "reason": "Incorrect — the family is the leading letter group (here 'm' for general purpose); 2xlarge is not the family."
+        },
+        "B": {
+          "description": "2xlarge as a Region.",
+          "reason": "Incorrect — Regions are not encoded in instance type names."
+        },
+        "C": {
+          "description": "2xlarge as the size designator scaling vCPU/memory.",
+          "reason": "Correct — in m6i.2xlarge, m=family, 6=generation, i=Intel processor variant, and 2xlarge=size; larger sizes mean proportionally more vCPU and memory."
+        },
+        "D": {
+          "description": "2xlarge as an AZ count.",
+          "reason": "Incorrect — instances run in a single AZ and the type name does not encode AZ span."
+        }
+      },
+      "Tips": "Decode instance names left to right: family (m/c/r/t...), generation (number), optional capabilities (e.g., 'i' Intel, 'a' AMD, 'g' Graviton, 'n' network), then size (large, xlarge, 2xlarge...). Size scales vCPU and RAM roughly linearly."
+    },
+    {
+      "id": 12,
+      "questionText": "A company runs a nightly batch image-processing job that is fully fault-tolerant: if a worker is interrupted, the job is simply retried on another worker. The company wants the lowest possible compute cost. Which EC2 purchasing option is most appropriate?",
+      "options": {
+        "A": "Dedicated Hosts",
+        "B": "Standard Reserved Instances for 3 years",
+        "C": "On-Demand Instances",
+        "D": "Spot Instances"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Dedicated Hosts.",
+          "reason": "Incorrect — Dedicated Hosts are the most expensive option, used for licensing/compliance, and are a poor fit for cheap batch processing."
+        },
+        "B": {
+          "description": "3-year Standard RIs.",
+          "reason": "Incorrect — RIs suit steady, always-on workloads with a long commitment, not an interruption-tolerant nightly job that does not run continuously."
+        },
+        "C": {
+          "description": "On-Demand for an interruption-tolerant batch job.",
+          "reason": "Incorrect — On-Demand has no interruption risk but is far more expensive than Spot for flexible, retryable work."
+        },
+        "D": {
+          "description": "Spot Instances for fault-tolerant, flexible workloads.",
+          "reason": "Correct — Spot offers the deepest discounts (up to ~90%) and is ideal when interruptions are acceptable, exactly matching a retryable batch job."
+        }
+      },
+      "Tips": "Pattern match purchasing options: fault-tolerant/flexible/interruptible + cheapest → Spot. Steady-state 24/7 + commitment → Reserved/Savings Plans. Short-term unpredictable + no interruptions → On-Demand. Compliance/BYOL → Dedicated Hosts."
+    },
+    {
+      "id": 13,
+      "questionText": "A company runs a production database on EC2 that must operate 24/7 for at least the next three years with steady, predictable utilization. The company wants to minimize cost while guaranteeing the instance is always available. Which purchasing option fits best?",
+      "options": {
+        "A": "A 3-year Reserved Instance or Compute Savings Plan commitment",
+        "B": "Spot Instances",
+        "C": "On-Demand Instances",
+        "D": "Spot Fleet with diversified pools"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A 3-year Reserved/Savings Plan commitment.",
+          "reason": "Correct — for steady, predictable, long-running workloads, a multi-year commitment delivers the largest discount while guaranteeing capacity availability."
+        },
+        "B": {
+          "description": "Spot for a 24/7 production database.",
+          "reason": "Incorrect — Spot can be interrupted at any time, which is unacceptable for an always-on production database."
+        },
+        "C": {
+          "description": "On-Demand for a steady multi-year workload.",
+          "reason": "Incorrect — On-Demand provides flexibility but no discount; paying On-Demand for a known 3-year steady workload wastes money."
+        },
+        "D": {
+          "description": "Spot Fleet for a production database.",
+          "reason": "Incorrect — even diversified Spot can be reclaimed; it is unsuitable for a database that must always be available."
+        }
+      },
+      "Tips": "Steady-state + long-term + cost-minimization = Reserved Instances or Savings Plans. The commitment (1 or 3 years) and payment option (no/partial/all upfront) drive the discount; 3-year all-upfront is cheapest per hour."
+    },
+    {
+      "id": 14,
+      "questionText": "A company must run a legacy application on EC2 using a 'bring your own license' (BYOL) model that is licensed per physical socket and core, and a compliance rule requires visibility into the underlying physical server. Which option satisfies these requirements?",
+      "options": {
+        "A": "On-Demand Instances with default tenancy",
+        "B": "Dedicated Hosts",
+        "C": "Spot Instances",
+        "D": "Dedicated Instances"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Shared default tenancy.",
+          "reason": "Incorrect — default tenancy shares hardware across customers and provides no host visibility or per-socket licensing control."
+        },
+        "B": {
+          "description": "Dedicated Hosts, which expose the physical server and its sockets/cores.",
+          "reason": "Correct — Dedicated Hosts provide visibility into the physical host (sockets, cores, host ID) and support per-socket/per-core BYOL licensing and compliance requirements."
+        },
+        "C": {
+          "description": "Spot for licensing/compliance.",
+          "reason": "Incorrect — Spot offers no host visibility, can be interrupted, and is unrelated to BYOL socket/core licensing."
+        },
+        "D": {
+          "description": "Dedicated Instances for socket/core-based BYOL.",
+          "reason": "Incorrect — Dedicated Instances run on hardware dedicated to your account but do NOT give visibility into sockets/cores or support per-socket BYOL licensing."
+        }
+      },
+      "Tips": "Dedicated Host vs Dedicated Instance is a classic trap. Dedicated HOST = physical server visibility (sockets/cores/host ID) for BYOL and compliance. Dedicated INSTANCE = isolated hardware but no host visibility. If you see 'per-socket license' or 'see the physical server', pick Dedicated Hosts."
+    },
+    {
+      "id": 15,
+      "questionText": "An architect wants to launch identical EC2 instances in a second AWS Region for disaster recovery, using a custom AMI that was built and registered in the primary Region. What must the architect do to use that AMI in the second Region?",
+      "options": {
+        "A": "Nothing — AMIs are global and automatically available in all Regions",
+        "B": "Recreate the instance from scratch because AMIs cannot be moved",
+        "C": "Copy the AMI to the second Region, because AMIs are Region-scoped",
+        "D": "Convert the AMI into an EBS snapshot, which is global"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Treating AMIs as global.",
+          "reason": "Incorrect — AMIs are tied to the Region in which they are created and are not automatically available elsewhere."
+        },
+        "B": {
+          "description": "Rebuilding from scratch.",
+          "reason": "Incorrect — there is no need to rebuild; AMIs can be copied across Regions natively."
+        },
+        "C": {
+          "description": "Copying the AMI across Regions.",
+          "reason": "Correct — AMIs are Region-scoped; the CopyImage action replicates the AMI (and its backing snapshots) into the target Region for use there."
+        },
+        "D": {
+          "description": "Assuming EBS snapshots are global.",
+          "reason": "Incorrect — EBS snapshots are also Region-scoped (stored regionally) and must likewise be copied across Regions."
+        }
+      },
+      "Tips": "AMIs and EBS snapshots are both REGIONAL. To use them in another Region you copy them (CopyImage / CopySnapshot). AMIs can also be shared with specific accounts or made public. Availability Zones, by contrast, exist within a single Region."
+    },
+    {
+      "id": 16,
+      "questionText": "An EC2 instance has a Security Group with an inbound rule allowing HTTPS (port 443) from the internet, and no explicit outbound rules beyond the default. A client establishes an HTTPS connection. Why does the response traffic flow back to the client successfully?",
+      "options": {
+        "A": "Because Security Groups are stateless and evaluate each packet independently",
+        "B": "Because the default Security Group denies nothing",
+        "C": "Because an explicit outbound allow rule for ephemeral ports was added",
+        "D": "Because Security Groups are stateful, so return traffic for an allowed inbound connection is automatically permitted"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Calling Security Groups stateless.",
+          "reason": "Incorrect — that describes NACLs; Security Groups are stateful, so this reasoning is wrong."
+        },
+        "B": {
+          "description": "Citing default-allow behavior.",
+          "reason": "Incorrect — while the default SG permits all outbound, the precise reason return traffic flows is statefulness, not the outbound default per se."
+        },
+        "C": {
+          "description": "Crediting an explicit ephemeral-port outbound rule.",
+          "reason": "Incorrect — no such rule is needed for Security Groups; statefulness handles the return path automatically."
+        },
+        "D": {
+          "description": "Security Groups are stateful and auto-allow return traffic.",
+          "reason": "Correct — because an inbound connection was allowed, the corresponding response is automatically allowed back out regardless of outbound rules; state is tracked."
+        }
+      },
+      "Tips": "Security Groups = STATEFUL (return traffic auto-allowed; allow rules only, no deny). NACLs = STATELESS (must allow both directions including ephemeral ports; support allow AND deny; ordered rules; subnet level). This stateful vs stateless distinction is heavily tested."
+    },
+    {
+      "id": 17,
+      "questionText": "A company must block a specific malicious IP address (203.0.113.50) from reaching any instance in a particular subnet. Security Groups are already in use. What is the correct way to explicitly deny this single IP?",
+      "options": {
+        "A": "Add an inbound deny rule for 203.0.113.50 to the subnet's Network ACL",
+        "B": "Remove all Security Group rules so traffic is blocked",
+        "C": "Add the IP to an IAM policy deny statement",
+        "D": "Add an inbound deny rule for 203.0.113.50 to the Security Group"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Adding a deny rule to the subnet NACL.",
+          "reason": "Correct — NACLs support explicit deny rules and operate at the subnet level, making them the right tool to block a specific IP address."
+        },
+        "B": {
+          "description": "Removing all SG rules.",
+          "reason": "Incorrect — removing rules would block everyone, not just the malicious IP, and is not targeted denial."
+        },
+        "C": {
+          "description": "Using an IAM policy.",
+          "reason": "Incorrect — IAM controls API/identity permissions, not network packet filtering by source IP at the subnet."
+        },
+        "D": {
+          "description": "Adding a deny rule to a Security Group.",
+          "reason": "Incorrect — Security Groups support only allow rules; you cannot create a deny rule in a Security Group."
+        }
+      },
+      "Tips": "Security Groups cannot DENY — only allow. To explicitly block a specific IP/CIDR, use a Network ACL deny rule (NACLs are stateless, ordered, and support allow + deny at the subnet level). 'Block a specific IP' → NACL."
+    },
+    {
+      "id": 18,
+      "questionText": "A company is launching a large, time-sensitive event and must guarantee that a specific number of EC2 instances of a specific type will be available in a particular Availability Zone for a few weeks, without committing to a 1- or 3-year term. Which feature best ensures capacity availability?",
+      "options": {
+        "A": "Compute Savings Plan",
+        "B": "On-Demand Capacity Reservations",
+        "C": "Standard Reserved Instances",
+        "D": "Spot Instances"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A Savings Plan for capacity assurance.",
+          "reason": "Incorrect — Savings Plans provide billing discounts in exchange for a spend commitment; they do not reserve capacity in a specific AZ."
+        },
+        "B": {
+          "description": "On-Demand Capacity Reservations in a specific AZ.",
+          "reason": "Correct — Capacity Reservations guarantee compute capacity in a chosen AZ for any duration with no term commitment; you reserve capacity now and release it when done."
+        },
+        "C": {
+          "description": "Reserved Instances for short-term capacity assurance.",
+          "reason": "Incorrect — RIs require a 1- or 3-year commitment and primarily provide a billing discount; the requirement explicitly excludes long-term commitment."
+        },
+        "D": {
+          "description": "Spot for guaranteed event capacity.",
+          "reason": "Incorrect — Spot capacity can be reclaimed at any time and offers no availability guarantee, which is unacceptable for a must-have-capacity event."
+        }
+      },
+      "Tips": "Distinguish capacity from discount. On-Demand Capacity Reservation = guaranteed CAPACITY in a specific AZ, no term commitment, billed whether used or not, no discount by itself. Reserved Instances / Savings Plans = billing DISCOUNT for a commitment. Combine them for discount + capacity."
+    },
+    {
+      "id": 19,
+      "questionText": "A company has a mix of EC2 workloads that frequently change across instance families, sizes, operating systems, and even between EC2 and AWS Fargate. The company wants a commitment-based discount that maximizes flexibility. Which option should it choose?",
+      "options": {
+        "A": "Zonal Reserved Instances",
+        "B": "EC2 Instance Savings Plans",
+        "C": "Compute Savings Plans",
+        "D": "Standard Reserved Instances"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Zonal RIs.",
+          "reason": "Incorrect — Zonal RIs reserve capacity in a specific AZ and are the least flexible; they do not span families or services."
+        },
+        "B": {
+          "description": "EC2 Instance Savings Plans.",
+          "reason": "Incorrect — these are cheaper but lock you to a specific instance family within a Region, so they are less flexible than Compute Savings Plans and do not cover Fargate."
+        },
+        "C": {
+          "description": "Compute Savings Plans, the most flexible commitment discount.",
+          "reason": "Correct — Compute Savings Plans apply automatically across any instance family, size, OS, tenancy, Region, and even Fargate and Lambda, in exchange for an hourly spend commitment."
+        },
+        "D": {
+          "description": "Standard RIs for maximum flexibility.",
+          "reason": "Incorrect — Standard RIs are the least flexible; they lock to a family (size can be modified) and cannot change instance family or apply to Fargate."
+        }
+      },
+      "Tips": "Flexibility ranking (most to least): Compute Savings Plans (any family/Region/OS/Fargate/Lambda) > EC2 Instance Savings Plans (locked to family + Region) > Convertible RIs (can change family) > Standard RIs (size-modifiable only). 'Maximum flexibility across families and Fargate' → Compute Savings Plans."
+    },
+    {
+      "id": 20,
+      "questionText": "A high-performance computing (HPC) application requires the lowest possible network latency and highest packet-per-second performance between a tightly coupled cluster of EC2 instances. Which placement strategy should be used?",
+      "options": {
+        "A": "No placement group; rely on default placement",
+        "B": "Partition placement group spanning three AZs",
+        "C": "Spread placement group across multiple AZs",
+        "D": "Cluster placement group within a single Availability Zone"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Default placement.",
+          "reason": "Incorrect — default placement gives no locality guarantee and will not reliably deliver the lowest latency tightly coupled HPC requires."
+        },
+        "B": {
+          "description": "Partition group across AZs.",
+          "reason": "Incorrect — partition groups isolate groups of instances to reduce correlated failure for distributed systems; they do not optimize for lowest inter-node latency."
+        },
+        "C": {
+          "description": "Spread group across AZs for lowest latency.",
+          "reason": "Incorrect — spread groups deliberately separate instances onto distinct hardware (and often AZs) for availability, which increases latency, the opposite of what HPC needs."
+        },
+        "D": {
+          "description": "Cluster placement group in one AZ.",
+          "reason": "Correct — a cluster placement group packs instances close together on the same high-bisection-bandwidth network in a single AZ, delivering the lowest latency and highest throughput for HPC."
+        }
+      },
+      "Tips": "Three placement groups: CLUSTER (low latency, high throughput, single AZ, HPC) — SPREAD (max availability, distinct hardware, ≤7 instances per AZ, critical small workloads) — PARTITION (large distributed systems like HDFS/Kafka/Cassandra, isolated partitions/racks). HPC/low latency → cluster."
+    },
+    {
+      "id": 21,
+      "questionText": "A team runs seven critical EC2 instances that must each be placed on distinct underlying hardware so that a single hardware failure can affect at most one instance. They want AWS to enforce this hardware isolation. Which placement group type should they use?",
+      "options": {
+        "A": "Spread placement group",
+        "B": "Cluster placement group",
+        "C": "Dedicated Host group",
+        "D": "Partition placement group"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Spread placement group placing each instance on distinct hardware.",
+          "reason": "Correct — a spread placement group guarantees instances are on separate racks/hardware so a single hardware failure impacts only one instance, ideal for a small set of critical instances."
+        },
+        "B": {
+          "description": "Cluster group for hardware isolation.",
+          "reason": "Incorrect — cluster groups pack instances together on shared infrastructure for performance, increasing correlated failure risk, not reducing it."
+        },
+        "C": {
+          "description": "Dedicated Host group.",
+          "reason": "Incorrect — Dedicated Hosts concern physical-server tenancy/licensing, not automatic per-instance hardware spreading for failure isolation."
+        },
+        "D": {
+          "description": "Partition group for per-instance isolation.",
+          "reason": "Incorrect — partition groups isolate groups of instances (partitions), not necessarily every single instance onto separate hardware; they suit large distributed clusters."
+        }
+      },
+      "Tips": "Spread placement groups isolate each instance on distinct hardware — limited to 7 running instances per AZ per group. Use when you have a small number of critical instances that must not share a single point of failure. Large fleets needing isolation → partition groups instead."
+    },
+    {
+      "id": 22,
+      "questionText": "A company deploys a large distributed big-data system (such as HDFS and Apache Cassandra) with dozens of EC2 instances. It wants to reduce the likelihood that a single rack failure takes down a large portion of the cluster, while keeping the nodes aware of their placement topology. Which placement group is most suitable?",
+      "options": {
+        "A": "No placement group",
+        "B": "Partition placement group",
+        "C": "Spread placement group",
+        "D": "Cluster placement group"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "No placement group.",
+          "reason": "Incorrect — without a placement group there is no rack-isolation guarantee or topology awareness for the distributed system."
+        },
+        "B": {
+          "description": "Partition placement group separating instances into partitions on distinct racks.",
+          "reason": "Correct — partition groups divide instances into logical partitions, each on separate racks, so a rack failure affects only one partition; this matches HDFS/Cassandra topology awareness."
+        },
+        "C": {
+          "description": "Spread group for dozens of nodes.",
+          "reason": "Incorrect — spread groups are capped at 7 instances per AZ, so they cannot accommodate dozens of nodes in a single group."
+        },
+        "D": {
+          "description": "Cluster group for a large fault-tolerant cluster.",
+          "reason": "Incorrect — cluster groups maximize performance by co-locating instances, which concentrates failure risk, unsuitable for large rack-aware distributed systems."
+        }
+      },
+      "Tips": "Partition placement groups: up to 7 partitions per AZ, hundreds of instances, each partition on isolated racks; partition metadata is exposed to instances for topology-aware software (HDFS, HBase, Cassandra, Kafka). Large distributed system + rack failure isolation → partition."
+    },
+    {
+      "id": 23,
+      "questionText": "An engineer attempts to launch 9 instances into a single spread placement group within one Availability Zone and receives a capacity-related error. What is the most likely cause?",
+      "options": {
+        "A": "Spread placement groups require Dedicated Hosts",
+        "B": "Spread placement groups cannot be used in a single AZ",
+        "C": "A spread placement group supports a maximum of 7 running instances per Availability Zone",
+        "D": "Spread placement groups only support burstable T-family instances"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring Dedicated Hosts.",
+          "reason": "Incorrect — spread groups do not require Dedicated Hosts; this is unrelated to the limit."
+        },
+        "B": {
+          "description": "Claiming spread groups are barred from a single AZ.",
+          "reason": "Incorrect — spread groups operate within an AZ (and can span AZs); single-AZ use is allowed, so this is not the cause."
+        },
+        "C": {
+          "description": "The 7-instances-per-AZ limit for spread groups.",
+          "reason": "Correct — a spread placement group is limited to 7 running instances per AZ; requesting 9 in one AZ exceeds that hard limit and triggers the error."
+        },
+        "D": {
+          "description": "Restricting to T-family.",
+          "reason": "Incorrect — spread groups are not limited to burstable instances; instance family is not the cause of the error."
+        }
+      },
+      "Tips": "Memorize the spread group limit: 7 running instances per AZ per spread placement group. To run more isolated instances, spread across multiple AZs (still 7 each) or switch to a partition placement group for large fleets. This exact number is a favorite trick."
+    },
+    {
+      "id": 24,
+      "questionText": "A company runs an active-passive pair of EC2 instances and wants a fast failover mechanism where a fixed private IP and MAC address can be quickly moved from the failed primary to the standby instance. Which EC2 networking component enables this?",
+      "options": {
+        "A": "Editing the route table to point at the standby",
+        "B": "Changing the instance's Security Group",
+        "C": "Resizing the instance type",
+        "D": "Moving an Elastic Network Interface (ENI) from the primary to the standby instance"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Editing the route table.",
+          "reason": "Incorrect — while routing changes can redirect traffic, the described mechanism of moving a fixed private IP and MAC is specifically an ENI attach/detach operation."
+        },
+        "B": {
+          "description": "Changing the Security Group.",
+          "reason": "Incorrect — modifying a Security Group adjusts allowed traffic; it does not move IP/MAC identity to a standby instance for failover."
+        },
+        "C": {
+          "description": "Resizing the instance.",
+          "reason": "Incorrect — changing instance type alters compute capacity and is unrelated to moving network identity for failover."
+        },
+        "D": {
+          "description": "Detaching a pre-configured ENI and attaching it to the standby instance.",
+          "reason": "Correct — an ENI carries a fixed private IP, MAC address, and other attributes; moving the ENI to the standby instance provides a quick, well-known failover within an AZ."
+        }
+      },
+      "Tips": "An ENI is a virtual network card with its own private IP(s), MAC address, and Security Groups. ENIs can be detached and reattached to another instance in the SAME AZ, enabling a simple failover or a separate management network. MAC-locked licensing also leverages ENIs."
+    },
+    {
+      "id": 25,
+      "questionText": "A company wants to use EC2 Hibernate so instances resume quickly with their in-memory state preserved. Which requirement must be satisfied for hibernation to work?",
+      "options": {
+        "A": "The root EBS volume must be encrypted and large enough to store the contents of RAM",
+        "B": "The instance must use an instance store as its root volume",
+        "C": "The instance must be a Spot Instance with no root volume",
+        "D": "Hibernation requires the instance to be in a cluster placement group"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An encrypted EBS root volume sized to hold RAM.",
+          "reason": "Correct — on hibernate, the in-memory (RAM) state is written to the EBS root volume, which must be encrypted and large enough to store that RAM, plus the instance family and RAM size must be supported."
+        },
+        "B": {
+          "description": "Using an instance store root volume for hibernate.",
+          "reason": "Incorrect — hibernation requires an EBS-backed root volume because RAM is saved to it; instance store data is ephemeral and cannot persist hibernation state."
+        },
+        "C": {
+          "description": "Spot with no root volume.",
+          "reason": "Incorrect — hibernation needs an EBS root volume to persist RAM; an instance cannot run without a root volume, and this option is incoherent."
+        },
+        "D": {
+          "description": "Requiring a cluster placement group.",
+          "reason": "Incorrect — placement groups are unrelated to hibernation prerequisites."
+        }
+      },
+      "Tips": "EC2 Hibernate saves RAM to the EBS root volume so the OS does not reboot on resume. Key requirements: EBS-backed AND encrypted root volume, sufficient root volume size to hold RAM, supported instance family, and RAM under the supported size limit. Instance store cannot be the root for hibernation."
+    },
+    {
+      "id": 26,
+      "questionText": "An engineer creates an EBS volume in us-east-1a and attempts to attach it to an EC2 instance running in us-east-1b. The attach fails. Why?",
+      "options": {
+        "A": "EBS volumes can only attach to instances of the same instance type",
+        "B": "EBS volumes can only be attached to instances in the same Availability Zone",
+        "C": "The volume must first be converted to an instance store",
+        "D": "EBS volumes must be encrypted before they can be attached"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring matching instance types.",
+          "reason": "Incorrect — instance type does not govern EBS attachment; the constraint is the Availability Zone."
+        },
+        "B": {
+          "description": "EBS volumes are AZ-scoped and attach only within their AZ.",
+          "reason": "Correct — an EBS volume lives in a single Availability Zone and can only be attached to instances in that same AZ; to move it, you snapshot and restore in the target AZ."
+        },
+        "C": {
+          "description": "Converting to instance store.",
+          "reason": "Incorrect — EBS volumes are not converted to instance store; that is not how attachment works."
+        },
+        "D": {
+          "description": "Requiring encryption to attach.",
+          "reason": "Incorrect — encryption is optional for attachment; an unencrypted volume attaches fine within its AZ."
+        }
+      },
+      "Tips": "EBS volumes are bound to ONE Availability Zone. To use a volume's data in another AZ, take a snapshot (snapshots are Region-scoped) and create a new volume from it in the target AZ. To move across Regions, copy the snapshot to the other Region first."
+    },
+    {
+      "id": 27,
+      "questionText": "A workload needs a general-purpose SSD EBS volume where the engineer wants to provision 8,000 IOPS and 500 MiB/s of throughput on a 200 GiB volume, independently of the volume's size, at the lowest cost for that performance. Which EBS volume type should be used?",
+      "options": {
+        "A": "st1",
+        "B": "gp2",
+        "C": "gp3",
+        "D": "sc1"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "st1 for this requirement.",
+          "reason": "Incorrect — st1 is throughput-optimized HDD for large sequential workloads and cannot deliver high random IOPS; it is not a general-purpose SSD."
+        },
+        "B": {
+          "description": "gp2 for size-independent provisioning.",
+          "reason": "Incorrect — gp2 ties baseline IOPS to volume size (3 IOPS/GiB); you cannot independently provision IOPS and throughput separately from size."
+        },
+        "C": {
+          "description": "gp3, which decouples IOPS/throughput from capacity.",
+          "reason": "Correct — gp3 provides a 3,000 IOPS / 125 MiB/s baseline and lets you provision additional IOPS (up to 16,000) and throughput (up to 1,000 MiB/s) independently of volume size, typically at lower cost than gp2."
+        },
+        "D": {
+          "description": "sc1.",
+          "reason": "Incorrect — sc1 is cold HDD for infrequent access with the lowest performance, unsuitable for 8,000 IOPS."
+        }
+      },
+      "Tips": "gp3 is the modern general-purpose SSD: IOPS and throughput are provisioned INDEPENDENTLY of size (baseline 3,000 IOPS / 125 MiB/s, up to 16,000 IOPS / 1,000 MiB/s). gp2 couples IOPS to size (3 IOPS/GiB). For tunable, cost-effective general-purpose SSD, choose gp3."
+    },
+    {
+      "id": 28,
+      "questionText": "A clustered application requires a single EBS volume to be attached to multiple EC2 instances simultaneously in the same Availability Zone, with a cluster-aware file system coordinating access. Which configuration supports this?",
+      "options": {
+        "A": "Use EFS, which is the only way to attach EBS to multiple instances",
+        "B": "Attach a gp3 volume to multiple instances using EBS Multi-Attach",
+        "C": "Use an instance store shared across instances",
+        "D": "Use an io2 (or io1) volume with EBS Multi-Attach enabled, within a single AZ"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Calling EFS an EBS multi-attach mechanism.",
+          "reason": "Incorrect — EFS is a separate NFS file system; it is not EBS, and the question specifically asks about attaching an EBS volume to multiple instances."
+        },
+        "B": {
+          "description": "Multi-Attach on a gp3 volume.",
+          "reason": "Incorrect — EBS Multi-Attach is supported only on Provisioned IOPS volumes (io1/io2), not on gp2/gp3."
+        },
+        "C": {
+          "description": "Sharing an instance store.",
+          "reason": "Incorrect — instance store volumes are physically tied to one host and cannot be shared across instances."
+        },
+        "D": {
+          "description": "io1/io2 with Multi-Attach in a single AZ.",
+          "reason": "Correct — EBS Multi-Attach allows an io1/io2 volume to attach to multiple instances (up to 16) in the same AZ; a cluster-aware file system is required to manage concurrent writes safely."
+        }
+      },
+      "Tips": "EBS Multi-Attach: io1/io2 ONLY, same AZ, up to 16 instances, and requires a cluster-aware file system (standard XFS/EXT4 will corrupt). For broadly shared storage across many instances and AZs, use EFS instead. gp2/gp3 do not support Multi-Attach."
+    },
+    {
+      "id": 29,
+      "questionText": "A caching layer on EC2 needs the highest possible random I/O performance for temporary scratch data, and the data does not need to survive instance stop or termination. Which storage option provides the best performance for this use case?",
+      "options": {
+        "A": "An EC2 Instance Store",
+        "B": "An EFS file system",
+        "C": "An sc1 EBS volume",
+        "D": "An io2 Block Express EBS volume"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Instance Store, physically attached for maximum I/O.",
+          "reason": "Correct — instance store volumes are physically attached NVMe/SSD on the host, offering the highest IOPS/throughput for temporary data such as caches and buffers, with the trade-off that data is lost on stop/terminate."
+        },
+        "B": {
+          "description": "EFS for a high-IOPS local cache.",
+          "reason": "Incorrect — EFS is a shared NFS file system over the network; it is not optimized to be the fastest local scratch/cache for a single instance."
+        },
+        "C": {
+          "description": "sc1 for high random I/O.",
+          "reason": "Incorrect — sc1 is cold HDD with the lowest performance, the opposite of a high-IOPS cache requirement."
+        },
+        "D": {
+          "description": "io2 Block Express for ephemeral scratch.",
+          "reason": "Incorrect — io2 is excellent and durable, but it is network-attached EBS; physically attached instance store can deliver higher raw I/O for temporary data where persistence is not required."
+        }
+      },
+      "Tips": "Instance Store = ephemeral, physically attached, highest local I/O; ideal for cache/buffer/scratch where data loss on stop/terminate is acceptable (persists across reboot only). For durable, persistent block storage use EBS; for shared file storage use EFS."
+    },
+    {
+      "id": 30,
+      "questionText": "A company needs a shared file system that hundreds of Linux EC2 instances across multiple Availability Zones can mount concurrently with standard NFS, automatically scaling capacity as files are added. Which AWS storage service should be used?",
+      "options": {
+        "A": "A single large gp3 EBS volume shared by snapshot",
+        "B": "Amazon EFS (Elastic File System)",
+        "C": "Amazon EBS with Multi-Attach",
+        "D": "An EC2 Instance Store"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Sharing one gp3 volume via snapshot.",
+          "reason": "Incorrect — a single EBS volume lives in one AZ and cannot be concurrently mounted by hundreds of instances across AZs; snapshots create copies, not shared live storage."
+        },
+        "B": {
+          "description": "Amazon EFS, an elastic multi-AZ NFS file system.",
+          "reason": "Correct — EFS is a managed NFS file system that scales automatically, supports concurrent mounts from many Linux instances across multiple AZs, and is the right fit for shared file storage."
+        },
+        "C": {
+          "description": "EBS Multi-Attach for cross-AZ shared NFS.",
+          "reason": "Incorrect — EBS Multi-Attach is limited to io1/io2, a single AZ, and up to 16 instances; it is not a multi-AZ, hundreds-of-clients NFS file system."
+        },
+        "D": {
+          "description": "Instance Store for shared storage.",
+          "reason": "Incorrect — instance store is local, ephemeral, and cannot be shared across instances or AZs."
+        }
+      },
+      "Tips": "EFS = managed, elastic, multi-AZ, NFS, Linux, many concurrent clients. EBS = single-AZ block storage for one instance (or up to 16 with io1/io2 Multi-Attach in one AZ). Instance Store = ephemeral local. 'Shared file system across many instances/AZs' → EFS."
+    }
+  ]
+}

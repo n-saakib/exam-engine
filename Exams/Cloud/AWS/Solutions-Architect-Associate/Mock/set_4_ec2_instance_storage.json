@@ -1,0 +1,167 @@
+{
+  "setId": "dc8b7c2c-97a9-45f1-9b10-50a632bf1a47",
+  "setTitle": "AWS SAA Exam Style - EC2 Instance Storage",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A database administrator created an unencrypted Amazon EBS volume containing critical PII data and attached it to an EC2 instance. A security audit mandates that all EBS volumes must be encrypted at rest using a KMS key. How can a solutions architect encrypt the existing unencrypted volume with the LEAST amount of downtime?",
+      "options": {
+        "A": "Run the `aws ec2 modify-volume` CLI command and set the `--encrypted` flag to true.",
+        "B": "Create a snapshot of the unencrypted volume. Copy the snapshot and select encryption using the KMS key. Create a new volume from the encrypted snapshot, attach it to the EC2 instance, and swap the mount points.",
+        "C": "Create an encrypted EBS volume. Use a host-level syncing tool (like rsync) to copy the data from the unencrypted volume to the encrypted volume, then detach the unencrypted volume.",
+        "D": "Enable 'Default EBS Encryption' in the EC2 console. AWS will automatically encrypt all existing unencrypted volumes in the background."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Modify-volume command.",
+          "reason": "Incorrect — You cannot encrypt an existing unencrypted volume directly. Modifying volume settings only works for size and IOPS."
+        },
+        "B": {
+          "description": "Snapshot -> Copy Encrypted -> New Volume.",
+          "reason": "Correct — This is the standard AWS workflow to encrypt an unencrypted volume. You must take a snapshot, copy that snapshot to an encrypted snapshot, and then restore a new volume from it."
+        },
+        "C": {
+          "description": "Using rsync to an encrypted volume.",
+          "reason": "Incorrect — While technically possible, it is much slower, requires more manual OS-level intervention, and is not the AWS recommended path for encrypting existing volumes."
+        },
+        "D": {
+          "description": "Default EBS Encryption.",
+          "reason": "Incorrect — Enabling default encryption only applies to newly created volumes. It does not retroactively encrypt existing volumes."
+        }
+      },
+      "Tips": "Workflow to encrypt unencrypted EBS: Snapshot -> Copy (Encrypt during copy) -> Create Volume -> Attach."
+    },
+    {
+      "id": 2,
+      "questionText": "An analytics firm runs a temporary caching layer for heavily accessed query data. They need a storage solution attached to their EC2 instances that provides the absolute highest random I/O performance possible (millions of IOPS). The data is temporary, and if an EC2 instance stops or is terminated, the data can be discarded. Which storage option should they choose?",
+      "options": {
+        "A": "Amazon EBS Provisioned IOPS SSD (io2 Block Express)",
+        "B": "Amazon EBS General Purpose SSD (gp3)",
+        "C": "Amazon EFS in Max I/O mode",
+        "D": "EC2 Instance Store"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EBS io2 Block Express.",
+          "reason": "Incorrect — While io2 Block Express is extremely fast (up to 256,000 IOPS), it is network-attached and still slower than physically attached NVMe local storage. It's also expensive and designed for persistent data."
+        },
+        "B": {
+          "description": "EBS gp3.",
+          "reason": "Incorrect — gp3 maxes out at 16,000 IOPS. It is not suitable for millions of IOPS."
+        },
+        "C": {
+          "description": "Amazon EFS Max I/O.",
+          "reason": "Incorrect — EFS is a network file system with higher latency than block storage. It is not designed for absolute highest raw IOPS."
+        },
+        "D": {
+          "description": "EC2 Instance Store.",
+          "reason": "Correct — Instance Store provides temporary block-level storage physically attached to the host server. NVMe-based instance store volumes provide millions of IOPS and single-digit millisecond latency, ideal for temporary cache data."
+        }
+      },
+      "Tips": "Highest possible IOPS + Temporary/Ephemeral data = Instance Store. Never choose EBS if the requirement asks for the 'absolute highest IOPS' and explicitly states 'data can be lost'."
+    },
+    {
+      "id": 3,
+      "questionText": "A company is hosting a fleet of web servers across three Availability Zones using an Auto Scaling Group. The application requires all EC2 instances to read from and write to a common pool of files concurrently. The file system must automatically grow as files are added and provide strong read-after-write consistency. Which service meets these requirements?",
+      "options": {
+        "A": "Amazon S3",
+        "B": "Amazon Elastic Block Store (EBS) with Multi-Attach",
+        "C": "Amazon Elastic File System (EFS)",
+        "D": "EC2 Instance Store with replication"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Amazon S3.",
+          "reason": "Incorrect — S3 is object storage, not a file system. Applications designed for standard POSIX file systems require SDK modifications to use S3, and S3 does not act like a traditional mountable directory out-of-the-box."
+        },
+        "B": {
+          "description": "EBS Multi-Attach.",
+          "reason": "Incorrect — EBS Multi-Attach only works for instances within the SAME Availability Zone using io1 or io2 volumes. The prompt specifies instances across three AZs."
+        },
+        "C": {
+          "description": "Amazon EFS.",
+          "reason": "Correct — EFS is a fully managed, elastic NFS file system that can be mounted by thousands of EC2 instances concurrently across multiple AZs. It provides strong consistency and grows automatically."
+        },
+        "D": {
+          "description": "Instance Store.",
+          "reason": "Incorrect — Instance store is ephemeral, physically attached to a single host, and cannot be shared across multiple instances natively."
+        }
+      },
+      "Tips": "'Shared file system', 'Linux', 'concurrent access from multiple AZs' = Amazon EFS."
+    },
+    {
+      "id": 4,
+      "questionText": "A developer needs an EBS volume for a new NoSQL database on EC2. The database will require 8,000 IOPS and 500 GiB of capacity. The developer initially selects a gp2 volume but notices the performance is insufficient because gp2 IOPS are tied to volume size. How can the developer achieve 8,000 IOPS in the most cost-effective way?",
+      "options": {
+        "A": "Increase the gp2 volume size to 2,667 GiB to achieve the required 8,000 IOPS (3 IOPS/GiB).",
+        "B": "Change the volume type to Provisioned IOPS SSD (io1) and provision 8,000 IOPS.",
+        "C": "Change the volume type to General Purpose SSD (gp3) and configure exactly 8,000 IOPS.",
+        "D": "Use an EC2 Instance Store volume instead of EBS."
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Over-provisioning gp2.",
+          "reason": "Incorrect — While this would technically achieve 8,000 IOPS (2667 * 3), paying for 2 TB of unused storage is not cost-effective."
+        },
+        "B": {
+          "description": "Using io1.",
+          "reason": "Incorrect — Provisioned IOPS volumes (io1/io2) are significantly more expensive per IOPS and per GB than gp3. Since 8,000 IOPS is well within gp3 limits (up to 16,000), io1 is overkill."
+        },
+        "C": {
+          "description": "Using gp3.",
+          "reason": "Correct — gp3 volumes allow you to provision IOPS and throughput INDEPENDENTLY of the volume capacity. You can provision a 500 GiB gp3 volume and explicitly configure it for 8,000 IOPS, making it the most cost-effective choice."
+        },
+        "D": {
+          "description": "Instance Store.",
+          "reason": "Incorrect — A database typically requires persistent storage. Instance store is ephemeral and data is lost when the instance is stopped."
+        }
+      },
+      "Tips": "gp2 IOPS = tied to size (3 IOPS per GB). gp3 IOPS = independent of size. If you need high IOPS on a small volume but stay under 16k, gp3 is always the most cost-effective."
+    },
+    {
+      "id": 5,
+      "questionText": "A company stores large amounts of log files on an Amazon EFS file system. A regulatory policy requires that these logs be kept for 3 years, but they are rarely accessed after 30 days. To save costs, the company wants to automatically move older files to a cheaper storage tier. How should this be implemented?",
+      "options": {
+        "A": "Write an AWS Lambda function triggered by EventBridge to move files older than 30 days from EFS to Amazon S3 Glacier.",
+        "B": "Configure an EFS Lifecycle Management policy to transition files to the EFS Infrequent Access (EFS IA) storage class after 30 days.",
+        "C": "Use AWS DataSync to replicate data older than 30 days to an EBS Cold HDD (sc1) volume.",
+        "D": "EFS does not support storage tiers. The data must be moved to S3 Standard-IA manually."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Lambda to S3 Glacier.",
+          "reason": "Incorrect — While possible, this requires custom code, operational overhead, and changing how the application accesses the older files. There is a native EFS feature for this."
+        },
+        "B": {
+          "description": "EFS Lifecycle Management.",
+          "reason": "Correct — EFS Lifecycle Management automatically moves files that haven't been accessed for a set period (e.g., 30 days) to EFS Infrequent Access (EFS IA), saving up to 92% on storage costs while keeping the files fully accessible via the same file system namespace."
+        },
+        "C": {
+          "description": "DataSync to EBS sc1.",
+          "reason": "Incorrect — EBS cannot be mounted by multiple instances simultaneously across AZs like EFS. Migrating to EBS breaks the shared file system architecture."
+        },
+        "D": {
+          "description": "EFS does not support tiers.",
+          "reason": "Incorrect — EFS natively supports EFS IA and EFS Archive storage classes."
+        }
+      },
+      "Tips": "EFS cost savings for old files = EFS Lifecycle Management (transitions to EFS-IA). Same namespace, no code changes required."
+    }
+  ]
+}

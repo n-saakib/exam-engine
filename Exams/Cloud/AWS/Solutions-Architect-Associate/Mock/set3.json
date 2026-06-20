@@ -1,0 +1,967 @@
+{
+  "setId": "2fb33f57-914c-454b-830b-2709c7122659",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Practice Exam 3",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A developer needs to launch EC2 instances and attach an existing IAM role to them. The launch fails with an authorization error referencing a missing permission, even though the developer can otherwise launch instances. Which specific IAM permission is the developer most likely missing?",
+      "options": {
+        "A": "iam:PassRole, which is required to pass a role to the EC2 service",
+        "B": "ec2:RunInstances only",
+        "C": "sts:AssumeRole on the developer's own user",
+        "D": "iam:CreateRole for the existing role"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "iam:PassRole to hand the role to EC2.",
+          "reason": "Correct — attaching (passing) an IAM role to an instance requires iam:PassRole permission for the principal performing the launch; without it the operation is denied even if RunInstances is allowed."
+        },
+        "B": {
+          "description": "Only ec2:RunInstances.",
+          "reason": "Incorrect — the developer can already launch instances, so RunInstances is present; the failure specifically involves attaching the role."
+        },
+        "C": {
+          "description": "sts:AssumeRole on the user.",
+          "reason": "Incorrect — AssumeRole is for the developer assuming a role themselves, not for passing a role to the EC2 service during launch."
+        },
+        "D": {
+          "description": "iam:CreateRole.",
+          "reason": "Incorrect — the role already exists; creation permission is irrelevant to passing an existing role."
+        }
+      },
+      "Tips": "Passing a role to a service (EC2, Lambda, ECS, etc.) requires iam:PassRole on the calling principal. This is a frequent gotcha: a user can launch instances but not attach a role without PassRole. PassRole is usually scoped with a condition limiting which roles/services it applies to."
+    },
+    {
+      "id": 2,
+      "questionText": "A company wants to reserve EC2 capacity in a SPECIFIC Availability Zone (guaranteeing capacity there) AND receive a billing discount via a 1-year commitment. Which Reserved Instance configuration provides BOTH the capacity reservation and the discount?",
+      "options": {
+        "A": "A Convertible Regional Reserved Instance",
+        "B": "A Zonal Reserved Instance (scoped to a specific AZ)",
+        "C": "A Regional Reserved Instance",
+        "D": "On-Demand Capacity Reservation with no commitment"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Convertible Regional RI.",
+          "reason": "Incorrect — Convertible RIs are Regional-scoped here and provide a discount with flexibility but not a specific-AZ capacity reservation."
+        },
+        "B": {
+          "description": "Zonal RI scoped to a specific AZ.",
+          "reason": "Correct — a Zonal Reserved Instance (scoped to an AZ) both reserves capacity in that AZ and provides the billing discount of the commitment, at the cost of losing AZ/size flexibility."
+        },
+        "C": {
+          "description": "Regional RI for AZ capacity reservation.",
+          "reason": "Incorrect — a Regional RI gives a billing discount and AZ/size flexibility but does NOT reserve capacity in a specific AZ."
+        },
+        "D": {
+          "description": "On-Demand Capacity Reservation alone.",
+          "reason": "Incorrect — that reserves capacity but provides no commitment-based discount by itself; the question requires both reservation and discount."
+        }
+      },
+      "Tips": "Regional RI = discount + AZ/size flexibility, NO capacity reservation. Zonal RI (scoped to an AZ) = discount + capacity reservation in that AZ, NO flexibility. To get capacity in a specific AZ with a discount, the answer is a Zonal RI."
+    },
+    {
+      "id": 3,
+      "questionText": "A company has Reserved Instances purchased as Standard RIs and now wants to change the instance FAMILY (e.g., from m5 to c5) because their workload shifted to compute-bound. What is the limitation they will encounter?",
+      "options": {
+        "A": "Standard RIs can be exchanged to a different instance family at will",
+        "B": "Reserved Instances of any type can never be modified",
+        "C": "Standard RIs cannot change instance family; only Convertible RIs can be exchanged across families",
+        "D": "Standard RIs can change family only within the same Region but not size"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Standard RIs freely changing family.",
+          "reason": "Incorrect — Standard RIs cannot be exchanged to a different family; that capability is specific to Convertible RIs."
+        },
+        "B": {
+          "description": "Claiming RIs can never be modified.",
+          "reason": "Incorrect — RIs can be modified/exchanged depending on type; Standard RIs support several modifications and Convertible RIs support exchanges."
+        },
+        "C": {
+          "description": "Only Convertible RIs can change family.",
+          "reason": "Correct — Standard RIs allow modifications like AZ, scope, and instance SIZE within the same family, but cannot change the instance family; Convertible RIs can be exchanged across families/OS/tenancy."
+        },
+        "D": {
+          "description": "Standard RIs changing family but not size.",
+          "reason": "Incorrect — it is the reverse: Standard RIs can change size within the family but not the family itself."
+        }
+      },
+      "Tips": "Standard RI: cheaper, can modify AZ/scope/size WITHIN a family, can sell on Marketplace, but cannot change family. Convertible RI: can EXCHANGE for different family/OS/tenancy (equal-or-greater value). Shifting families → Convertible RI."
+    },
+    {
+      "id": 4,
+      "questionText": "A Spot Fleet must maintain target capacity while minimizing the chance of Spot interruptions, even if it means not always choosing the absolute lowest-priced pools. Which allocation strategy should be used?",
+      "options": {
+        "A": "lowestPrice",
+        "B": "diversified across the two cheapest pools only",
+        "C": "On-Demand only",
+        "D": "capacityOptimized"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "lowestPrice strategy.",
+          "reason": "Incorrect — lowestPrice picks the cheapest pools, which often have less spare capacity and higher interruption rates, contradicting the goal of minimizing interruptions."
+        },
+        "B": {
+          "description": "Diversified over the two cheapest pools.",
+          "reason": "Incorrect — limiting diversification to only the cheapest pools does not optimize for capacity availability and can still suffer interruptions."
+        },
+        "C": {
+          "description": "On-Demand only.",
+          "reason": "Incorrect — that abandons Spot entirely; the requirement is to keep using Spot while minimizing interruptions, not to switch to On-Demand."
+        },
+        "D": {
+          "description": "capacityOptimized strategy.",
+          "reason": "Correct — capacityOptimized provisions from the pools with the most available spare capacity, which minimizes the likelihood of interruption, even if those pools are not the cheapest."
+        }
+      },
+      "Tips": "Spot allocation strategies: lowestPrice (cheapest, more interruptions), capacityOptimized (most spare capacity, fewest interruptions), diversified (spread across many pools), priceCapacityOptimized (balances both). To minimize interruptions → capacityOptimized (or priceCapacityOptimized)."
+    },
+    {
+      "id": 5,
+      "questionText": "An EC2 instance is launched with an auto-assigned public IPv4 address. The instance is stopped and later started again. What happens to its public IPv4 address?",
+      "options": {
+        "A": "The auto-assigned public IPv4 address is released and a new one is assigned on start; only an Elastic IP would persist",
+        "B": "The same public IPv4 address is retained across stop/start",
+        "C": "The instance loses all networking permanently",
+        "D": "The private IP changes but the public IP stays the same"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "New public IP on start; only an EIP persists.",
+          "reason": "Correct — an auto-assigned public IPv4 is released when the instance stops and a different one is assigned at next start; to keep a fixed public IP, associate an Elastic IP."
+        },
+        "B": {
+          "description": "Retaining the same public IP across stop/start.",
+          "reason": "Incorrect — auto-assigned public IPv4 addresses are not retained through a stop/start cycle."
+        },
+        "C": {
+          "description": "Permanent loss of networking.",
+          "reason": "Incorrect — the instance regains networking on start; it simply gets a new public IP and keeps its private IP."
+        },
+        "D": {
+          "description": "Private changes, public stays.",
+          "reason": "Incorrect — it is the opposite: the private IP is retained, while the auto-assigned public IP changes."
+        }
+      },
+      "Tips": "Auto-assigned public IPv4 = ephemeral; changes on stop/start. Private IPv4 = stable for the instance's life in the subnet. For a persistent public IP, use an Elastic IP (which stays with you until released). This stop/start behavior is commonly tested."
+    },
+    {
+      "id": 6,
+      "questionText": "A newly created custom Security Group (not the default SG) is attached to an instance, and no rules have been added. What is the instance's connectivity behavior?",
+      "options": {
+        "A": "All inbound and outbound traffic is denied",
+        "B": "All inbound traffic is denied (no inbound rules), and all outbound traffic is allowed by default",
+        "C": "All inbound and all outbound traffic is allowed",
+        "D": "Only traffic within the same Security Group is allowed in both directions"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Both directions denied.",
+          "reason": "Incorrect — the default outbound rule allows all outbound, so outbound is not denied."
+        },
+        "B": {
+          "description": "Inbound denied (no rules), outbound allowed by default.",
+          "reason": "Correct — a newly created Security Group contains no inbound rules (so all inbound is blocked) and one default outbound rule allowing all outbound traffic."
+        },
+        "C": {
+          "description": "All inbound and outbound allowed.",
+          "reason": "Incorrect — a new custom SG has no inbound rules, so inbound is denied; only outbound is open by default."
+        },
+        "D": {
+          "description": "Only same-SG traffic both ways.",
+          "reason": "Incorrect — that is not the default; default outbound is allow-all, and inbound has no rules at all."
+        }
+      },
+      "Tips": "New custom Security Group defaults: NO inbound rules (inbound denied) + default outbound allow-all. The DEFAULT VPC security group additionally allows inbound from itself. Remember SGs only have allow rules and are stateful."
+    },
+    {
+      "id": 7,
+      "questionText": "A role's trust policy and its permissions policy serve different purposes. Which statement correctly distinguishes them?",
+      "options": {
+        "A": "Both policies define the same thing and are interchangeable",
+        "B": "The trust policy defines what the role can do; the permissions policy defines who can assume it",
+        "C": "The trust policy defines who (which principals) can assume the role; the permissions policy defines what actions the role is allowed to perform",
+        "D": "The trust policy is attached to the EC2 instance and the permissions policy to the user"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Calling them interchangeable.",
+          "reason": "Incorrect — they are distinct and not interchangeable; one controls assumption, the other controls permissions."
+        },
+        "B": {
+          "description": "Reversing the two policies' roles.",
+          "reason": "Incorrect — this swaps their meanings; the trust policy governs who can assume, not what the role can do."
+        },
+        "C": {
+          "description": "Trust policy = who can assume; permissions policy = what the role can do.",
+          "reason": "Correct — the trust policy (a resource-based policy on the role) specifies the principals allowed to assume the role, while the attached permissions policy defines the actions the role may perform once assumed."
+        },
+        "D": {
+          "description": "Misattaching the policies.",
+          "reason": "Incorrect — both policies relate to the role itself; the trust policy is part of the role and the permissions policy is attached to the role."
+        }
+      },
+      "Tips": "A role has TWO policies: the trust policy (who can assume it — the Principal) and the permissions policy (what it can do once assumed). When troubleshooting AssumeRole failures, check the trust policy first; for action failures after assuming, check the permissions policy."
+    },
+    {
+      "id": 8,
+      "questionText": "Security best practice for IAM access keys recommends rotating them regularly with zero downtime. IAM supports this by allowing how many active access keys per user at once?",
+      "options": {
+        "A": "One access key only",
+        "B": "Unlimited access keys",
+        "C": "Five access keys",
+        "D": "Two access keys, enabling create-new-then-deactivate-old rotation without downtime"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Only one key.",
+          "reason": "Incorrect — a single key would force downtime during rotation; IAM allows two to support seamless rotation."
+        },
+        "B": {
+          "description": "Unlimited keys.",
+          "reason": "Incorrect — the limit is two access keys per user, not unlimited."
+        },
+        "C": {
+          "description": "Five keys.",
+          "reason": "Incorrect — the limit is two, not five."
+        },
+        "D": {
+          "description": "Two active keys for zero-downtime rotation.",
+          "reason": "Correct — IAM permits up to two access keys per user, so you can create a new key, update applications, verify, and then deactivate/delete the old one without interruption."
+        }
+      },
+      "Tips": "Each IAM user can have up to TWO access keys. Rotation pattern: create key #2 → deploy/verify → deactivate key #1 → confirm → delete key #1. The two-key limit exists precisely to enable zero-downtime rotation. (Better still: use roles and avoid long-lived keys.)"
+    },
+    {
+      "id": 9,
+      "questionText": "An organization wants to identify which S3 buckets, IAM roles, KMS keys, or other resources in the account can be accessed from OUTSIDE the account (external/public access), to find unintended exposure. Which service provides these findings?",
+      "options": {
+        "A": "IAM Access Analyzer",
+        "B": "IAM credential report",
+        "C": "AWS Trusted Advisor cost checks",
+        "D": "Amazon Inspector network reachability for EC2 only"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "IAM Access Analyzer for external/public resource access.",
+          "reason": "Correct — IAM Access Analyzer analyzes resource-based policies to identify resources (S3 buckets, IAM roles, KMS keys, Lambda, SQS, etc.) shared with external principals or made public, flagging unintended access."
+        },
+        "B": {
+          "description": "Credential report for external-access findings.",
+          "reason": "Incorrect — the credential report lists user credential status, not resources exposed externally."
+        },
+        "C": {
+          "description": "Trusted Advisor cost checks.",
+          "reason": "Incorrect — those focus on cost optimization, not identifying external resource access from policies."
+        },
+        "D": {
+          "description": "Inspector network reachability only.",
+          "reason": "Incorrect — Inspector assesses workload vulnerabilities/reachability, not policy-based external access to IAM/S3/KMS resources."
+        }
+      },
+      "Tips": "IAM Access Analyzer = finds resources accessible from outside your account/organization (external access) by analyzing resource-based policies. It also offers unused-access analysis and policy validation. For 'who can access this from outside', it is Access Analyzer."
+    },
+    {
+      "id": 10,
+      "questionText": "A security policy requires that certain sensitive IAM API actions can only be performed if the user authenticated with MFA recently (within a time window). Which condition key supports requiring recent MFA?",
+      "options": {
+        "A": "aws:PrincipalOrgId",
+        "B": "aws:MultiFactorAuthAge",
+        "C": "aws:RequestedRegion",
+        "D": "aws:SourceIp"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "aws:PrincipalOrgId.",
+          "reason": "Incorrect — that checks the AWS Organizations org membership of the principal, not MFA timing."
+        },
+        "B": {
+          "description": "aws:MultiFactorAuthAge for recent MFA enforcement.",
+          "reason": "Correct — aws:MultiFactorAuthAge returns the number of seconds since MFA authentication, letting a policy require that MFA occurred within a recent time window."
+        },
+        "C": {
+          "description": "aws:RequestedRegion.",
+          "reason": "Incorrect — that restricts which Region a request targets, unrelated to MFA recency."
+        },
+        "D": {
+          "description": "aws:SourceIp for recent MFA.",
+          "reason": "Incorrect — SourceIp restricts by request IP address, not by how recently MFA was performed."
+        }
+      },
+      "Tips": "MFA condition keys: aws:MultiFactorAuthPresent (was MFA used at all) and aws:MultiFactorAuthAge (how long ago, in seconds). Use MultiFactorAuthAge to require MFA within a recent window for sensitive operations."
+    },
+    {
+      "id": 11,
+      "questionText": "An architect launches a cluster placement group and initially provisions 6 instances successfully. Later, an attempt to add 10 more instances of a DIFFERENT instance type to the same cluster placement group fails with an insufficient-capacity error. What is the recommended approach?",
+      "options": {
+        "A": "Cluster placement groups must span multiple AZs to scale",
+        "B": "Cluster placement groups guarantee unlimited capacity; retry indefinitely",
+        "C": "Launch all required instances in a single request when possible, and use the same instance type, because adding instances later or mixing types raises the risk of insufficient-capacity errors",
+        "D": "Convert the cluster placement group to a spread placement group automatically"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring multi-AZ for scaling.",
+          "reason": "Incorrect — cluster placement groups are confined to a single AZ by design; they cannot span AZs."
+        },
+        "B": {
+          "description": "Assuming unlimited capacity.",
+          "reason": "Incorrect — cluster placement groups do not guarantee unlimited capacity; capacity in a single AZ for tightly packed instances is finite."
+        },
+        "C": {
+          "description": "Launch all at once with a homogeneous instance type.",
+          "reason": "Correct — AWS recommends launching all cluster placement group instances in one request and using the same instance type, because incrementally adding instances (especially of different types) increases the chance of an insufficient-capacity error."
+        },
+        "D": {
+          "description": "Auto-converting to spread.",
+          "reason": "Incorrect — placement group types cannot be converted automatically, and spread would not meet cluster's low-latency goal."
+        }
+      },
+      "Tips": "Cluster placement group tips: single AZ, recommend a single homogeneous instance type, and launch all instances in ONE request to reduce insufficient-capacity errors. If capacity is short, stop all instances and start them together. Cluster cannot span AZs."
+    },
+    {
+      "id": 12,
+      "questionText": "An EC2 instance has a primary network interface (eth0) and a secondary ENI (eth1). The engineer tries to detach the primary network interface from the running instance and gets an error. Why?",
+      "options": {
+        "A": "Detaching requires the instance to be in a placement group",
+        "B": "Secondary ENIs cannot be detached, only primary ones",
+        "C": "ENIs can never be detached under any circumstances",
+        "D": "The primary network interface (eth0) cannot be detached from an instance; only secondary ENIs can be detached and reattached"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring a placement group to detach.",
+          "reason": "Incorrect — detaching a secondary ENI does not require a placement group; the real constraint is that eth0 cannot be detached."
+        },
+        "B": {
+          "description": "Claiming only primary ENIs can detach.",
+          "reason": "Incorrect — it is the reverse; the primary interface is the one that cannot be detached."
+        },
+        "C": {
+          "description": "Claiming ENIs never detach.",
+          "reason": "Incorrect — secondary ENIs can be detached/attached; only the primary is fixed."
+        },
+        "D": {
+          "description": "Primary eth0 cannot be detached; secondary ENIs can.",
+          "reason": "Correct — the primary network interface is fixed to the instance for its lifetime and cannot be detached, whereas secondary ENIs can be detached and attached to other instances in the same AZ."
+        }
+      },
+      "Tips": "The PRIMARY ENI (eth0) is permanently bound to the instance and cannot be detached. SECONDARY ENIs can be created, detached, and moved to another instance in the SAME AZ (useful for failover, dual-homing, or management networks). ENIs are AZ-bound."
+    },
+    {
+      "id": 13,
+      "questionText": "A workload requires extremely high block-storage performance: hundreds of thousands of IOPS, sub-millisecond latency, and up to 4,000 MiB/s throughput on a single volume for a large mission-critical database. Which EBS volume type meets these requirements?",
+      "options": {
+        "A": "io2 Block Express",
+        "B": "gp3",
+        "C": "st1",
+        "D": "sc1"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "io2 Block Express for the highest performance tier.",
+          "reason": "Correct — io2 Block Express delivers the highest single-volume performance (up to 256,000 IOPS and 4,000 MiB/s, sub-millisecond latency) with 99.999% durability, suited to large mission-critical databases."
+        },
+        "B": {
+          "description": "gp3 for hundreds of thousands of IOPS.",
+          "reason": "Incorrect — gp3 tops out around 16,000 IOPS and 1,000 MiB/s per volume, far below the requirement."
+        },
+        "C": {
+          "description": "st1 for high IOPS.",
+          "reason": "Incorrect — st1 is throughput-optimized HDD for sequential workloads and cannot provide high random IOPS or sub-millisecond latency."
+        },
+        "D": {
+          "description": "sc1.",
+          "reason": "Incorrect — sc1 is the lowest-performance cold HDD and is wholly unsuitable for a high-IOPS mission-critical database."
+        }
+      },
+      "Tips": "Performance ceilings: gp3 = 16,000 IOPS / 1,000 MiB/s. io1 = up to 64,000 IOPS. io2 Block Express = up to 256,000 IOPS / 4,000 MiB/s, sub-ms latency, 99.999% durability. For the highest-end single-volume database performance → io2 Block Express."
+    },
+    {
+      "id": 14,
+      "questionText": "An EBS gp2 volume's baseline IOPS depends on its size. A team needs higher baseline IOPS but does not want to enlarge the volume or pay for unused capacity. What is the better choice and why?",
+      "options": {
+        "A": "Switch to st1 for higher IOPS",
+        "B": "Switch to gp3, which lets you provision IOPS independently of volume size",
+        "C": "Stay on gp2 and just keep growing the volume to gain IOPS",
+        "D": "Switch to sc1 for higher IOPS"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "st1 for higher IOPS.",
+          "reason": "Incorrect — st1 is throughput-optimized HDD, not designed for high random IOPS."
+        },
+        "B": {
+          "description": "gp3 decouples IOPS from size.",
+          "reason": "Correct — gp3 provides a baseline of 3,000 IOPS regardless of size and lets you provision additional IOPS independently of capacity, so you pay for the IOPS you need without enlarging the volume."
+        },
+        "C": {
+          "description": "Growing a gp2 volume for more IOPS.",
+          "reason": "Incorrect — gp2 couples IOPS to size (3 IOPS/GiB), forcing you to overprovision capacity to gain IOPS, which wastes money."
+        },
+        "D": {
+          "description": "sc1 for higher IOPS.",
+          "reason": "Incorrect — sc1 is the lowest-performance cold HDD; it would reduce, not increase, IOPS."
+        }
+      },
+      "Tips": "gp2: IOPS scale with size (3 IOPS/GiB, min 100, burst to 3,000). gp3: IOPS/throughput provisioned independently of size (baseline 3,000 IOPS / 125 MiB/s). To raise IOPS without overprovisioning capacity, migrate gp2 → gp3 (often cheaper too)."
+    },
+    {
+      "id": 15,
+      "questionText": "An online application must increase the size of an attached EBS volume and switch its type from gp2 to gp3 WITHOUT detaching the volume or stopping the instance. Which capability makes this possible?",
+      "options": {
+        "A": "You must detach the volume, modify it, then reattach",
+        "B": "EBS volumes cannot be modified after creation",
+        "C": "EBS Elastic Volumes allow modifying size, type, IOPS, and throughput while the volume remains attached and in use",
+        "D": "You must create a snapshot and restore to a new volume every time"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Requiring detach/modify/reattach.",
+          "reason": "Incorrect — detaching is not required; Elastic Volumes modify in place while attached."
+        },
+        "B": {
+          "description": "Claiming EBS volumes are immutable.",
+          "reason": "Incorrect — EBS supports live modification of volumes; they are not fixed after creation."
+        },
+        "C": {
+          "description": "Elastic Volumes for live modification.",
+          "reason": "Correct — EBS Elastic Volumes let you increase size, change volume type, and adjust IOPS/throughput while the volume stays attached to a running instance; afterward you extend the file system at the OS level."
+        },
+        "D": {
+          "description": "Requiring snapshot/restore each time.",
+          "reason": "Incorrect — that older approach is unnecessary with Elastic Volumes for size/type/performance changes."
+        }
+      },
+      "Tips": "EBS Elastic Volumes: increase size, change type (e.g., gp2→gp3), and tune IOPS/throughput live, no detach/stop needed. You CANNOT decrease size. After modifying, extend the filesystem/partition in the OS to use the new space. Note a brief cooldown (~6 hours) between modifications."
+    },
+    {
+      "id": 16,
+      "questionText": "An EFS file system is mounted by EC2 instances spread across three Availability Zones. How do instances in each AZ connect to the file system, and what controls network access to those connection points?",
+      "options": {
+        "A": "A single global endpoint with no security control",
+        "B": "Instances connect directly to EBS volumes per AZ",
+        "C": "EFS uses an Internet Gateway in each AZ",
+        "D": "A mount target in each AZ (per subnet), each protected by a Security Group, with instances connecting over NFS (port 2049)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A single global endpoint with no security.",
+          "reason": "Incorrect — EFS uses per-AZ mount targets with security groups, not an uncontrolled global endpoint."
+        },
+        "B": {
+          "description": "Connecting to EBS per AZ.",
+          "reason": "Incorrect — EFS is not EBS; instances do not connect to EBS volumes to reach an EFS file system."
+        },
+        "C": {
+          "description": "Using an Internet Gateway per AZ.",
+          "reason": "Incorrect — EFS access is over the VPC via mount targets, not through Internet Gateways."
+        },
+        "D": {
+          "description": "Per-AZ mount targets with Security Groups over NFS 2049.",
+          "reason": "Correct — EFS creates a mount target (with an IP) in each AZ/subnet; instances mount the file system via the mount target in their AZ using NFS on port 2049, and a Security Group on the mount target controls access."
+        }
+      },
+      "Tips": "EFS access: one mount target per AZ (in a subnet), each with an IP and a Security Group; instances mount over NFSv4 on port 2049. Ensure the mount target's SG allows inbound 2049 from the instances' SG. EFS is Linux-only and multi-AZ."
+    },
+    {
+      "id": 17,
+      "questionText": "A company stores non-critical, easily reproducible scratch data on EFS and wants to minimize cost. The data does not need multi-AZ resilience. Which EFS storage class minimizes cost for this scenario?",
+      "options": {
+        "A": "EFS One Zone (or One Zone-IA)",
+        "B": "EFS Provisioned throughput",
+        "C": "EFS Standard",
+        "D": "EFS Max I/O"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EFS One Zone (or One Zone-IA) for lowest cost.",
+          "reason": "Correct — One Zone storage keeps data in a single AZ at significantly lower cost, appropriate for non-critical, reproducible data that does not require multi-AZ durability; combine with IA for further savings."
+        },
+        "B": {
+          "description": "EFS Provisioned throughput.",
+          "reason": "Incorrect — that is a throughput mode affecting performance/cost of throughput, not a storage class for reducing storage cost on cold data."
+        },
+        "C": {
+          "description": "EFS Standard for cheapest non-critical storage.",
+          "reason": "Incorrect — Standard stores data redundantly across multiple AZs and costs more; for non-critical single-AZ-tolerant data it is not the cheapest."
+        },
+        "D": {
+          "description": "EFS Max I/O.",
+          "reason": "Incorrect — Max I/O is a performance mode, not a cost-saving storage class."
+        }
+      },
+      "Tips": "EFS storage classes: Standard / Standard-IA (multi-AZ) and One Zone / One Zone-IA (single-AZ, cheaper, lower durability). Non-critical, reproducible, single-AZ-tolerant data → One Zone classes. Add lifecycle management to push cold files into IA for more savings."
+    },
+    {
+      "id": 18,
+      "questionText": "A team needs to centrally back up EBS volumes, EFS file systems, RDS databases, and DynamoDB tables with unified policies, retention, and cross-Region/cross-account copy, from a single console. Which service is purpose-built for this?",
+      "options": {
+        "A": "S3 Lifecycle policies",
+        "B": "AWS Backup",
+        "C": "EBS snapshots run manually",
+        "D": "Amazon Data Lifecycle Manager (DLM)"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "S3 Lifecycle policies.",
+          "reason": "Incorrect — S3 Lifecycle manages object transitions/expiration within S3, not backups of EBS/EFS/RDS/DynamoDB."
+        },
+        "B": {
+          "description": "AWS Backup for unified, multi-service backups.",
+          "reason": "Correct — AWS Backup centrally manages and automates backups across EBS, EFS, RDS, DynamoDB, and more, with backup plans, retention, and cross-Region/cross-account copy from one place."
+        },
+        "C": {
+          "description": "Manual EBS snapshots.",
+          "reason": "Incorrect — manual snapshots are not centralized, do not cover other services, and lack unified policy management."
+        },
+        "D": {
+          "description": "DLM for multi-service centralized backup.",
+          "reason": "Incorrect — DLM focuses on EBS snapshots and EBS-backed AMIs; it is not the centralized multi-service backup tool covering EFS, RDS, DynamoDB, etc."
+        }
+      },
+      "Tips": "AWS Backup = centralized, multi-service backup (EBS, EFS, RDS, DynamoDB, Storage Gateway, etc.) with plans, retention, vaults, and cross-Region/cross-account copy. DLM = EBS-snapshot/AMI scheduling only. For 'unified backups across services', choose AWS Backup."
+    },
+    {
+      "id": 19,
+      "questionText": "Which statement about the durability and scope of EBS snapshots is correct?",
+      "options": {
+        "A": "Snapshots are global and instantly available in every Region",
+        "B": "Snapshots are stored on the source EBS volume itself",
+        "C": "Snapshots are stored durably and are Region-scoped; they can be copied to other Regions for DR",
+        "D": "Snapshots are stored within a single Availability Zone and are lost if that AZ fails"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming snapshots are global.",
+          "reason": "Incorrect — snapshots are Region-scoped, not automatically global; cross-Region use requires an explicit copy."
+        },
+        "B": {
+          "description": "Snapshots on the source volume.",
+          "reason": "Incorrect — snapshots are stored separately in managed S3, not on the source volume."
+        },
+        "C": {
+          "description": "Durable, Region-scoped, copyable across Regions.",
+          "reason": "Correct — EBS snapshots are stored durably and are scoped to a Region; for disaster recovery you copy them to another Region (and can copy across accounts)."
+        },
+        "D": {
+          "description": "Claiming snapshots are single-AZ.",
+          "reason": "Incorrect — snapshots are stored regionally (in managed S3) and are not tied to a single AZ's fate the way the source volume is."
+        }
+      },
+      "Tips": "EBS snapshots: durable, incremental, stored in managed S3, REGION-scoped. The source EBS volume is AZ-scoped; the snapshot is Region-scoped. For cross-Region DR, copy the snapshot (CopySnapshot). For cross-account sharing, share the snapshot (and KMS key if encrypted)."
+    },
+    {
+      "id": 20,
+      "questionText": "An instance-store-backed AMI and an EBS-backed AMI differ in important ways. Which statement is correct?",
+      "options": {
+        "A": "Instance-store-backed AMIs support stopping the instance without losing the root volume data",
+        "B": "Both AMI types persist root volume data identically",
+        "C": "Instance-store-backed AMIs are required for EC2 Hibernate",
+        "D": "EBS-backed AMIs allow the instance to be stopped and started with the root volume persisting, whereas instance-store-backed instances cannot be stopped (only rebooted or terminated)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Instance-store-backed AMIs persisting root data on stop.",
+          "reason": "Incorrect — instance-store-backed instances lose their ephemeral root data and cannot be stopped (only rebooted or terminated)."
+        },
+        "B": {
+          "description": "Both persisting identically.",
+          "reason": "Incorrect — they differ: EBS-backed persists root data across stop/start; instance-store-backed does not persist and cannot stop."
+        },
+        "C": {
+          "description": "Instance-store-backed required for hibernate.",
+          "reason": "Incorrect — hibernation REQUIRES an EBS-backed (and encrypted) root volume; instance-store-backed cannot hibernate."
+        },
+        "D": {
+          "description": "EBS-backed can stop/start with persistence; instance-store-backed cannot stop.",
+          "reason": "Correct — EBS-backed instances can be stopped and started with the root volume persisting, while instance-store-backed instances have an ephemeral root and cannot be stopped, only rebooted or terminated."
+        }
+      },
+      "Tips": "EBS-backed AMI: root is an EBS volume, instance can stop/start with persistence, supports hibernate. Instance-store-backed AMI: ephemeral root, cannot stop (reboot/terminate only), data lost on termination. Modern workloads almost always use EBS-backed AMIs."
+    },
+    {
+      "id": 21,
+      "questionText": "A company wants to grant another AWS account read access to a specific S3 bucket WITHOUT creating an IAM role for them to assume. Which mechanism allows direct cross-account access in this case?",
+      "options": {
+        "A": "A resource-based policy (S3 bucket policy) that names the other account/principal as allowed",
+        "B": "A Security Group rule referencing the other account",
+        "C": "Only an IAM role assumption can grant cross-account access",
+        "D": "A permission boundary on the other account"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An S3 bucket policy naming the external principal.",
+          "reason": "Correct — a resource-based policy such as an S3 bucket policy can directly grant another account/principal access by listing them as the Principal, without requiring role assumption."
+        },
+        "B": {
+          "description": "A Security Group rule for the account.",
+          "reason": "Incorrect — Security Groups filter network traffic, not account-level access to S3 objects."
+        },
+        "C": {
+          "description": "Claiming only role assumption works.",
+          "reason": "Incorrect — resource-based policies can grant cross-account access directly without the external account assuming a role."
+        },
+        "D": {
+          "description": "A permission boundary on the other account.",
+          "reason": "Incorrect — permission boundaries cap a principal's permissions within an account; they do not grant cross-account access to a bucket."
+        }
+      },
+      "Tips": "Cross-account access has two main patterns: (1) IAM role + AssumeRole (caller switches identity), or (2) resource-based policy (S3 bucket/SQS/SNS/KMS/Lambda) that names the external principal directly. For S3, a bucket policy grants direct cross-account access without a role."
+    },
+    {
+      "id": 22,
+      "questionText": "An application running on EC2 must achieve consistent high EBS throughput. The instance type chosen has a separate, dedicated network capacity for EBS traffic so that EBS I/O does not contend with regular network traffic. What is this instance capability called?",
+      "options": {
+        "A": "Elastic Fabric Adapter",
+        "B": "EBS-optimized instance",
+        "C": "Placement group",
+        "D": "Enhanced networking (ENA)"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Elastic Fabric Adapter.",
+          "reason": "Incorrect — EFA is for HPC OS-bypass networking, unrelated to dedicated EBS bandwidth."
+        },
+        "B": {
+          "description": "An EBS-optimized instance with dedicated EBS bandwidth.",
+          "reason": "Correct — EBS-optimized instances provide dedicated throughput between the instance and EBS so storage I/O does not compete with other network traffic, enabling consistent EBS performance (enabled by default on most modern instances)."
+        },
+        "C": {
+          "description": "A placement group.",
+          "reason": "Incorrect — placement groups control physical placement for latency/availability, not dedicated EBS bandwidth."
+        },
+        "D": {
+          "description": "Enhanced networking for dedicated EBS bandwidth.",
+          "reason": "Incorrect — ENA improves general network performance but is not specifically the dedicated-EBS-bandwidth feature."
+        }
+      },
+      "Tips": "EBS-optimized instances dedicate bandwidth to EBS so storage traffic is isolated from regular network traffic, giving consistent IOPS/throughput. Most current-generation instances are EBS-optimized by default. To hit high provisioned-IOPS targets, ensure the instance is EBS-optimized and large enough."
+    },
+    {
+      "id": 23,
+      "questionText": "A solutions architect must choose storage for a single EC2 instance's high-performance, temporary buffer that must NOT incur EBS costs and can tolerate data loss on instance stop. The instance type includes local NVMe storage. What should be used?",
+      "options": {
+        "A": "An io2 volume with Multi-Attach",
+        "B": "An additional gp3 EBS volume",
+        "C": "The instance store (local NVMe) included with the instance type",
+        "D": "An EFS One Zone file system"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "io2 with Multi-Attach.",
+          "reason": "Incorrect — io2 is premium EBS (cost) and Multi-Attach is for sharing across instances, irrelevant to a single-instance local buffer."
+        },
+        "B": {
+          "description": "A gp3 EBS volume for the temporary buffer.",
+          "reason": "Incorrect — gp3 incurs EBS storage costs and is network-attached; the requirement is to avoid EBS cost and use included high-performance local storage."
+        },
+        "C": {
+          "description": "The included instance store (local NVMe).",
+          "reason": "Correct — the local instance store comes with the instance type at no extra storage charge, offers very high local I/O for a temporary buffer, and tolerates data loss on stop/terminate, exactly matching the requirements."
+        },
+        "D": {
+          "description": "EFS One Zone.",
+          "reason": "Incorrect — EFS is a networked shared file system with its own cost and is not the included high-performance local buffer described."
+        }
+      },
+      "Tips": "Instance store = local NVMe/SSD included with certain instance types, no separate storage charge, highest local I/O, ephemeral (lost on stop/terminate). Ideal for caches, buffers, scratch, and temporary processing data where loss is acceptable."
+    },
+    {
+      "id": 24,
+      "questionText": "A role is assumed by a user, and that session then assumes a second role (role chaining). What is the maximum session duration for a chained role session via AssumeRole?",
+      "options": {
+        "A": "Unlimited until manually revoked",
+        "B": "Exactly 15 minutes",
+        "C": "Up to 12 hours, same as a normal AssumeRole maximum",
+        "D": "Limited to 1 hour for role chaining, regardless of the role's configured maximum session duration"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Unlimited until revoked.",
+          "reason": "Incorrect — temporary credentials always expire; there is no unlimited session, and chaining is capped at 1 hour."
+        },
+        "B": {
+          "description": "Exactly 15 minutes.",
+          "reason": "Incorrect — 15 minutes is the minimum AssumeRole duration, not the chaining maximum, which is 1 hour."
+        },
+        "C": {
+          "description": "12 hours for chained sessions.",
+          "reason": "Incorrect — although a single AssumeRole can allow up to 12 hours, role CHAINING caps the resulting session at 1 hour."
+        },
+        "D": {
+          "description": "1 hour cap for role chaining.",
+          "reason": "Correct — when you use temporary credentials from one role to assume another (role chaining), the session is limited to a maximum of 1 hour, even if the target role allows a longer maximum session duration."
+        }
+      },
+      "Tips": "AssumeRole sessions: 15 minutes minimum, up to the role's configured maximum (up to 12 hours). BUT role CHAINING (using one role's temp creds to assume another) caps the session at 1 hour. This 1-hour chaining cap is a classic detail trap."
+    },
+    {
+      "id": 25,
+      "questionText": "A company needs the SAME EBS volume's data available in TWO different Availability Zones for a migration. EBS volumes are AZ-scoped. What is the correct procedure to make the data available in the second AZ?",
+      "options": {
+        "A": "Create a snapshot of the volume, then create a new volume from that snapshot in the second AZ",
+        "B": "Enable Multi-Attach to span AZs",
+        "C": "Attach the existing volume to an instance in the second AZ directly",
+        "D": "Convert the EBS volume to EFS automatically"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Snapshot then create a new volume in the target AZ.",
+          "reason": "Correct — because EBS volumes are AZ-scoped, you snapshot the volume (snapshots are Region-scoped) and create a new volume from the snapshot in the second AZ to make the data available there."
+        },
+        "B": {
+          "description": "Multi-Attach spanning AZs.",
+          "reason": "Incorrect — EBS Multi-Attach works only within a SINGLE AZ; it cannot span AZs."
+        },
+        "C": {
+          "description": "Direct cross-AZ attach.",
+          "reason": "Incorrect — an EBS volume cannot be attached to an instance in a different AZ; volumes are AZ-scoped."
+        },
+        "D": {
+          "description": "Auto-converting EBS to EFS.",
+          "reason": "Incorrect — there is no automatic EBS-to-EFS conversion; that is not how cross-AZ EBS data movement works."
+        }
+      },
+      "Tips": "Moving EBS data across AZs: snapshot (Region-scoped) → create new volume from snapshot in the target AZ. Across Regions: copy the snapshot to the other Region first, then create the volume. Multi-Attach is single-AZ only and does not solve cross-AZ needs."
+    },
+    {
+      "id": 26,
+      "questionText": "An EC2 instance role provides credentials via the instance metadata service. An application using the AWS SDK on that instance does not explicitly configure credentials. How does the SDK obtain credentials?",
+      "options": {
+        "A": "It prompts the user for an access key at runtime",
+        "B": "The SDK's default credential provider chain automatically retrieves temporary credentials from the instance metadata service (IMDS)",
+        "C": "It reads the root user's keys from S3",
+        "D": "It cannot; you must always set environment variables"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Prompting for keys at runtime.",
+          "reason": "Incorrect — SDKs do not prompt for credentials; they resolve them automatically through the provider chain."
+        },
+        "B": {
+          "description": "The default credential provider chain pulls from IMDS.",
+          "reason": "Correct — when no credentials are explicitly configured, the AWS SDK/CLI credential provider chain automatically fetches temporary credentials from the attached instance role via the metadata service."
+        },
+        "C": {
+          "description": "Reading root keys from S3.",
+          "reason": "Incorrect — SDKs do not read root credentials from S3; that would be insecure and is not part of the credential chain."
+        },
+        "D": {
+          "description": "Requiring environment variables always.",
+          "reason": "Incorrect — the SDK can transparently use the instance role without any environment variables when running on EC2."
+        }
+      },
+      "Tips": "The SDK/CLI credential provider chain checks (roughly): explicit config/env vars → shared credentials/config files → container/instance role via metadata. On EC2 with an instance role and nothing else set, it transparently uses the role's temporary credentials from IMDS. No keys on disk needed."
+    },
+    {
+      "id": 27,
+      "questionText": "A workload requires a shared POSIX-compliant file system mounted by multiple Linux EC2 instances, and the data must remain available even if an entire Availability Zone fails. Which option satisfies durability across AZ failure with shared access?",
+      "options": {
+        "A": "An EFS One Zone file system",
+        "B": "An instance store shared across AZs",
+        "C": "Amazon EFS with the Standard (multi-AZ) storage class",
+        "D": "An EBS io2 volume with Multi-Attach in one AZ"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EFS One Zone for AZ-failure resilience.",
+          "reason": "Incorrect — One Zone keeps data in a single AZ, so it does not survive that AZ's failure; it trades durability for cost."
+        },
+        "B": {
+          "description": "Instance store across AZs.",
+          "reason": "Incorrect — instance store is ephemeral local storage that cannot be shared across instances or AZs."
+        },
+        "C": {
+          "description": "EFS Standard, which stores data redundantly across multiple AZs.",
+          "reason": "Correct — EFS Standard stores data redundantly across multiple AZs and supports concurrent POSIX/NFS access from many Linux instances, remaining available even if one AZ fails."
+        },
+        "D": {
+          "description": "io2 Multi-Attach in one AZ for AZ-failure resilience.",
+          "reason": "Incorrect — Multi-Attach is confined to a single AZ, so an AZ failure would take the volume offline; it does not provide cross-AZ durability."
+        }
+      },
+      "Tips": "For shared POSIX/NFS storage that survives an AZ failure → EFS Standard (multi-AZ). EFS One Zone is cheaper but single-AZ (no AZ-failure resilience). EBS Multi-Attach is single-AZ and limited to io1/io2. Instance store is ephemeral and local."
+    },
+    {
+      "id": 28,
+      "questionText": "An administrator wants a policy that allows an action only when the resource being accessed is tagged to match the requesting user's own username (attribute-based access control). Which IAM feature enables this dynamic matching?",
+      "options": {
+        "A": "A NACL referencing tags",
+        "B": "A permission boundary listing all usernames",
+        "C": "Hardcoding each username in separate policies",
+        "D": "Policy variables and condition keys (e.g., using aws:username or tag conditions) for attribute-based access control (ABAC)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A NACL referencing tags.",
+          "reason": "Incorrect — NACLs filter network traffic and cannot evaluate IAM tags/usernames."
+        },
+        "B": {
+          "description": "A permission boundary of all usernames.",
+          "reason": "Incorrect — boundaries cap permissions; they are not the mechanism for dynamic tag/username matching."
+        },
+        "C": {
+          "description": "Hardcoding usernames per policy.",
+          "reason": "Incorrect — that does not scale and is the opposite of dynamic, attribute-based matching."
+        },
+        "D": {
+          "description": "Policy variables and tag conditions for ABAC.",
+          "reason": "Correct — IAM supports policy variables (such as aws:username) and tag-based conditions, enabling attribute-based access control where access is granted based on matching tags/attributes rather than enumerating identities."
+        }
+      },
+      "Tips": "ABAC uses tags + condition keys/policy variables (e.g., aws:PrincipalTag, aws:ResourceTag, aws:username) so one policy grants access based on matching attributes, scaling without per-user policies. Contrast with RBAC (roles/groups). 'Dynamic match on tags/attributes' → ABAC."
+    },
+    {
+      "id": 29,
+      "questionText": "A company is designing a three-tier app and wants the database tier's Security Group to accept connections ONLY from the application tier, automatically adjusting as the app tier scales out and in. Which Security Group source should the DB tier rule use?",
+      "options": {
+        "A": "The application tier's Security Group ID as the source",
+        "B": "The entire VPC CIDR",
+        "C": "The application tier's subnet CIDR range",
+        "D": "0.0.0.0/0 restricted by a NACL"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Referencing the application tier's Security Group ID.",
+          "reason": "Correct — using the app tier's SG ID as the source means only instances in that SG can reach the DB, and the rule dynamically follows the app tier as it scales, without IP management."
+        },
+        "B": {
+          "description": "Using the whole VPC CIDR.",
+          "reason": "Incorrect — the entire VPC CIDR is far too broad, allowing any resource in the VPC to reach the database, violating least privilege."
+        },
+        "C": {
+          "description": "Using the app tier's subnet CIDR.",
+          "reason": "Incorrect — a subnet CIDR allows any resource in that subnet (not only app-tier instances) and is static, not automatically tracking the app tier's membership."
+        },
+        "D": {
+          "description": "0.0.0.0/0 with a NACL.",
+          "reason": "Incorrect — opening to the world and patching with a NACL is fragile and overly broad; SG-ID referencing is the precise, recommended approach."
+        }
+      },
+      "Tips": "For tier-to-tier least privilege that auto-scales, reference the upstream tier's SECURITY GROUP ID as the source rather than a CIDR. SG-ID references are dynamic (follow membership) and precise. CIDR/VPC ranges are static and too broad. This mirrors the AWS-recommended multi-tier pattern."
+    },
+    {
+      "id": 30,
+      "questionText": "A team is comparing EBS, instance store, and EFS for a new workload. Which mapping of characteristic to service is CORRECT?",
+      "options": {
+        "A": "Instance store = multi-AZ shared file system; EFS = ephemeral local; EBS = object storage",
+        "B": "EBS = single-AZ network block storage for one instance; Instance store = ephemeral local block storage; EFS = multi-AZ shared NFS file system for many Linux instances",
+        "C": "All three are identical and interchangeable",
+        "D": "EBS = shared NFS across AZs; EFS = single-instance block; Instance store = durable network storage"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Mislabeling all three services.",
+          "reason": "Incorrect — every mapping in this option is wrong (instance store is not a multi-AZ file system, EFS is not ephemeral local, EBS is not object storage)."
+        },
+        "B": {
+          "description": "Correct mapping of EBS, instance store, and EFS.",
+          "reason": "Correct — EBS is single-AZ network block storage for one instance (or up to 16 with io1/io2 Multi-Attach), instance store is ephemeral local block storage, and EFS is a multi-AZ shared NFS file system for many Linux instances."
+        },
+        "C": {
+          "description": "Claiming they are identical.",
+          "reason": "Incorrect — the three services have distinct durability, sharing, and performance characteristics and are not interchangeable."
+        },
+        "D": {
+          "description": "Swapping the services' roles.",
+          "reason": "Incorrect — this inverts their characteristics; EBS is block (not shared NFS), EFS is the shared file system, and instance store is ephemeral (not durable network)."
+        }
+      },
+      "Tips": "Core storage trio: EBS = durable single-AZ block (one instance; snapshot-backed). Instance store = ephemeral local block (highest local I/O, lost on stop/terminate). EFS = elastic multi-AZ shared NFS file system (many Linux clients). Match the workload's sharing/durability needs to the right one."
+    }
+  ]
+}

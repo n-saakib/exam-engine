@@ -1,0 +1,967 @@
+{
+  "setId": "9a953479-c83f-4a90-a049-54d592e53db3",
+  "setTitle": "AWS SAA Exam Style - IAM & EC2 Practice Exam 5 (Hard)",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "A SaaS provider needs your account to let its service assume a role in your account to manage resources on your behalf. To prevent the 'confused deputy' problem (where another customer of the SaaS could trick it into accessing your resources), what should the role's trust policy require?",
+      "options": {
+        "A": "A condition on sts:ExternalId matching a unique external ID agreed with the SaaS provider",
+        "B": "A permission boundary on your own account's users",
+        "C": "MFA on the SaaS provider's IAM users",
+        "D": "A condition on aws:SourceIp restricting to the SaaS provider's IPs"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A trust-policy condition on sts:ExternalId.",
+          "reason": "Correct — requiring a unique sts:ExternalId in the role's trust policy ensures the SaaS provider must present your specific external ID when assuming the role, preventing it from being tricked into using your role on behalf of a different customer."
+        },
+        "B": {
+          "description": "A permission boundary on your users.",
+          "reason": "Incorrect — boundaries cap your own principals' permissions; they do not control how an external SaaS assumes a role in your account."
+        },
+        "C": {
+          "description": "MFA on the provider's users.",
+          "reason": "Incorrect — you cannot enforce MFA on a third party's users, and MFA does not address the confused-deputy scenario for cross-account role assumption."
+        },
+        "D": {
+          "description": "Using aws:SourceIp to prevent confused deputy.",
+          "reason": "Incorrect — IP restrictions are brittle (provider IPs change) and do not solve the confused-deputy problem, which is about distinguishing which customer the provider is acting for."
+        }
+      },
+      "Tips": "Confused-deputy defense for third-party cross-account access = sts:ExternalId condition in the role trust policy (a shared secret unique to you). The third party stores your external ID and passes it on AssumeRole. This is distinct from the internal cross-account pattern, which typically does not need an external ID."
+    },
+    {
+      "id": 2,
+      "questionText": "A company wants a single API call to provision a fleet mixing On-Demand and Spot Instances across multiple instance types and Availability Zones, targeting a total capacity with a defined On-Demand base and Spot for the remainder, optimizing Spot for fewest interruptions. Which capability should they use?",
+      "options": {
+        "A": "An On-Demand Capacity Reservation only",
+        "B": "EC2 Fleet (or Spot Fleet) with a mix of On-Demand and Spot, multiple instance types, and the capacityOptimized (or priceCapacityOptimized) Spot allocation strategy",
+        "C": "A Compute Savings Plan",
+        "D": "A single RunInstances call per instance type"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "An On-Demand Capacity Reservation only.",
+          "reason": "Incorrect — a Capacity Reservation reserves capacity but does not provision a mixed On-Demand/Spot fleet across multiple instance types in one call."
+        },
+        "B": {
+          "description": "EC2 Fleet/Spot Fleet with mixed purchasing and capacityOptimized Spot.",
+          "reason": "Correct — EC2 Fleet (and the older Spot Fleet) launches a target capacity in one request across multiple instance types/AZs, mixing On-Demand (with a base) and Spot, and supports allocation strategies like capacityOptimized/priceCapacityOptimized to reduce Spot interruptions."
+        },
+        "C": {
+          "description": "A Compute Savings Plan.",
+          "reason": "Incorrect — a Savings Plan is a billing-discount commitment, not a provisioning mechanism that launches a mixed fleet across types/AZs."
+        },
+        "D": {
+          "description": "Many separate RunInstances calls.",
+          "reason": "Incorrect — individual RunInstances calls do not provide a single-request, multi-type, mixed-purchase fleet with allocation strategies."
+        }
+      },
+      "Tips": "EC2 Fleet = single request for a target capacity across instance types, AZs, and purchase options (On-Demand base + Spot), with allocation strategies (capacityOptimized / priceCapacityOptimized to minimize Spot interruptions). Spot Fleet is the older, Spot-centric predecessor. Savings Plans/Capacity Reservations are billing/capacity tools, not fleet provisioners."
+    },
+    {
+      "id": 3,
+      "questionText": "A partition placement group is used for a large Cassandra cluster. The team wants the application to be aware of which partition each node is on so it can place replicas on different partitions. How many partitions can a partition placement group have per Availability Zone, and how does the app learn partition placement?",
+      "options": {
+        "A": "Exactly 1 partition per AZ; all nodes share a rack",
+        "B": "Up to 3 partitions per AZ; partition info is not exposed",
+        "C": "Up to 7 partitions per AZ; instances can retrieve their partition number from instance metadata, enabling topology-aware placement",
+        "D": "Unlimited partitions; the app must guess placement"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Exactly 1 partition per AZ.",
+          "reason": "Incorrect — partition groups support multiple (up to 7) partitions per AZ on separate racks; that is the point of the feature."
+        },
+        "B": {
+          "description": "3 partitions and no exposure.",
+          "reason": "Incorrect — the per-AZ partition maximum is 7, and partition information IS exposed to instances, so both parts are wrong."
+        },
+        "C": {
+          "description": "Up to 7 partitions per AZ, with partition number available via metadata.",
+          "reason": "Correct — a partition placement group supports up to 7 partitions per AZ, each on isolated racks, and instances can read their partition number from instance metadata so topology-aware software (Cassandra, HDFS, Kafka) can spread replicas across partitions."
+        },
+        "D": {
+          "description": "Unlimited partitions, app guesses.",
+          "reason": "Incorrect — partitions are capped at 7 per AZ and placement is discoverable via metadata, not guessed."
+        }
+      },
+      "Tips": "Partition placement groups: up to 7 partitions PER AZ, each on distinct racks; instances learn their partition via metadata for topology-aware replica placement (HDFS/HBase/Cassandra/Kafka). Contrast: spread = 7 INSTANCES/AZ on distinct hardware; cluster = co-located in one AZ for low latency."
+    },
+    {
+      "id": 4,
+      "questionText": "A team runs a steady baseline of 10 instances 24/7 but frequently scales to 30 instances during variable peak periods. They want to minimize cost without over-committing. What is the recommended purchasing strategy?",
+      "options": {
+        "A": "Run all 30 on On-Demand with no commitment",
+        "B": "Run all 30 on Spot at all times",
+        "C": "Commit a Savings Plan/RI for all 30 instances",
+        "D": "Commit a Savings Plan/RI for the steady baseline (10), and cover variable peak capacity with On-Demand and/or Spot"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "All 30 On-Demand.",
+          "reason": "Incorrect — paying On-Demand for the predictable baseline forgoes large commitment discounts and is not cost-optimal."
+        },
+        "B": {
+          "description": "All 30 on Spot always.",
+          "reason": "Incorrect — running the steady baseline on Spot risks interruptions to critical always-on capacity; baseline should be reliable and discounted via commitment."
+        },
+        "C": {
+          "description": "Committing for all 30.",
+          "reason": "Incorrect — committing to peak capacity means paying for 30 even when only 10 run, wasting money during off-peak; commitments should cover only steady usage."
+        },
+        "D": {
+          "description": "Commit for the baseline, use On-Demand/Spot for peaks.",
+          "reason": "Correct — commit a Savings Plan or RIs to the always-on baseline (10) for the discount, and handle the variable peak (up to 30) with On-Demand (reliable) or Spot (cheaper if interruption-tolerant), avoiding over-commitment."
+        }
+      },
+      "Tips": "Cost strategy: commit (Savings Plans/RIs) to the STEADY baseline for discounts, and flex the VARIABLE portion with On-Demand (reliable) or Spot (cheap, interruptible). Never commit to peak capacity. This baseline-plus-flex pattern is the canonical cost-optimization answer."
+    },
+    {
+      "id": 5,
+      "questionText": "An EBS snapshot is rarely needed but must be retained for years for compliance, and restore time of 24-72 hours is acceptable. The team wants to minimize snapshot storage cost. Which option fits?",
+      "options": {
+        "A": "Move the snapshot to the EBS Snapshot Archive tier for low-cost long-term retention (with slower restore)",
+        "B": "Convert the snapshot to an instance store",
+        "C": "Keep all snapshots in the standard snapshot tier",
+        "D": "Store the snapshot on a gp3 volume"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EBS Snapshot Archive for cheap long-term retention.",
+          "reason": "Correct — the EBS Snapshot Archive tier offers significantly lower storage cost for snapshots you rarely access and can wait 24-72 hours to restore, ideal for multi-year compliance retention."
+        },
+        "B": {
+          "description": "Converting a snapshot to instance store.",
+          "reason": "Incorrect — snapshots are not converted to instance store; instance store is ephemeral local storage, not archival snapshot storage."
+        },
+        "C": {
+          "description": "Keeping everything in the standard tier.",
+          "reason": "Incorrect — the standard tier costs more for long-term retention of rarely accessed snapshots; archive is cheaper for this pattern."
+        },
+        "D": {
+          "description": "Storing the snapshot on a gp3 volume.",
+          "reason": "Incorrect — snapshots are stored in managed S3, not placed on a gp3 volume; this is not a cost-archival mechanism."
+        }
+      },
+      "Tips": "EBS Snapshot Archive = low-cost tier for rarely accessed snapshots needing long-term retention; restore takes 24-72 hours and there is a minimum archive period (90 days). For frequently restored snapshots keep the standard tier; for cold compliance retention, archive."
+    },
+    {
+      "id": 6,
+      "questionText": "A team accidentally deleted a critical EBS snapshot and a custom AMI. They want a safety net so that future accidental deletions of snapshots and AMIs can be recovered within a retention window. Which AWS feature provides this?",
+      "options": {
+        "A": "Fast Snapshot Restore",
+        "B": "Recycle Bin (with retention rules for EBS snapshots and AMIs)",
+        "C": "Termination protection",
+        "D": "EBS Multi-Attach"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Fast Snapshot Restore.",
+          "reason": "Incorrect — FSR removes first-touch latency on restored volumes; it does not recover deleted snapshots/AMIs."
+        },
+        "B": {
+          "description": "Recycle Bin with retention rules.",
+          "reason": "Correct — the Recycle Bin lets you define retention rules so deleted EBS snapshots and AMIs are retained (recoverable) for a configured period before permanent deletion, providing an undo for accidental deletions."
+        },
+        "C": {
+          "description": "Termination protection.",
+          "reason": "Incorrect — termination protection guards EC2 instances from accidental termination, not snapshots/AMIs from deletion."
+        },
+        "D": {
+          "description": "Multi-Attach as a recovery safety net.",
+          "reason": "Incorrect — Multi-Attach lets multiple instances share an io1/io2 volume; it has nothing to do with recovering deleted snapshots/AMIs."
+        }
+      },
+      "Tips": "Recycle Bin = retention rules that hold deleted EBS snapshots and AMIs for a set period so you can restore them, protecting against accidental or malicious deletion. Distinct from FSR (latency), Multi-Attach (sharing), and termination protection (instances)."
+    },
+    {
+      "id": 7,
+      "questionText": "A company compares io1 and io2 EBS volumes. Both can be configured with the same provisioned IOPS at the same price point. What is a key advantage of io2 over io1?",
+      "options": {
+        "A": "io2 cannot be used as a boot volume but io1 can",
+        "B": "io2 does not support provisioned IOPS",
+        "C": "io2 offers higher durability (99.999%) and a higher IOPS-to-GiB ratio than io1, at the same price",
+        "D": "io2 is slower than io1"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "io2 not bootable but io1 is.",
+          "reason": "Incorrect — both io1 and io2 are SSD volumes that can serve as boot volumes; this is false."
+        },
+        "B": {
+          "description": "io2 lacking provisioned IOPS.",
+          "reason": "Incorrect — io2 is a Provisioned IOPS SSD; it absolutely supports provisioned IOPS."
+        },
+        "C": {
+          "description": "io2 with higher durability and IOPS-to-GiB ratio at the same price.",
+          "reason": "Correct — io2 provides higher durability (99.999% vs io1's lower figure) and supports a higher IOPS-to-GiB ratio, at the same price as io1, making io2 generally preferable; io2 Block Express extends performance further."
+        },
+        "D": {
+          "description": "io2 being slower than io1.",
+          "reason": "Incorrect — io2 is not slower; it matches or exceeds io1 and offers higher durability."
+        }
+      },
+      "Tips": "io2 vs io1: same price, but io2 has higher durability (99.999%) and a higher max IOPS-to-GiB ratio. Prefer io2 over io1 for new high-IOPS workloads; use io2 Block Express for the highest performance (up to 256,000 IOPS / 4,000 MiB/s). Both are SSD and bootable."
+    },
+    {
+      "id": 8,
+      "questionText": "An application in a container on EC2 cannot retrieve credentials from the instance metadata service after IMDSv2 was enforced. The container makes metadata requests that traverse an extra network hop. What setting most likely needs adjustment?",
+      "options": {
+        "A": "The EBS volume size",
+        "B": "The instance's key pair",
+        "C": "The Security Group inbound rules",
+        "D": "The IMDS PUT response hop limit (increase it, e.g., to 2) so token requests survive the additional network hop introduced by the container networking"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "The EBS volume size.",
+          "reason": "Incorrect — storage size has no bearing on metadata token routing or hop limits."
+        },
+        "B": {
+          "description": "The instance's key pair.",
+          "reason": "Incorrect — key pairs are for SSH/Windows password decryption, unrelated to IMDS token hop limits."
+        },
+        "C": {
+          "description": "Security Group inbound rules.",
+          "reason": "Incorrect — the metadata service is link-local (169.254.169.254) and not governed by Security Groups; SG rules are not the cause."
+        },
+        "D": {
+          "description": "Increasing the IMDS hop limit to survive the extra hop.",
+          "reason": "Correct — IMDSv2 token responses have a default hop limit (often 1); container networking can add a hop, so increasing the metadata hop limit (e.g., to 2) lets the container reach the metadata service and obtain credentials."
+        }
+      },
+      "Tips": "IMDSv2 PUT (token) responses have a configurable HOP LIMIT (default low, e.g., 1). Containers/proxies can add a hop, breaking metadata access. Increase the metadata hop limit (e.g., to 2) for containerized workloads. The metadata endpoint is link-local and not controlled by Security Groups."
+    },
+    {
+      "id": 9,
+      "questionText": "A company uses Dedicated Hosts for BYOL software licensed to specific physical hardware. They need an instance to consistently launch back onto the SAME physical host after a stop/start, to remain license-compliant. Which feature provides this?",
+      "options": {
+        "A": "Dedicated Host affinity (host affinity set to the specific host)",
+        "B": "Spread placement group",
+        "C": "EC2 Hibernate",
+        "D": "Elastic IP association"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Dedicated Host affinity tying the instance to a specific host.",
+          "reason": "Correct — setting host affinity on a Dedicated Host makes the instance consistently return to the same physical host after stop/start, which is required for hardware-bound BYOL license compliance."
+        },
+        "B": {
+          "description": "Spread placement group for host stickiness.",
+          "reason": "Incorrect — spread groups distribute instances across distinct hardware; they do not pin an instance to a specific physical host across stop/start."
+        },
+        "C": {
+          "description": "EC2 Hibernate.",
+          "reason": "Incorrect — hibernation preserves RAM across stops; it does not pin an instance to a specific physical host."
+        },
+        "D": {
+          "description": "Elastic IP association.",
+          "reason": "Incorrect — an Elastic IP fixes a public IP, not the physical host an instance runs on."
+        }
+      },
+      "Tips": "Dedicated Host AFFINITY pins an instance to a specific physical host across stop/start for hardware-bound BYOL licensing. Combine Dedicated Hosts with AWS License Manager and host resource groups to track per-socket/core licenses. Spread/cluster groups and EIPs do not control physical-host stickiness."
+    },
+    {
+      "id": 10,
+      "questionText": "An EFS file system in Bursting throughput mode is experiencing throughput throttling. The team observes that the file system stores only a small amount of data. Why is throughput limited, and what are two ways to fix it?",
+      "options": {
+        "A": "Switch the EFS file system to an EBS volume",
+        "B": "In Bursting mode, baseline throughput scales with the amount of data stored (and uses burst credits); options are to store more data, or switch to Provisioned or Elastic throughput mode",
+        "C": "EFS throughput can never be increased",
+        "D": "Throughput is unrelated to stored data; only the instance type matters"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Switching EFS to EBS.",
+          "reason": "Incorrect — that changes the storage paradigm entirely and is not how you address EFS Bursting throughput limits."
+        },
+        "B": {
+          "description": "Bursting baseline scales with data size; fix via more data, Provisioned, or Elastic mode.",
+          "reason": "Correct — Bursting mode grants baseline throughput proportional to stored data (plus burst credits that can deplete); to get more throughput you can store more data, or switch to Provisioned throughput (set a fixed level) or Elastic throughput (auto-scales, pay-per-use)."
+        },
+        "C": {
+          "description": "Claiming throughput can never increase.",
+          "reason": "Incorrect — EFS throughput can be increased via Provisioned or Elastic modes, or naturally as more data is stored in Bursting mode."
+        },
+        "D": {
+          "description": "Throughput unrelated to stored data.",
+          "reason": "Incorrect — in Bursting mode, baseline throughput is directly proportional to the data stored, so the small data size explains the low baseline."
+        }
+      },
+      "Tips": "EFS Bursting throughput baseline scales with stored data (~50 KiB/s per GiB) plus burst credits; small file systems get low baseline and can run out of credits. Fixes: store more data, or use Provisioned throughput (fixed, decoupled from size) or Elastic throughput (auto-scaling, pay-per-use)."
+    },
+    {
+      "id": 11,
+      "questionText": "A three-tier application must enforce strict least privilege: the web tier (behind an ALB) talks only to the app tier, and the app tier talks only to the database tier. The fleet auto-scales, so IP-based rules are unreliable. Which Security Group design is correct?",
+      "options": {
+        "A": "All tiers allow inbound from the VPC CIDR for simplicity",
+        "B": "Use NACLs only and skip Security Groups entirely",
+        "C": "Web SG inbound 443 from the internet; App SG inbound on the app port sourced from the Web SG ID; DB SG inbound on the DB port sourced from the App SG ID",
+        "D": "One shared Security Group for all tiers allowing all internal traffic"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "All tiers allowing the VPC CIDR.",
+          "reason": "Incorrect — a VPC-CIDR rule permits any resource in the VPC to reach each tier, which is far too broad for least privilege."
+        },
+        "B": {
+          "description": "Using NACLs only.",
+          "reason": "Incorrect — NACLs are stateless, subnet-level, and harder to manage for dynamic tier-to-tier rules; Security Group ID referencing is the recommended pattern."
+        },
+        "C": {
+          "description": "Each tier references the upstream tier's SG ID as its inbound source.",
+          "reason": "Correct — referencing Security Group IDs (Web SG → App SG → DB SG) creates precise, dynamic least-privilege rules that automatically follow instances as the fleet scales, with no IP management."
+        },
+        "D": {
+          "description": "One shared SG allowing all internal traffic.",
+          "reason": "Incorrect — a shared SG lets every tier reach every other tier, eliminating isolation and violating least privilege."
+        }
+      },
+      "Tips": "Least privilege + tier-to-tier + auto-scaling → reference the upstream tier's SECURITY GROUP ID as the source. SG-ID references are dynamic and precise; CIDR/VPC rules are static and too broad; shared SGs remove isolation. This is the AWS-recommended multi-tier pattern."
+    },
+    {
+      "id": 12,
+      "questionText": "A workload needs a single EBS-backed instance with both maximum read/write performance AND protection against the failure of any single underlying EBS volume at the array level. Which RAID level provides redundancy (mirroring) so data survives a volume failure?",
+      "options": {
+        "A": "No RAID; EBS volumes cannot be combined",
+        "B": "RAID 0 (striping)",
+        "C": "RAID 5",
+        "D": "RAID 1 (mirroring)"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Claiming EBS cannot be combined.",
+          "reason": "Incorrect — multiple EBS volumes can be combined with RAID 0 or RAID 1 at the OS level; they certainly can be combined."
+        },
+        "B": {
+          "description": "RAID 0 for redundancy.",
+          "reason": "Incorrect — RAID 0 stripes for performance but provides NO redundancy; losing one volume loses the array."
+        },
+        "C": {
+          "description": "RAID 5 on EBS.",
+          "reason": "Incorrect — AWS does not recommend parity RAID (5/6) on EBS due to write-penalty overhead and because EBS already replicates within an AZ; it is not the recommended redundancy approach here."
+        },
+        "D": {
+          "description": "RAID 1 mirroring for volume-failure protection.",
+          "reason": "Correct — RAID 1 mirrors data across volumes so the array survives the failure of a single volume, providing redundancy at the array level (at the cost of write duplication and capacity)."
+        }
+      },
+      "Tips": "On EBS, RAID 0 = striping (higher performance, no redundancy); RAID 1 = mirroring (redundancy, survives a volume failure). AWS recommends RAID 0 for performance and generally avoids RAID 5/6. Note EBS already replicates within an AZ, so array-level redundancy is often unnecessary."
+    },
+    {
+      "id": 13,
+      "questionText": "A company must standardize, test, and distribute hardened, patched AMIs across multiple accounts and Regions on a repeatable schedule, with an automated pipeline. Which AWS service is purpose-built for this?",
+      "options": {
+        "A": "EC2 Image Builder",
+        "B": "AWS Config",
+        "C": "Amazon Data Lifecycle Manager",
+        "D": "AWS Backup"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EC2 Image Builder for automated AMI pipelines.",
+          "reason": "Correct — EC2 Image Builder automates creating, patching, testing, and distributing AMIs (and container images) across accounts and Regions via repeatable pipelines, ideal for golden-image standardization."
+        },
+        "B": {
+          "description": "AWS Config for building AMIs.",
+          "reason": "Incorrect — Config records/evaluates resource configuration compliance; it does not build, test, or distribute AMIs."
+        },
+        "C": {
+          "description": "DLM for AMI build pipelines.",
+          "reason": "Incorrect — DLM schedules EBS snapshots and EBS-backed AMI creation/retention, but it is not a full build/harden/test/distribute pipeline like Image Builder."
+        },
+        "D": {
+          "description": "AWS Backup for AMI pipelines.",
+          "reason": "Incorrect — AWS Backup centralizes backups across services; it is not an image build/test/distribution pipeline."
+        }
+      },
+      "Tips": "EC2 Image Builder = automated pipeline to build, patch, test, and distribute golden AMIs (and container images) across accounts/Regions on a schedule. DLM handles snapshot/AMI lifecycle scheduling; AWS Backup handles multi-service backups; Config handles compliance. For repeatable hardened image creation → Image Builder."
+    },
+    {
+      "id": 14,
+      "questionText": "An EC2 instance must support a very high number of secondary private IP addresses and multiple network interfaces for a network appliance. The current instance type does not allow enough ENIs/IPs. What determines the maximum number of ENIs and private IPs per instance?",
+      "options": {
+        "A": "The Security Group configuration",
+        "B": "The instance type (size/family), which sets the maximum number of ENIs and private IPs per ENI",
+        "C": "The EBS volume type attached",
+        "D": "The number of Availability Zones in the Region"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Security Group configuration setting ENI/IP limits.",
+          "reason": "Incorrect — Security Groups control allowed traffic, not the number of ENIs or private IPs an instance can have."
+        },
+        "B": {
+          "description": "The instance type determines ENI and IP maximums.",
+          "reason": "Correct — the maximum number of network interfaces and the number of private IPs per interface are determined by the instance type; larger instance types support more ENIs/IPs, so choosing a larger type raises these limits."
+        },
+        "C": {
+          "description": "The EBS volume type.",
+          "reason": "Incorrect — EBS volume type affects storage performance, not networking ENI/IP limits."
+        },
+        "D": {
+          "description": "The number of AZs in the Region.",
+          "reason": "Incorrect — AZ count is unrelated to per-instance ENI/IP limits, which are an instance-type property."
+        }
+      },
+      "Tips": "ENI count and private-IPs-per-ENI maximums are set by the INSTANCE TYPE (bigger types allow more). To support more ENIs/IPs for an appliance, choose a larger instance type. Security Groups, AZ count, and EBS types do not change these networking limits."
+    },
+    {
+      "id": 15,
+      "questionText": "A scientific application has a very long initialization phase (loading large datasets into memory) and is started and stopped frequently throughout the day. The team wants to avoid repeating the long initialization on every start by preserving the in-memory state. Which EC2 feature addresses this, and what is a key prerequisite?",
+      "options": {
+        "A": "Use Spot Instances; they preserve memory automatically",
+        "B": "Use a larger instance type to speed initialization, which is the only option",
+        "C": "Use EC2 Hibernate, which saves RAM to the encrypted EBS root volume so the long-initialized in-memory state is restored on resume",
+        "D": "Use an instance store to persist memory across stops"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Spot preserving memory automatically.",
+          "reason": "Incorrect — Spot does not preserve in-memory state across stops; it is about pricing/interruptions, not memory persistence."
+        },
+        "B": {
+          "description": "Only a larger instance type.",
+          "reason": "Incorrect — a bigger instance speeds compute but still re-initializes from scratch each start; hibernation is the feature that preserves the in-memory state."
+        },
+        "C": {
+          "description": "EC2 Hibernate saving RAM to encrypted EBS root for fast resume.",
+          "reason": "Correct — hibernation writes the RAM (including the long-initialized in-memory state) to the encrypted EBS root volume and restores it on resume, avoiding repeated initialization; a key prerequisite is an encrypted, sufficiently sized EBS root and a supported instance family/RAM size."
+        },
+        "D": {
+          "description": "Instance store to persist memory.",
+          "reason": "Incorrect — instance store is ephemeral and lost on stop; it cannot persist in-memory state across stops, and hibernation specifically requires an EBS root, not instance store."
+        }
+      },
+      "Tips": "EC2 Hibernate is ideal for long-initialization workloads (large in-memory caches/datasets) that stop/start often: RAM → encrypted EBS root → restored on resume, skipping re-initialization. Prerequisites: encrypted EBS root sized for RAM, supported instance family, RAM under the limit; up to 60 days hibernated."
+    },
+    {
+      "id": 16,
+      "questionText": "An IAM role is configured with a maximum session duration of 4 hours. A user calls AssumeRole and requests a 6-hour session. What happens?",
+      "options": {
+        "A": "The session defaults to exactly 15 minutes",
+        "B": "The session becomes unlimited",
+        "C": "A 6-hour session is granted, overriding the role setting",
+        "D": "The request fails or is capped because the requested duration cannot exceed the role's configured maximum session duration"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Defaulting to 15 minutes.",
+          "reason": "Incorrect — 15 minutes is the minimum possible duration, not the result of requesting more than the maximum."
+        },
+        "B": {
+          "description": "Unlimited session.",
+          "reason": "Incorrect — STS sessions always expire; durations are bounded by the role's maximum (up to 12 hours), never unlimited."
+        },
+        "C": {
+          "description": "Granting 6 hours over the role's max.",
+          "reason": "Incorrect — a requested duration cannot exceed the role's configured maximum session duration."
+        },
+        "D": {
+          "description": "Capped/failed at the role's max session duration.",
+          "reason": "Correct — AssumeRole cannot grant a session longer than the role's MaxSessionDuration (here 4 hours); requesting more than the maximum is rejected (or must be within the configured limit)."
+        }
+      },
+      "Tips": "AssumeRole duration: between 15 minutes and the role's configured MaxSessionDuration (up to 12 hours). You cannot exceed the role's maximum. Remember role CHAINING separately caps sessions at 1 hour regardless of the configured maximum."
+    },
+    {
+      "id": 17,
+      "questionText": "A company wants to ensure that even if an attacker gains an EC2 instance's IAM role credentials, the blast radius is minimal. Which combination of practices best limits the damage from stolen instance-role credentials?",
+      "options": {
+        "A": "Apply least-privilege scoping to the instance role, enforce IMDSv2 with a low hop limit, and use short-lived credentials (roles, not static keys)",
+        "B": "Disable CloudTrail to reduce noise",
+        "C": "Grant the instance role broad administrative permissions for convenience",
+        "D": "Store long-lived access keys on the instance as a backup"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Least privilege + IMDSv2 (low hop limit) + short-lived role credentials.",
+          "reason": "Correct — scoping the role to only what the app needs limits what stolen credentials can do, IMDSv2 with a low hop limit makes credential theft (e.g., via SSRF) much harder, and using role-provided temporary credentials (no static keys) ensures any leaked credentials expire quickly."
+        },
+        "B": {
+          "description": "Disabling CloudTrail.",
+          "reason": "Incorrect — disabling CloudTrail removes the audit trail needed to detect and investigate misuse; it worsens security posture."
+        },
+        "C": {
+          "description": "Granting broad admin to the instance role.",
+          "reason": "Incorrect — broad permissions maximize blast radius; this is the opposite of limiting damage."
+        },
+        "D": {
+          "description": "Storing long-lived keys as backup.",
+          "reason": "Incorrect — long-lived keys on the instance increase risk and persist if stolen; this enlarges the blast radius."
+        }
+      },
+      "Tips": "Limit blast radius of stolen instance credentials with: least-privilege role scoping, IMDSv2 enforced with a low hop limit (harder to steal via SSRF), short-lived temporary credentials (roles not static keys), and keep CloudTrail ON for detection. Broad permissions and static keys do the opposite."
+    },
+    {
+      "id": 18,
+      "questionText": "An application stores objects that must be accessed by many clients over HTTP(S) with virtually unlimited capacity and 11 nines of durability, and does NOT require block or POSIX file semantics. Among EBS, instance store, EFS, and S3, which is the correct choice?",
+      "options": {
+        "A": "EFS, because objects require POSIX semantics",
+        "B": "Amazon S3, because it is object storage with virtually unlimited capacity and very high durability, accessed via API/HTTP(S)",
+        "C": "Instance store, for the highest performance",
+        "D": "EBS, because it is the most durable"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "EFS for objects requiring POSIX.",
+          "reason": "Incorrect — the requirement explicitly does NOT need POSIX/file semantics; EFS is a file system, not object storage, and is not the best fit here."
+        },
+        "B": {
+          "description": "Amazon S3 for durable, unlimited object storage over HTTP(S).",
+          "reason": "Correct — S3 is object storage with virtually unlimited capacity, 11 nines of durability, and API/HTTP(S) access by many clients, matching a non-block, non-POSIX object workload."
+        },
+        "C": {
+          "description": "Instance store for objects.",
+          "reason": "Incorrect — instance store is ephemeral local block storage for one instance; it is not durable object storage and cannot serve many clients with unlimited capacity."
+        },
+        "D": {
+          "description": "EBS for object storage.",
+          "reason": "Incorrect — EBS is single-AZ block storage attached to one instance; it is not object storage and is not designed for many HTTP clients or unlimited capacity."
+        }
+      },
+      "Tips": "Decision matrix: S3 = object storage (HTTP API, unlimited, 11 nines, many clients). EBS = single-AZ block for one instance. EFS = multi-AZ shared POSIX/NFS file system. Instance store = ephemeral local block. Object data over HTTP at scale → S3 (even though EBS/EFS/instance store were the framing, S3 is correct)."
+    },
+    {
+      "id": 19,
+      "questionText": "A company enforces that all EBS volumes are encrypted by default in a Region. An engineer creates a new volume from an UNENCRYPTED snapshot. With encryption-by-default enabled, what is the result?",
+      "options": {
+        "A": "The new volume is unencrypted because the source snapshot was unencrypted",
+        "B": "The restore fails because you cannot restore an unencrypted snapshot when encryption-by-default is on",
+        "C": "The new volume is created encrypted (encryption-by-default applies), effectively encrypting the data on restore using the default KMS key",
+        "D": "The snapshot is modified in place to become encrypted"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "New volume staying unencrypted.",
+          "reason": "Incorrect — with encryption-by-default enabled, new volumes are encrypted even when created from an unencrypted snapshot."
+        },
+        "B": {
+          "description": "Restore failing.",
+          "reason": "Incorrect — the restore does not fail; encryption-by-default simply encrypts the resulting volume rather than blocking the operation."
+        },
+        "C": {
+          "description": "New volume created encrypted via encryption-by-default.",
+          "reason": "Correct — when EBS encryption-by-default is enabled, a volume created from an unencrypted snapshot is encrypted on creation (using the configured default KMS key), so the restored volume is encrypted."
+        },
+        "D": {
+          "description": "Snapshot modified in place.",
+          "reason": "Incorrect — the source snapshot is not changed; only the newly created volume is encrypted."
+        }
+      },
+      "Tips": "EBS encryption-by-default (per Region) encrypts NEW volumes automatically, including volumes restored from unencrypted snapshots (the restore produces an encrypted volume using the default KMS key). It does not retroactively encrypt existing volumes or modify source snapshots in place."
+    },
+    {
+      "id": 20,
+      "questionText": "A team needs to grant temporary, audited, keyless shell access to EC2 instances in private subnets (no public IP, no inbound SSH) for administrators, integrated with IAM and logging. Which approach is best?",
+      "options": {
+        "A": "Attach Elastic IPs and allow SSH from 0.0.0.0/0",
+        "B": "Place the instances in a public subnet and use password authentication",
+        "C": "Open inbound port 22 to the internet and share SSH keys",
+        "D": "Use AWS Systems Manager Session Manager (with the SSM agent and an instance role), which provides IAM-controlled, logged, keyless access without inbound SSH"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Elastic IPs with SSH from anywhere.",
+          "reason": "Incorrect — this maximizes exposure and provides no per-user IAM control or auditing; it is the opposite of secure access."
+        },
+        "B": {
+          "description": "Public subnet with password auth.",
+          "reason": "Incorrect — password authentication and public exposure are insecure and unaudited; Session Manager is the recommended keyless approach."
+        },
+        "C": {
+          "description": "Opening port 22 to the internet with shared keys.",
+          "reason": "Incorrect — exposing SSH publicly and sharing keys is insecure, unaudited per-user, and contrary to least privilege."
+        },
+        "D": {
+          "description": "SSM Session Manager for keyless, IAM-controlled, logged access.",
+          "reason": "Correct — Session Manager (via the SSM agent and an instance role) provides browser/CLI shell access to instances without inbound SSH, public IPs, or SSH keys, with IAM-based authorization and full session logging to CloudTrail/CloudWatch/S3."
+        }
+      },
+      "Tips": "SSM Session Manager = keyless, IAM-authorized, fully logged shell access to instances with NO inbound SSH, NO public IP, and NO key pairs (needs the SSM agent + an instance role + network path to SSM endpoints). Preferred over public SSH for security, auditability, and least privilege."
+    },
+    {
+      "id": 21,
+      "questionText": "A cluster placement group spanning a single AZ is full and cannot launch additional instances of the required type due to insufficient capacity. The team must scale up the cluster. Which approach is most likely to succeed?",
+      "options": {
+        "A": "Stop all instances in the group and start them together (or relaunch the whole group) so AWS can place the larger set contiguously, and use a single homogeneous instance type",
+        "B": "Convert the cluster placement group to a spread placement group in place",
+        "C": "Add instances of many different types to fill capacity",
+        "D": "Move the cluster placement group to span three AZs"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Stop all and start together with one instance type.",
+          "reason": "Correct — for cluster placement groups, stopping all instances and starting them together (or relaunching the whole group in one request) lets AWS allocate the larger contiguous capacity; using a single homogeneous instance type maximizes the chance of success."
+        },
+        "B": {
+          "description": "Converting cluster to spread in place.",
+          "reason": "Incorrect — placement group type cannot be converted in place, and spread would defeat the cluster's low-latency purpose."
+        },
+        "C": {
+          "description": "Adding many different instance types.",
+          "reason": "Incorrect — mixing instance types raises the risk of insufficient-capacity errors in a cluster group; homogeneity is recommended."
+        },
+        "D": {
+          "description": "Spanning three AZs.",
+          "reason": "Incorrect — cluster placement groups are confined to a single AZ and cannot span AZs."
+        }
+      },
+      "Tips": "Cluster placement group scaling tip: if you hit insufficient capacity, STOP all instances and START them together (or relaunch the group in one request) so AWS finds contiguous capacity; prefer a single instance type and request all instances at once. Cluster groups cannot span AZs or be converted to another type."
+    },
+    {
+      "id": 22,
+      "questionText": "An EBS gp2 volume of 100 GiB is used for a workload that occasionally needs short bursts well above its baseline IOPS. The volume sometimes throttles after sustained bursts. What mechanism governs gp2 burst behavior, and what is a durable fix for higher consistent IOPS?",
+      "options": {
+        "A": "gp2 throttling is fixed by adding a Security Group rule",
+        "B": "gp2 uses I/O burst credits (baseline 3 IOPS/GiB, bursting up to 3,000 IOPS for smaller volumes); for consistent higher IOPS, migrate to gp3 (or io1/io2) where IOPS are provisioned independently of size",
+        "C": "gp2 has no baseline; it always provides 16,000 IOPS",
+        "D": "gp2 cannot be changed; recreate the volume as instance store"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Fixing throttling with a Security Group.",
+          "reason": "Incorrect — Security Groups filter network traffic and have no effect on EBS IOPS or burst credits."
+        },
+        "B": {
+          "description": "gp2 I/O burst credits; fix by moving to gp3/io1/io2.",
+          "reason": "Correct — gp2 baseline is 3 IOPS/GiB (a 100 GiB volume gets ~300 baseline IOPS) and smaller volumes burst to 3,000 IOPS using I/O credits that deplete under sustained load; migrating to gp3 (provisioned IOPS independent of size) or io1/io2 gives consistent higher IOPS."
+        },
+        "C": {
+          "description": "Claiming gp2 always provides 16,000 IOPS.",
+          "reason": "Incorrect — gp2 has a size-based baseline (3 IOPS/GiB) and bursts via credits; it does not constantly provide 16,000 IOPS."
+        },
+        "D": {
+          "description": "Recreating as instance store.",
+          "reason": "Incorrect — instance store is ephemeral and unrelated to providing consistent provisioned IOPS; the fix is gp3/io1/io2."
+        }
+      },
+      "Tips": "gp2: baseline 3 IOPS/GiB, smaller volumes burst to 3,000 IOPS via I/O credits that can exhaust under sustained load. For consistent higher IOPS, migrate to gp3 (decoupled IOPS/throughput) or io1/io2 (provisioned IOPS). gp3 is usually cheaper than gp2 too."
+    },
+    {
+      "id": 23,
+      "questionText": "A company wants the highest EFS throughput for a predictable, steady high-throughput workload and is willing to pay for a fixed throughput level regardless of how much data is stored. Which EFS throughput mode should be selected?",
+      "options": {
+        "A": "Elastic throughput mode",
+        "B": "Max I/O performance mode",
+        "C": "Provisioned throughput mode",
+        "D": "Bursting throughput mode"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Elastic throughput mode.",
+          "reason": "Incorrect — Elastic auto-scales and bills per use, which suits unpredictable/spiky workloads; the question specifies a fixed level you are willing to pay for, which is Provisioned."
+        },
+        "B": {
+          "description": "Max I/O performance mode.",
+          "reason": "Incorrect — Max I/O is a PERFORMANCE mode (parallelism vs latency), not a throughput mode for setting a fixed throughput level."
+        },
+        "C": {
+          "description": "Provisioned throughput mode for a fixed, size-independent level.",
+          "reason": "Correct — Provisioned throughput lets you set a specific throughput level independent of the amount of data stored, ideal for steady, predictable high-throughput workloads where you accept paying for the provisioned level."
+        },
+        "D": {
+          "description": "Bursting mode for fixed high throughput.",
+          "reason": "Incorrect — bursting ties baseline throughput to stored data and relies on credits; it does not provide a fixed, size-independent throughput level."
+        }
+      },
+      "Tips": "EFS throughput modes: Bursting (scales with data + credits), Provisioned (fixed level independent of size, for steady/predictable high throughput), Elastic (auto-scales, pay-per-use, for spiky/unpredictable). Predictable steady high throughput at a fixed level → Provisioned."
+    },
+    {
+      "id": 24,
+      "questionText": "A regulated workload requires that an EBS volume's data is encrypted both at rest AND in transit between the volume and the instance, with keys managed in AWS KMS. Which statement about EBS encryption is correct?",
+      "options": {
+        "A": "EBS encryption requires manually encrypting each file before writing",
+        "B": "EBS encryption is only available for HDD volume types",
+        "C": "EBS encryption protects data at rest only, not in transit",
+        "D": "EBS encryption (via KMS) encrypts data at rest on the volume, data in transit between the volume and instance, and all snapshots created from the volume"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Manually encrypting each file.",
+          "reason": "Incorrect — EBS encryption is transparent at the volume level; you do not manually encrypt individual files for it to work."
+        },
+        "B": {
+          "description": "Encryption only for HDD types.",
+          "reason": "Incorrect — EBS encryption is available across volume types (SSD and HDD), not limited to HDD."
+        },
+        "C": {
+          "description": "Claiming encryption is at-rest only.",
+          "reason": "Incorrect — EBS encryption also protects data in transit between the volume and the instance, not just at rest."
+        },
+        "D": {
+          "description": "EBS encryption covers at-rest, in-transit, and snapshots via KMS.",
+          "reason": "Correct — EBS encryption using KMS encrypts data at rest on the volume, data moving between the volume and the instance, and snapshots taken from the volume (and volumes created from those snapshots are encrypted too)."
+        }
+      },
+      "Tips": "EBS encryption (KMS-backed) is transparent and covers: data at rest, data in transit between instance and volume, and snapshots (plus volumes restored from encrypted snapshots). Enable per volume or account-wide via encryption-by-default. It works across volume types and adds negligible performance impact."
+    },
+    {
+      "id": 25,
+      "questionText": "An EC2 instance role needs access to an S3 bucket in ANOTHER account. The bucket owner prefers not to manage your IAM principals. Which two-sided configuration enables the cross-account access?",
+      "options": {
+        "A": "Your instance role's IAM policy must allow the S3 actions, AND the bucket owner's bucket policy (resource-based) must allow your role/account as a Principal",
+        "B": "The bucket owner must create an IAM user for your instance",
+        "C": "Only your IAM policy is needed; the bucket owner does nothing",
+        "D": "A VPC peering connection grants S3 access automatically"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Your IAM policy allows S3 actions AND the bucket policy names your role/account.",
+          "reason": "Correct — cross-account access to S3 generally needs your principal's IAM policy to allow the actions and the bucket owner's resource-based bucket policy to allow your account/role as a Principal; both must permit the access."
+        },
+        "B": {
+          "description": "Bucket owner creating an IAM user for you.",
+          "reason": "Incorrect — the owner does not need to create IAM users for you; a bucket policy (or a role they let you assume) grants cross-account access without managing your principals."
+        },
+        "C": {
+          "description": "Only your IAM policy needed.",
+          "reason": "Incorrect — cross-account S3 access requires permission on BOTH sides: your identity policy and the bucket's resource policy (or an assumed role granted by the owner)."
+        },
+        "D": {
+          "description": "VPC peering granting S3 access.",
+          "reason": "Incorrect — VPC peering is networking; S3 access is governed by IAM and bucket policies, not peering."
+        }
+      },
+      "Tips": "Cross-account S3: BOTH sides must allow it — your IAM (identity) policy permits the S3 actions, and the bucket owner's bucket policy (resource-based) lists your account/role as Principal (or grants you a role to assume). One-sided permission is insufficient. Networking (peering) is irrelevant to S3 authorization."
+    },
+    {
+      "id": 26,
+      "questionText": "A company is deciding storage for a single-instance, write-heavy relational database needing consistent sub-millisecond latency and high durability, and a separate shared content directory accessed by 50 Linux app servers across 3 AZs. Which pairing is correct?",
+      "options": {
+        "A": "st1 for the database; S3 mounted as a file system for the shared content",
+        "B": "io2 Block Express for the database; EFS Standard for the shared content directory",
+        "C": "Instance store for the database; EBS Multi-Attach for the shared content",
+        "D": "EFS for the database; instance store for the shared content"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "st1 DB; S3-as-filesystem shared content.",
+          "reason": "Incorrect — st1 is throughput HDD (no sub-ms latency or high random IOPS for a DB), and S3 is object storage, not a natively mounted POSIX file system for app servers."
+        },
+        "B": {
+          "description": "io2 Block Express for the DB; EFS Standard for shared content.",
+          "reason": "Correct — io2 Block Express gives consistent sub-millisecond latency, high IOPS, and 99.999% durability for the single-instance database, while EFS Standard provides a multi-AZ shared POSIX/NFS file system for the 50 Linux app servers across 3 AZs."
+        },
+        "C": {
+          "description": "Instance store DB; Multi-Attach shared content.",
+          "reason": "Incorrect — instance store is ephemeral (unacceptable for a durable database), and EBS Multi-Attach is single-AZ and io1/io2-only, unsuitable for cross-AZ shared content for 50 servers."
+        },
+        "D": {
+          "description": "EFS DB; instance store shared content.",
+          "reason": "Incorrect — EFS is a shared file system, not low-latency block storage for a write-heavy relational DB, and instance store cannot be shared across instances/AZs."
+        }
+      },
+      "Tips": "Match needs precisely: durable low-latency single-instance block DB → io1/io2 (io2 Block Express for extreme). Shared multi-AZ POSIX storage for many Linux clients → EFS Standard. Avoid instance store (ephemeral) for databases and EBS Multi-Attach (single-AZ, io1/io2) for broad multi-AZ sharing."
+    },
+    {
+      "id": 27,
+      "questionText": "A security policy requires that highly privileged IAM actions (like deleting CloudTrail or modifying critical policies) are only permitted when the principal authenticated with MFA AND from the corporate network. Which policy construct enforces BOTH conditions?",
+      "options": {
+        "A": "A permission boundary that ignores network context",
+        "B": "Two separate Allow statements, one for MFA and one for IP, with no conditions",
+        "C": "A single Condition block combining aws:MultiFactorAuthPresent (true) AND aws:SourceIp (corporate CIDR), so both must be satisfied",
+        "D": "A Principal element listing the corporate network"
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A boundary ignoring network context.",
+          "reason": "Incorrect — a permission boundary caps permissions but is not how you AND MFA and IP conditions on specific privileged actions."
+        },
+        "B": {
+          "description": "Two Allow statements without conditions.",
+          "reason": "Incorrect — Allow statements without conditions do not enforce MFA or IP; conditions are required, and combining them in one block ANDs them."
+        },
+        "C": {
+          "description": "One Condition block ANDing MFA and SourceIp.",
+          "reason": "Correct — multiple keys within a single Condition block are evaluated with logical AND, so requiring aws:MultiFactorAuthPresent=true and aws:SourceIp in the corporate CIDR forces both to be true for the action to be allowed."
+        },
+        "D": {
+          "description": "A Principal element for the network.",
+          "reason": "Incorrect — Principal names identities in resource-based policies; it does not encode MFA or IP conditions."
+        }
+      },
+      "Tips": "Within a single Condition block, multiple condition keys are ANDed (all must match); multiple values for one key are ORed. To require MFA AND a corporate IP, put aws:MultiFactorAuthPresent and aws:SourceIp in the same Condition block. Often paired with an explicit Deny when conditions are NOT met for strong enforcement."
+    },
+    {
+      "id": 28,
+      "questionText": "A workload uses Spot Instances and must gracefully handle interruptions by checkpointing work before the instance is reclaimed. How much warning does AWS provide before reclaiming a Spot Instance, and where is it delivered?",
+      "options": {
+        "A": "A 24-hour email warning",
+        "B": "No warning is given; instances vanish instantly",
+        "C": "A one-week advance notice in the console only",
+        "D": "A two-minute interruption notice is delivered via instance metadata (and an EventBridge event), allowing the app to checkpoint and gracefully shut down"
+      },
+      "correctAnswer": [
+        "D"
+      ],
+      "explanations": {
+        "A": {
+          "description": "A 24-hour email warning.",
+          "reason": "Incorrect — Spot interruptions are not announced 24 hours ahead by email; the notice is about two minutes via metadata/EventBridge."
+        },
+        "B": {
+          "description": "No warning at all.",
+          "reason": "Incorrect — AWS provides a short interruption notice for Spot, so instances do not simply vanish without any signal."
+        },
+        "C": {
+          "description": "A one-week console notice.",
+          "reason": "Incorrect — there is no one-week advance Spot interruption notice; the warning window is roughly two minutes."
+        },
+        "D": {
+          "description": "Two-minute notice via metadata and EventBridge.",
+          "reason": "Correct — Spot interruption notices give roughly two minutes of warning, surfaced through the instance metadata (interruption notice) and an EventBridge event, so applications can checkpoint progress and shut down gracefully."
+        }
+      },
+      "Tips": "Spot interruption notice = about 2 minutes, delivered via instance metadata (and an EventBridge/CloudWatch event). Use it to checkpoint, drain connections, and shut down gracefully. Combine with interruption behaviors (terminate default / stop / hibernate) and capacityOptimized allocation to reduce disruption."
+    },
+    {
+      "id": 29,
+      "questionText": "A company must guarantee that a fleet of 200 instances for a distributed analytics job is spread across isolated racks so that a single rack failure affects only a fraction of the fleet, while keeping the instances in as few AZs as possible. Which placement strategy meets this at this scale?",
+      "options": {
+        "A": "Partition placement group, which supports many instances across up to 7 partitions per AZ on isolated racks",
+        "B": "Cluster placement group in a single AZ",
+        "C": "Spread placement group (7 per AZ)",
+        "D": "No placement group; rely on default placement"
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Partition placement group for large rack-isolated fleets.",
+          "reason": "Correct — partition placement groups support large numbers of instances divided across up to 7 partitions per AZ, each on isolated racks, so a rack failure affects only one partition, matching a 200-instance analytics fleet."
+        },
+        "B": {
+          "description": "Cluster group in one AZ.",
+          "reason": "Incorrect — cluster groups co-locate instances for low latency and concentrate failure risk; they do not isolate across racks for fault tolerance."
+        },
+        "C": {
+          "description": "Spread group for 200 instances.",
+          "reason": "Incorrect — spread groups are capped at 7 instances per AZ, so 200 instances cannot fit in a spread group within few AZs."
+        },
+        "D": {
+          "description": "Default placement.",
+          "reason": "Incorrect — default placement gives no rack-isolation guarantee or topology awareness for a large distributed system."
+        }
+      },
+      "Tips": "Large distributed fleets needing rack-failure isolation → PARTITION placement groups (up to 7 partitions/AZ, hundreds of instances, isolated racks, topology metadata). Spread groups (7/AZ) are for a few critical instances. Cluster groups are for low-latency, not fault isolation."
+    },
+    {
+      "id": 30,
+      "questionText": "An EC2 instance with an attached IAM role and an instance store volume is STOPPED and later STARTED. Which two outcomes are correct regarding the instance store data and the public IPv4 address (assuming auto-assigned, not Elastic)?",
+      "options": {
+        "A": "Instance store data persists; the public IPv4 changes",
+        "B": "Instance store data is lost on stop; the auto-assigned public IPv4 changes on start (a new address is assigned)",
+        "C": "Instance store data persists; the public IPv4 stays the same",
+        "D": "Instance store data is lost; the public IPv4 stays the same"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Instance store persisting; IP changing.",
+          "reason": "Incorrect — the IP behavior is right but instance store data does NOT persist across a stop."
+        },
+        "B": {
+          "description": "Instance store lost on stop; auto-assigned public IPv4 changes on start.",
+          "reason": "Correct — stopping an instance discards instance store (ephemeral) data, and the auto-assigned public IPv4 is released on stop and a new one is assigned on start; only an Elastic IP would persist."
+        },
+        "C": {
+          "description": "Instance store persisting and IP unchanged.",
+          "reason": "Incorrect — instance store data is lost on stop, and an auto-assigned public IPv4 changes on stop/start; both claims are wrong."
+        },
+        "D": {
+          "description": "Instance store lost; IP unchanged.",
+          "reason": "Incorrect — the instance-store part is right, but an auto-assigned public IPv4 changes on stop/start (it is not retained)."
+        }
+      },
+      "Tips": "Stop/start effects: instance store data is LOST (ephemeral; survives only reboot), the auto-assigned public IPv4 CHANGES (use an Elastic IP to keep it), while the private IP and EBS data persist. These combined stop/start behaviors are a favorite multi-part exam trap."
+    }
+  ]
+}

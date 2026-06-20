@@ -1,0 +1,167 @@
+{
+  "setId": "6b767120-b95b-49a5-a074-855eb3bc2eba",
+  "setTitle": "AWS SAA Exam Style - IAM & AWS CLI",
+  "difficulty": "Mock",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "An application running on an EC2 instance requires access to an S3 bucket to read configuration files. The security team has strictly mandated that long-term AWS credentials must never be stored on compute instances. However, developers are currently hardcoding IAM user access keys in the application source code to test functionality. What is the MOST secure and operationally efficient way to grant the EC2 instance the required S3 access?",
+      "options": {
+        "A": "Store the IAM Access Key and Secret Key in the EC2 instance's user data script so the application can retrieve them at boot time.",
+        "B": "Create an IAM Role with the necessary S3 permissions and attach it to an EC2 instance profile. Associate the instance profile with the EC2 instance.",
+        "C": "Use the AWS CLI on the EC2 instance to run `aws configure` and securely store the IAM User credentials in the `~/.aws/credentials` file.",
+        "D": "Create an IAM permissions boundary that limits the IAM user to only S3 read actions, then continue using the access keys in the code."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Storing credentials in EC2 user data.",
+          "reason": "Incorrect — EC2 user data is accessible to anyone who can view the instance metadata or the EC2 console. It is not secure for storing secrets."
+        },
+        "B": {
+          "description": "Using an IAM Role and Instance Profile.",
+          "reason": "Correct — IAM Roles provide temporary, automatically rotated credentials via the EC2 Instance Metadata Service (IMDS). This completely eliminates the need to manage or store long-term access keys, adhering to best practices."
+        },
+        "C": {
+          "description": "Using `aws configure` to store credentials.",
+          "reason": "Incorrect — While better than hardcoding in source code, this still involves placing long-term static credentials on the instance, which violates the security team's mandate."
+        },
+        "D": {
+          "description": "Using a permissions boundary.",
+          "reason": "Incorrect — A permissions boundary sets the maximum permissions an entity can have, but it does not solve the problem of hardcoded, long-term static credentials being used in the application."
+        }
+      },
+      "Tips": "Never use Access Keys on EC2 instances. Whenever you see 'EC2 instance needs access to AWS service X', the answer is almost always 'IAM Role attached via Instance Profile'."
+    },
+    {
+      "id": 2,
+      "questionText": "A company has two AWS accounts: Account A (Production) and Account B (Development). Developers logged into Account B via IAM Users need temporary access to view CloudWatch metrics in Account A. What is the correct sequence of steps to configure this cross-account access?",
+      "options": {
+        "A": "In Account A, create an IAM Role granting CloudWatch read access and trust Account B. In Account B, attach a policy to the developers allowing `sts:AssumeRole` on the Account A Role.",
+        "B": "In Account A, create an IAM User with CloudWatch read access and share the access keys with Account B developers. Use the AWS CLI to switch profiles.",
+        "C": "In Account B, create an IAM Role granting CloudWatch read access and trust Account A. In Account A, attach a policy to the CloudWatch resource allowing access from Account B.",
+        "D": "In Account A, create an IAM Group with CloudWatch permissions and add the Account B IAM Users to this group directly."
+      },
+      "correctAnswer": [
+        "A"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Role in target account (A), AssumeRole policy in source account (B).",
+          "reason": "Correct — To grant cross-account access, the account owning the resource (A) must create a Role with a trust policy allowing the other account (B) to assume it. The users in Account B must also have permissions to call `sts:AssumeRole`."
+        },
+        "B": {
+          "description": "Creating an IAM User in Account A and sharing keys.",
+          "reason": "Incorrect — Sharing long-term access keys violates security best practices and defeats the purpose of centralized identity management."
+        },
+        "C": {
+          "description": "Creating the Role in Account B.",
+          "reason": "Incorrect — The Role must be created in the account where the resources reside (Account A), not the account where the identities reside."
+        },
+        "D": {
+          "description": "Adding cross-account users to a local group.",
+          "reason": "Incorrect — You cannot add IAM Users from one AWS Account directly into an IAM Group in another AWS Account."
+        }
+      },
+      "Tips": "For cross-account roles, remember: Resource Account = Target Account = Creates the Role. Identity Account = Source Account = Assumes the Role."
+    },
+    {
+      "id": 3,
+      "questionText": "An IAM User belongs to a 'Developers' group that has an AWS managed policy attached, granting `Allow` access to all S3 actions. However, an inline policy is directly attached to the IAM User that contains an explicit `Deny` for the `s3:DeleteBucket` action. If the user attempts to delete an S3 bucket, what will be the result and why?",
+      "options": {
+        "A": "The action is Allowed because managed policies attached to groups take precedence over inline policies attached to users.",
+        "B": "The action is Denied because an explicit Deny in any policy overrides any Allow in IAM policy evaluation logic.",
+        "C": "The action is Allowed because the broad Allow on all S3 actions overrides the specific Deny on a single S3 action.",
+        "D": "The action results in an error prompting the administrator to resolve the policy conflict before execution."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Group policies override user inline policies.",
+          "reason": "Incorrect — AWS IAM does not prioritize based on policy type (managed vs inline) or attachment entity (group vs user). It uses a standard evaluation logic."
+        },
+        "B": {
+          "description": "Explicit Deny always wins.",
+          "reason": "Correct — In AWS IAM evaluation logic, by default all requests are denied. An explicit Allow overrides the default deny. However, an explicit Deny ALWAYS overrides any explicit Allow."
+        },
+        "C": {
+          "description": "Broad Allow overrides specific Deny.",
+          "reason": "Incorrect — Scope does not dictate precedence. An explicit Deny wins regardless of how broad the Allow is."
+        },
+        "D": {
+          "description": "IAM prompts for conflict resolution.",
+          "reason": "Incorrect — IAM silently evaluates policies at runtime based on logic; it does not prompt users to resolve conflicts."
+        }
+      },
+      "Tips": "The golden rule of IAM evaluation: 1) Default Deny. 2) Explicit Allow overrides Default Deny. 3) Explicit Deny overrides EVERYTHING."
+    },
+    {
+      "id": 4,
+      "questionText": "A solutions architect is automating AWS infrastructure deployments using the AWS CLI. When querying a large number of EC2 instances using `aws ec2 describe-instances`, the command times out or returns incomplete data. Which AWS CLI feature should the architect use to handle large outputs efficiently?",
+      "options": {
+        "A": "Use the `--query` parameter to filter the results server-side before they are returned.",
+        "B": "Use the `--max-items` and `--starting-token` parameters to paginate the results.",
+        "C": "Increase the timeout using the `--cli-read-timeout` parameter.",
+        "D": "Switch to using the `aws ec2 get-console-output` command instead."
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Using --query for filtering.",
+          "reason": "Incorrect — The `--query` parameter uses JMESPath to filter the output *client-side* after the API has already returned the full payload. It does not solve API timeout/limit issues."
+        },
+        "B": {
+          "description": "Pagination parameters.",
+          "reason": "Correct — For commands that return a large list of items, the AWS CLI uses pagination. You can control this using `--max-items` (to limit items per page) and `--starting-token` (to request the next page)."
+        },
+        "C": {
+          "description": "Increasing CLI read timeout.",
+          "reason": "Incorrect — While `--cli-read-timeout` exists, it does not solve the fundamental issue of AWS API limits regarding the number of items returned in a single response."
+        },
+        "D": {
+          "description": "Using get-console-output.",
+          "reason": "Incorrect — This command retrieves the system boot logs from an EC2 instance, not a list of instances."
+        }
+      },
+      "Tips": "When dealing with 'large lists' or 'API limits' in the AWS CLI, the solution is Pagination (`--starting-token`, `--max-items`, or `--page-size`)."
+    },
+    {
+      "id": 5,
+      "questionText": "A company is using AWS Organizations. An IAM user in an organizational unit (OU) has an AdministratorAccess policy attached. However, a Service Control Policy (SCP) is applied to the OU that explicitly denies access to Amazon DynamoDB. What will happen if the IAM user tries to create a DynamoDB table?",
+      "options": {
+        "A": "The user will successfully create the table because the AdministratorAccess policy overrides SCPs.",
+        "B": "The user will successfully create the table because IAM user policies are evaluated before Organization SCPs.",
+        "C": "The user will be denied because the SCP acts as an ultimate boundary and an explicit deny in an SCP overrides any IAM Allow.",
+        "D": "The user will be denied because IAM users cannot create DynamoDB tables unless explicitly added to the SCP."
+      },
+      "correctAnswer": [
+        "C"
+      ],
+      "explanations": {
+        "A": {
+          "description": "AdministratorAccess overrides SCP.",
+          "reason": "Incorrect — Even `AdministratorAccess` is restricted by SCPs. Only the management account is exempt from SCPs applied to OUs."
+        },
+        "B": {
+          "description": "IAM policies evaluated before SCPs.",
+          "reason": "Incorrect — Both are evaluated together. A request must be allowed by BOTH the SCP and the IAM policy to succeed."
+        },
+        "C": {
+          "description": "SCP explicit deny wins.",
+          "reason": "Correct — SCPs offer central control over the maximum available permissions. If an SCP denies an action, it overrides any Allow granted by IAM policies, even `AdministratorAccess`."
+        },
+        "D": {
+          "description": "Must be explicitly added to SCP.",
+          "reason": "Incorrect — You do not add individual IAM users to SCPs. SCPs dictate what the account as a whole can or cannot do."
+        }
+      },
+      "Tips": "Think of SCPs as a 'filter' over the entire AWS Account. No matter how powerful an IAM user is (even Admin), if the SCP denies it, the action is blocked."
+    }
+  ]
+}
