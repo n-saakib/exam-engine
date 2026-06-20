@@ -7,7 +7,6 @@ import { Spinner } from "@/components/Spinner";
 import { EmptyState } from "@/components/EmptyState";
 import { useToast } from "@/components/Toast";
 import { useExamSession } from "@/hooks/useExamSession";
-import { useSettings } from "@/hooks/useSettings";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { useExamStore, type ExamStore } from "@/store/examStore";
 
@@ -48,8 +47,6 @@ export function ExamScreen({
 }) {
   const router = useRouter();
   const { toast } = useToast();
-  const settingsQuery = useSettings();
-  const progressiveReveal = settingsQuery.data?.progressive_reveal ?? false;
 
   const { data, isLoading, isError, error } = useExamSession(sessionId);
 
@@ -61,18 +58,38 @@ export function ExamScreen({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const submittingRef = useRef(false);
-  // Tracks the sessionId of the last DTO we hydrated from. The store is a
-  // process-wide singleton that survives a navigation away & back (e.g. pause →
-  // /resume → resume). On a fresh mount we MUST re-hydrate, otherwise the
-  // previous mount's `running: false` (from pause) leaks across navigation
-  // and the timer stays paused.
+  // Tracks the sessionId we have already hydrated the store from in this
+  // mount. The exam screen can remount after /resume (pause → /resume →
+  // resume); on remount, React Query serves the cached initial-fetch DTO
+  // (staleTime: Infinity), so re-running `loadFromDTO` would clobber any
+  // in-memory store mutations with the pre-PATCH snapshot.
+  //
+  // To survive remounts, the per-mount ref is initialised from a
+  // module-level Set on `globalThis`. The Set is updated whenever we
+  // successfully hydrate, so the second mount sees the sessionId already
+  // hydrated and skips loadFromDTO.
   const hydratedForRef = useRef<string | null>(null);
 
-  // ── Hydrate the store on every fresh mount with matching data ────────────
+  // ── Hydrate the store only when we haven't already (per session) ─────────
   useEffect(() => {
-    if (data && data.id === sessionId && hydratedForRef.current !== data.id) {
+    if (typeof window === "undefined") return;
+    const g = globalThis as {
+      __hydratedExamSessionIds?: Set<string>;
+    };
+    if (!g.__hydratedExamSessionIds) g.__hydratedExamSessionIds = new Set();
+    // On first effect run per mount, sync the per-mount ref from the
+    // module-level Set so a remounted instance sees the prior hydration.
+    if (hydratedForRef.current === null && g.__hydratedExamSessionIds.has(sessionId)) {
+      hydratedForRef.current = sessionId;
+    }
+    if (
+      data &&
+      data.id === sessionId &&
+      hydratedForRef.current !== data.id
+    ) {
       loadFromDTO(data);
       hydratedForRef.current = data.id;
+      g.__hydratedExamSessionIds.add(sessionId);
     }
   }, [data, sessionId, loadFromDTO]);
 
@@ -160,14 +177,14 @@ export function ExamScreen({
       onGiveUp: () => {
         const s = store.getState();
         const q = s.questions[s.currentIndex];
-        if (!q || s.answers[q.id]?.revealed) return;
+        if (!q || s.answers[q.id]?.committed) return;
         // Mirror the button: with ≥1 selected, opening the exam-submit dialog
         // (when on the last question) is the parent screen's responsibility,
-        // so route through the same path the button uses. The reveal path is
+        // so route through the same path the button uses. The commit path is
         // shared; the dialog open is delegated.
         const hasSelection = (s.answers[q.id]?.selected.length ?? 0) > 0;
         const isLast = s.currentIndex >= s.questions.length - 1;
-        void s.reveal(q.id, { gaveUp: !hasSelection }).then(() => {
+        void s.commit(q.id, { gaveUp: !hasSelection }).then(() => {
           if (hasSelection && isLast) setSubmitOpen(true);
         });
       },
@@ -252,7 +269,6 @@ export function ExamScreen({
       <QuestionPanel
         ref={headingRef}
         store={store}
-        progressiveReveal={progressiveReveal}
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2">
