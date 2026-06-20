@@ -149,3 +149,6 @@ coverage/
 playwright-report/
 test-results/
 .vitest/
+
+# puku-cli personal preferences (loaded alongside PUKU.md, never committed)
+PUKU.local.md
