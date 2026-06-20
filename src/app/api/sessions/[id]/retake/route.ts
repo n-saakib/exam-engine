@@ -27,7 +27,7 @@ const RetakeBodySchema = z.object({
  *
  * - scope "all"       → fresh session re-using the entire origin snapshot.
  * - scope "incorrect" → new session with ONLY the origin questions whose outcome
- *   was incorrect or revealed. 409 SETS_EXHAUSTED when none qualify.
+ *   was incorrect or gave-up. 409 SETS_EXHAUSTED when none qualify.
  *
  * Returns 201 with the new live session DTO.
  * 404 SESSION_NOT_FOUND.

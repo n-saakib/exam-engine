@@ -521,10 +521,9 @@ describe("<QuestionReviewCard>", () => {
   });
 
   it("renders the 'gave_up' outcome with the 'Gave up' badge and warning border", async () => {
-    // The post-submit outcome 'gave_up' covers three cases (explicit give-up,
-    // blank-at-submit, revealed-without-picking) — they all share the same
-    // badge / border so the user sees a single "Gave up" label in the
-    // review list.
+    // The post-submit outcome 'gave_up' covers two cases (explicit give-up,
+    // blank-at-submit) — they all share the same badge / border so the
+    // user sees a single "Gave up" label in the review list.
     const gaveUp: ResultsQuestion = {
       ...CORRECT_QUESTION,
       outcome: "gave_up",

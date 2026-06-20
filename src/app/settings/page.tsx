@@ -9,7 +9,7 @@ import { AppearanceSettings } from "@/features/settings/AppearanceSettings";
 /**
  * Settings screen (F8). Sections:
  * 1. Source Settings   — Exams root path + filesystem/upload mode + rescan
- * 2. Exam Defaults     — timer, shuffle, show-count, progressive-reveal
+ * 2. Exam Defaults     — timer, shuffle, show-count
  * 3. Data Management   — export + reset flows (all behind confirm dialogs)
  * 4. Catalog Diagnostics — problem files list + rescan
  * 5. Appearance        — theme selector (F1 ThemeSwitcher integrated here)

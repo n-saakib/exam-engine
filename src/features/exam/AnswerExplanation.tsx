@@ -6,10 +6,17 @@ import { cn } from "@/lib/cn";
 import type { LiveQuestion } from "@/domain/types";
 
 /**
- * Post-reveal / post-lock detail (F4-T22/T23): the correct answer, every
- * option's explanation, and Tips. Progressive reveal (settings
- * `progressive_reveal`): show correctness first, explanations behind a
- * "Show explanations" expander. When off, explanations are shown inline.
+ * Post-commit detail (F4-T22/T23): the correct answer is always shown
+ * inline once the question has been committed (submit or give-up). The
+ * per-option explanations and Tips are collapsed behind a "Show
+ * explanation" / "Hide explanation" toggle — committing the question no
+ * longer dumps the full reasoning on screen. This mirrors the toggle
+ * pattern used in `QuestionReviewCard` (history view) so the two surfaces
+ * behave consistently.
+ *
+ * The `data-testid="revealed-detail"` selector is preserved on the section
+ * element so the e2e spine and any external selectors continue to work
+ * without churn.
  *
  * Display order is FIXED to A, B, C, D (ADR-15). Explanations are keyed by
  * the underlying option letter (which is what travels with the question and
@@ -65,15 +72,8 @@ function displayLetterFor(
   return underlyingKey;
 }
 
-export function RevealedDetail({
-  question,
-  progressive,
-}: {
-  question: LiveQuestion;
-  progressive: boolean;
-}) {
-  const [open, setOpen] = useState(!progressive);
-
+export function AnswerExplanation({ question }: { question: LiveQuestion }) {
+  const [showExplanation, setShowExplanation] = useState(false);
   if (question.correctAnswer === undefined) return null;
   const correct = Array.isArray(question.correctAnswer)
     ? question.correctAnswer
@@ -99,6 +99,7 @@ export function RevealedDetail({
         }))
         .filter((r) => r.key in explanations)
     : [];
+  const hasExplanations = rows.length > 0;
 
   return (
     <section
@@ -110,49 +111,54 @@ export function RevealedDetail({
         Correct answer: {correctDisplay}
       </p>
 
-      {progressive ? (
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className={cn(
-            "mt-2 text-sm font-medium text-brand underline-offset-2 hover:underline",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1",
-          )}
-        >
-          {open ? "Hide explanations" : "Show explanations"}
-        </button>
-      ) : null}
+      {hasExplanations || question.Tips ? (
+        <div className="mt-3">
+          <button
+            type="button"
+            onClick={() => setShowExplanation((v) => !v)}
+            className="text-xs text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand rounded"
+            aria-expanded={showExplanation}
+            aria-controls={`explanation-${question.id}`}
+            data-testid="toggle-explanation"
+          >
+            {showExplanation ? "Hide explanation" : "Show explanation"}
+          </button>
 
-      {open ? (
-        <div className="mt-3 flex flex-col gap-3" data-testid="explanations">
-          {rows.map(({ displayLetter, key }) => {
-            const ex = explanations[key];
-            const isCorrect = correct.includes(key);
-            return (
-              <div key={displayLetter} className="text-sm">
-                <p className="font-medium">
-                  <span
-                    className={cn(
-                      "mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold",
-                      isCorrect
-                        ? "bg-correct text-white"
-                        : "bg-surface text-muted ring-1 ring-border",
-                    )}
-                  >
-                    {displayLetter}
-                  </span>
-                  {ex.description}
-                </p>
-                <p className="mt-1 text-muted">{ex.reason}</p>
-              </div>
-            );
-          })}
+          {showExplanation ? (
+            <div
+              id={`explanation-${question.id}`}
+              className="mt-3 flex flex-col gap-3"
+              data-testid="explanations"
+            >
+              {rows.map(({ displayLetter, key }) => {
+                const ex = explanations[key];
+                const isCorrect = correct.includes(key);
+                return (
+                  <div key={displayLetter} className="text-sm">
+                    <p className="font-medium">
+                      <span
+                        className={cn(
+                          "mr-1.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold",
+                          isCorrect
+                            ? "bg-correct text-white"
+                            : "bg-surface text-muted ring-1 ring-border",
+                        )}
+                      >
+                        {displayLetter}
+                      </span>
+                      {ex.description}
+                    </p>
+                    <p className="mt-1 text-muted">{ex.reason}</p>
+                  </div>
+                );
+              })}
 
-          {question.Tips ? (
-            <div className="mt-1 rounded-card bg-surface p-3 text-sm">
-              <p className="font-semibold">Tips</p>
-              <p className="mt-1 text-muted">{question.Tips}</p>
+              {question.Tips ? (
+                <div className="mt-1 rounded-card bg-surface p-3 text-sm">
+                  <p className="font-semibold">Tips</p>
+                  <p className="mt-1 text-muted">{question.Tips}</p>
+                </div>
+              ) : null}
             </div>
           ) : null}
         </div>

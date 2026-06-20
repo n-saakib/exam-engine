@@ -81,16 +81,18 @@ export function SubmitOrNextButton({
  * on whether the user has selected at least one option for the current
  * question:
  *
- *   - 0 selected, any question  → label "Give up"; on confirm, just reveal.
- *   - ≥1 selected, not last     → label "Submit"; on confirm, reveal the result
- *     inline (committed answer is graded; no advance — Next/Submit-exam buttons
- *     handle navigation/exam finalization).
- *   - ≥1 selected, last         → label "Submit"; on confirm, reveal and then
- *     open the exam-submit dialog so the user can finalize.
+ *   - 0 selected, any question  → label "Give up"; on confirm, commit the
+ *     question as `gave_up` and surface the correct answer inline.
+ *   - ≥1 selected, not last     → label "Submit answer"; on confirm, commit the
+ *     selection (graded answer + explanations appear inline; no advance —
+ *     Next/Submit-exam buttons handle navigation/exam finalization).
+ *   - ≥1 selected, last         → label "Submit answer"; on confirm, commit and
+ *     then open the exam-submit dialog so the user can finalize.
  *
- * The reveal itself is the existing `store.reveal(qid)` — it forces a flush,
- * the server returns the snapshot-attached correct data, and the local
- * question merges the correct data. Both branches share that path.
+ * Both branches share the same code path: `store.commit(qid)` writes
+ * `is_committed = 1` server-side and surfaces `correctAnswer` /
+ * `explanations` / `Tips` on the question in the live DTO. The `gaveUp`
+ * flag is sticky and only set when the caller opts in (no-selection case).
  */
 export function SubmitOrGiveUpButton({
   store,
@@ -99,11 +101,11 @@ export function SubmitOrGiveUpButton({
   store: ExamStore;
   onLastSubmit?: () => void;
 }) {
-  const reveal = store((s) => s.reveal);
+  const commit = store((s) => s.commit);
   const qid = store((s) => s.questions[s.currentIndex]?.id);
-  const revealed = store((s) => {
+  const committed = store((s) => {
     const q = s.questions[s.currentIndex];
-    return q ? !!s.answers[q.id]?.revealed : false;
+    return q ? !!s.answers[q.id]?.committed : false;
   });
   const selectedCount = store((s) => {
     const q = s.questions[s.currentIndex];
@@ -120,24 +122,25 @@ export function SubmitOrGiveUpButton({
   const canSubmitLast = hasSelection && isLast;
 
   const handle = async () => {
-    if (qid === undefined || revealed) return;
-    // Give up (no selection) asks for confirmation before revealing.
-    // Submit (has selection) on the LAST question also asks for confirmation —
-    // the user is about to finalise, so we want a clear handoff.
+    if (qid === undefined || committed) return;
+    // Give up (no selection) asks for confirmation — once committed, the
+    // question counts as `gave_up` in scoring. Submit (has selection) on the
+    // LAST question also asks for confirmation — the user is about to
+    // finalise, so we want a clear handoff.
     if (!hasSelection) {
       const ok = await confirm({
-        title: "Reveal the answer?",
+        title: "Give up on this question?",
         description:
-          "This shows the correct answer and explanations, and marks the question as revealed (excluded from your score).",
-        confirmLabel: "Reveal",
+          "This submits the question as a give-up (counts as wrong) and shows the correct answer and explanations.",
+        confirmLabel: "Give up",
         variant: "primary" as const,
       });
       if (!ok) return;
     } else if (canSubmitLast) {
       const ok = await confirm({
-        title: "Submit and reveal the answer?",
+        title: "Submit and finalize?",
         description:
-          "This reveals the answer for this question and lets you finalise the exam.",
+          "This submits your answer for this question and opens the exam-submit dialog so you can finalize the exam.",
         confirmLabel: "Submit",
         variant: "primary" as const,
       });
@@ -146,28 +149,26 @@ export function SubmitOrGiveUpButton({
     setBusy(true);
     try {
       const isGiveUp = !hasSelection;
-      await reveal(qid, { gaveUp: isGiveUp });
+      await commit(qid, { gaveUp: isGiveUp });
       if (canSubmitLast) onLastSubmit?.();
     } finally {
       setBusy(false);
     }
   };
 
-  const label = revealed
-    ? "Revealed"
+  const label = committed
+    ? "Submitted"
     : busy
-      ? hasSelection
-        ? "Submitting…"
-        : "Revealing…"
+      ? "Submitting…"
       : hasSelection
-        ? "Submit"
+        ? "Submit answer"
         : "Give up";
 
   return (
     <Button
       variant="secondary"
       size="sm"
-      disabled={revealed || busy}
+      disabled={committed || busy}
       onClick={() => void handle()}
     >
       {label}

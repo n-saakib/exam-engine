@@ -184,6 +184,41 @@ ALTER TABLE exam_sessions DROP COLUMN revealed_count;
 ALTER TABLE exam_sessions DROP COLUMN unanswered_count;
 `;
 
+const M0006_RENAME_REVEALED_TO_COMMITTED = `-- 0006_rename_revealed_to_committed — rename the per-question live-exam flag.
+--
+-- Until now \`session_answers.is_revealed\` was overloaded as both:
+--   (a) the answers-hidden gate in the live-session mapper, and
+--   (b) a "this question was peeked" flag that drove the retake-incorrect
+--       filter (any revealed question always qualified).
+-- Both are being folded into the simpler model: a question has three outcomes
+-- (correct | incorrect | gave_up) and one orthogonal flag (is_flagged). The
+-- moment a user commits an answer (submit or give-up), the correct answer is
+-- exposed inline; there is no separate "peek" action.
+--
+-- This migration renames the column to \`is_committed\` so the same 1:1
+-- semantics carry forward with a clearer name. SQLite ≥ 3.25 supports
+-- ALTER TABLE … RENAME COLUMN; better-sqlite3 12.x bundles SQLite 3.45+.
+--
+-- Forward-only. No backfill is required: every existing row with
+-- is_revealed = 1 is a committed question under the new model.
+ALTER TABLE session_answers RENAME COLUMN is_revealed TO is_committed;
+`;
+
+const M0007_DROP_PROGRESSIVE_REVEAL = `-- 0007_drop_progressive_reveal — drop the now-unused \`progressive_reveal\`
+-- setting from the key/value \`settings\` table.
+--
+-- \`progressive_reveal\` controlled a UX-only toggle: when ON, the per-question
+-- explanation was hidden behind a "Show explanations" expander; when OFF,
+-- explanations were shown inline immediately. With the removal of the reveal
+-- state (migration 0006), explanations are always shown inline at commit
+-- time, so the toggle has no remaining semantics.
+--
+-- Forward-only. We do not migrate the value of the existing setting — any
+-- user with \`progressive_reveal = 1\` simply loses the toggle on next boot;
+-- the new (always-inline) behaviour is what they would have wanted anyway.
+DELETE FROM settings WHERE key = 'progressive_reveal';
+`;
+
 /** All migrations, ascending by version. */
 export const MIGRATIONS: readonly Migration[] = [
   { version: 1, name: "0001_init", sql: M0001_INIT },
@@ -191,4 +226,6 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 3, name: "0003_add_gave_up", sql: M0003_ADD_GAVE_UP },
   { version: 4, name: "0004_add_gave_up_count", sql: M0004_ADD_GAVE_UP_COUNT },
   { version: 5, name: "0005_drop_revealed_unanswered_counts", sql: M0005_DROP_REVEALED_UNANSWERED_COUNTS },
+  { version: 6, name: "0006_rename_revealed_to_committed", sql: M0006_RENAME_REVEALED_TO_COMMITTED },
+  { version: 7, name: "0007_drop_progressive_reveal", sql: M0007_DROP_PROGRESSIVE_REVEAL },
 ];

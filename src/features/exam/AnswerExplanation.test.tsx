@@ -1,9 +1,9 @@
 /**
- * <RevealedDetail> tests. The component is the post-reveal panel shown after
- * the user has seen the correct answer. It renders the joined correct
- * answer(s), each option's explanation (keyed by A/B/C/...) and an optional
- * Tips block. Progressive reveal hides the explanations behind a toggle
- * button; otherwise they are shown inline.
+ * <AnswerExplanation> tests. The component is the post-commit panel shown
+ * after the user has submitted or given up on a question. The "Correct
+ * answer: …" header is always visible; the per-option explanations and
+ * Tips are collapsed behind a "Show explanation" / "Hide explanation"
+ * toggle so the user isn't dumped the full reasoning at commit time.
  *
  * BUG GUARD: The most important test in this file verifies that the
  * explanations list is rendered in the FIXED A, B, C, D order (ADR-15), with
@@ -11,16 +11,19 @@
  * this breaks, the user sees a "C" chip next to a description that actually
  * belongs to option A — confusing and hard to spot in review.
  *
+ * The `data-testid="revealed-detail"` selector is preserved so the e2e
+ * spine selector remains stable across the rename.
+ *
  * Verifies:
  *   - Returns null when no `correctAnswer` is set.
  *   - Joins the correct answer keys with ", ".
  *   - (BUG GUARD) Iterates explanations in fixed A, B, C, D order; the
  *     description text comes from the underlying key (via optionOrder).
  *   - Falls back to `Object.keys(options)` when `optionOrder` is absent.
- *   - Progressive reveal toggle: hidden by default, click to expand.
- *   - Inline mode: explanations visible without a click.
- *   - Renders `question.Tips` when present.
+ *   - Renders `question.Tips` when present (after opening the toggle).
  *   - Legacy `correctAnswer: string` (single letter) shape is supported.
+ *   - Toggle: collapsed by default, opens / closes on click, hidden when
+ *     there's nothing to show.
  */
 
 import { render, screen, within, fireEvent } from "@testing-library/react";
@@ -35,7 +38,7 @@ vi.mock("@/lib/apiClient", () => ({
   ApiError: class ApiError extends Error {},
 }));
 
-import { RevealedDetail } from "./RevealedDetail";
+import { AnswerExplanation } from "./AnswerExplanation";
 
 function makeQuestion(overrides: Partial<LiveQuestion> = {}): LiveQuestion {
   return {
@@ -44,7 +47,7 @@ function makeQuestion(overrides: Partial<LiveQuestion> = {}): LiveQuestion {
     questionType: "single",
     questionText: "Q?",
     options: { A: "a", B: "b", C: "c", D: "d" },
-    answer: { selected: [], flagged: false, revealed: true, gaveUp: false, timeSpentMs: 0 },
+    answer: { selected: [], flagged: false, committed: true, gaveUp: false, timeSpentMs: 0 },
     correctAnswer: "A",
     explanations: {
       // Descriptions use a fixed "expl-" prefix so they remain unique
@@ -58,11 +61,11 @@ function makeQuestion(overrides: Partial<LiveQuestion> = {}): LiveQuestion {
   };
 }
 
-function renderRevealed(question: LiveQuestion, progressive = false) {
+function renderExplanation(question: LiveQuestion) {
   return render(
     <ToastProvider>
       <GlobalDialogsProvider>
-        <RevealedDetail question={question} progressive={progressive} />
+        <AnswerExplanation question={question} />
       </GlobalDialogsProvider>
     </ToastProvider>,
   );
@@ -72,22 +75,22 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("<RevealedDetail>", () => {
+describe("<AnswerExplanation>", () => {
   it("returns null when correctAnswer is undefined", () => {
     const question = makeQuestion({ correctAnswer: undefined });
-    const { container } = renderRevealed(question);
+    const { container } = renderExplanation(question);
     // No revealed-detail section should be present at all.
     expect(container.querySelector('[data-testid="revealed-detail"]')).toBeNull();
   });
 
   it("renders the 'Correct answer:' header with joined keys", () => {
     const question = makeQuestion({ correctAnswer: ["A", "B"] });
-    renderRevealed(question);
+    renderExplanation(question);
     // The header should join the letters with ", ".
     expect(screen.getByText(/correct answer: a, b/i)).toBeInTheDocument();
   });
 
-  // BUG GUARD: ADR-15 — the "Correct answer" header in the post-reveal
+  // BUG GUARD: ADR-15 — the "Correct answer" header in the post-commit
   // detail must show the display letter (A, B, C, D) the user saw on the
   // option chips, NOT the underlying key. If the shuffle mapped
   // underlying "B" to display "A", the header must read "Correct answer:
@@ -105,7 +108,7 @@ describe("<RevealedDetail>", () => {
       optionOrder: ["B", "C", "A", "D"],
       correctAnswer: "A",
     });
-    renderRevealed(question);
+    renderExplanation(question);
     expect(screen.getByText(/correct answer: c/i)).toBeInTheDocument();
     // And the underlying key must NOT leak through.
     expect(screen.queryByText(/correct answer: a/i)).toBeNull();
@@ -120,7 +123,7 @@ describe("<RevealedDetail>", () => {
       optionOrder: ["B", "A", "C", "D"],
       correctAnswer: ["A", "B"],
     });
-    renderRevealed(question);
+    renderExplanation(question);
     expect(screen.getByText(/correct answer: a, b/i)).toBeInTheDocument();
   });
 
@@ -135,7 +138,7 @@ describe("<RevealedDetail>", () => {
     // Each explanation is a <div> with one <p> (the chip + description)
     // and a second <p> (the reason). The "description" element gets
     // unique per-letter values like "__DESC_A__" so that, after we read
-    // the <p>'s textContent (which is "A__DESC_C__" etc.), we can
+    // the <p>'s textContent (which is "A" + "__DESC_C__" etc.), we can
     // unambiguously extract both the chip letter and the description token.
     const question = makeQuestion({
       options: { A: "a", B: "b", C: "c", D: "d" },
@@ -149,7 +152,11 @@ describe("<RevealedDetail>", () => {
       },
     });
 
-    renderRevealed(question);
+    renderExplanation(question);
+
+    // Explanations are collapsed behind the toggle by default — open the
+    // panel first so the BUG GUARD below can inspect the rendered rows.
+    fireEvent.click(screen.getByRole("button", { name: /show explanation/i }));
 
     const list = screen.getByTestId("explanations");
     // Each explanation is rendered as one direct child <div> of the
@@ -195,7 +202,10 @@ describe("<RevealedDetail>", () => {
       },
     });
 
-    renderRevealed(question);
+    renderExplanation(question);
+
+    // Open the explanations panel first (collapsed by default).
+    fireEvent.click(screen.getByRole("button", { name: /show explanation/i }));
 
     const list = screen.getByTestId("explanations");
     const rows = list.querySelectorAll(":scope > div");
@@ -214,56 +224,14 @@ describe("<RevealedDetail>", () => {
     ]);
   });
 
-  it("progressive=true: hides explanations by default, reveals them on click", () => {
-    const question = makeQuestion();
-    renderRevealed(question, /* progressive */ true);
-
-    // Initially hidden — no explanations list in the DOM.
-    expect(screen.queryByTestId("explanations")).toBeNull();
-
-    // Toggle button is visible with the closed-state label.
-    const toggle = screen.getByRole("button", { name: /show explanations/i });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-
-    // Click → explanations appear, button label flips.
-    fireEvent.click(toggle);
-
-    const list = screen.getByTestId("explanations");
-    expect(list).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: /hide explanations/i }),
-    ).toHaveAttribute("aria-expanded", "true");
-
-    // And the explanations are now visible. The default fixture uses
-    // "expl-A" / "expl-B" / etc. as descriptions; assert on the
-    // explanation chip letters (which are unique per row).
-    expect(within(list).getByText("expl-A")).toBeInTheDocument();
-  });
-
-  it("progressive=false: shows explanations inline without a toggle", () => {
-    const question = makeQuestion();
-    renderRevealed(question, /* progressive */ false);
-
-    // Explanations are immediately visible.
-    const list = screen.getByTestId("explanations");
-    expect(list).toBeInTheDocument();
-    expect(within(list).getByText("expl-A")).toBeInTheDocument();
-
-    // No toggle button is rendered in non-progressive mode.
-    expect(
-      screen.queryByRole("button", { name: /show explanations/i }),
-    ).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /hide explanations/i }),
-    ).toBeNull();
-  });
-
   it("renders question.tips when present", () => {
     // The field on LiveQuestion is `Tips` (capital T) per the schema.
     const question = makeQuestion({ Tips: "Remember to read carefully." });
-    renderRevealed(question);
-    // Non-progressive mode shows inline; the Tips block should be present.
-    // Use the revealed-detail wrapper and look for the literal Tips label.
+    renderExplanation(question);
+    // Open the explanations panel first (Tips is collapsed with the rest).
+    fireEvent.click(screen.getByRole("button", { name: /show explanation/i }));
+    // The Tips block should be present. Use the revealed-detail wrapper and
+    // look for the literal Tips label (testid is preserved across the rename).
     const wrapper = screen.getByTestId("revealed-detail");
     expect(within(wrapper).getByText(/^tips$/i)).toBeInTheDocument();
     expect(
@@ -275,10 +243,14 @@ describe("<RevealedDetail>", () => {
     // Older payloads may send a single string instead of an array.
     // The component should still render a single-letter header.
     const question = makeQuestion({ correctAnswer: "C" });
-    renderRevealed(question);
+    renderExplanation(question);
 
     // Header shows just "C" — joined list of one is still "C".
     expect(screen.getByText(/correct answer: c/i)).toBeInTheDocument();
+
+    // Open the explanations panel first so we can verify the correct-key
+    // highlighting on the chips.
+    fireEvent.click(screen.getByRole("button", { name: /show explanation/i }));
 
     // And the correct-key highlighting should still apply: the chip on
     // option C's explanation should carry the "bg-correct" class while
@@ -290,5 +262,54 @@ describe("<RevealedDetail>", () => {
     // Sanity: the wrong-option chips should NOT have the correct styling.
     const wrongChip = within(list).getByText("A");
     expect(wrongChip.className).not.toMatch(/bg-correct/);
+  });
+
+  // ── Show / Hide explanation toggle ─────────────────────────────────────────
+  it("renders the 'Show explanation' button but does NOT render the explanation list until clicked", () => {
+    const question = makeQuestion();
+    renderExplanation(question);
+
+    // The "Correct answer" header is always visible (it's the answer, not
+    // the explanation). The explanation rows + Tips are collapsed.
+    expect(screen.getByText(/correct answer: a/i)).toBeInTheDocument();
+
+    const toggle = screen.getByRole("button", { name: /show explanation/i });
+    expect(toggle).toBeInTheDocument();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-controls")).toBe("explanation-1");
+    expect(screen.queryByTestId("explanations")).toBeNull();
+  });
+
+  it("opens the explanation list when 'Show explanation' is clicked and closes it on a second click", () => {
+    const question = makeQuestion({ Tips: "Read carefully." });
+    renderExplanation(question);
+
+    const toggle = screen.getByRole("button", { name: /show explanation/i });
+    fireEvent.click(toggle);
+
+    // Panel is open: the explanations list is in the DOM, the button
+    // flipped to "Hide explanation", and aria-expanded is "true".
+    expect(screen.getByRole("button", { name: /hide explanation/i })).toBeInTheDocument();
+    expect(screen.getByTestId("explanations")).toBeInTheDocument();
+    expect(screen.getByText("Read carefully.")).toBeInTheDocument();
+
+    // Click again to close.
+    fireEvent.click(screen.getByRole("button", { name: /hide explanation/i }));
+    expect(screen.getByRole("button", { name: /show explanation/i })).toBeInTheDocument();
+    expect(screen.queryByTestId("explanations")).toBeNull();
+  });
+
+  it("does not render the 'Show explanation' button when there are no explanations and no Tips", () => {
+    const question = makeQuestion({
+      explanations: undefined,
+      Tips: undefined,
+    });
+    renderExplanation(question);
+
+    // Header is still visible — it's the answer.
+    expect(screen.getByText(/correct answer: a/i)).toBeInTheDocument();
+    // But there's nothing to expand, so no toggle.
+    expect(screen.queryByRole("button", { name: /show explanation/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /hide explanation/i })).toBeNull();
   });
 });

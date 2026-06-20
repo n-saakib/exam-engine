@@ -16,8 +16,8 @@ import { answerStatus, type NavStatus } from "./selectors";
 
 const STATUS_CLASSES: Record<NavStatus, string> = {
   current: "border-current bg-current/15 text-fg ring-2 ring-current",
-  // gave_up shares the revealed/warning amber so the colour tokens don't
-  // change; the ⏏ glyph keeps it visually distinct from a regular reveal.
+  // gave_up shares the warning amber so the colour tokens don't change;
+  // the ⏏ glyph keeps it visually distinct from a regular commit.
   gave_up: "border-revealed bg-revealed/15 text-fg",
   answered_correct: "border-correct bg-correct/15 text-fg",
   answered_incorrect: "border-incorrect bg-incorrect/15 text-fg",
@@ -70,7 +70,7 @@ export function QuestionNavigator({ store }: { store: ExamStore }) {
         {questions.map((q, i) => {
           const isCurrent = i === currentIndex;
           const a = answers[q.id];
-          // A question can be both flagged AND in any answered/revealed state
+          // A question can be both flagged AND in any answered/committed state
           // — surface both in the label even though the swatch colour
           // reflects the primary status.
           const status = answerStatus(a, isCurrent, q);

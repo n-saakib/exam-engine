@@ -46,7 +46,6 @@ describe("GET /api/settings", () => {
     expect(body.show_count_before_start).toBe(true);
     expect(body.shuffle_questions).toBe(false);
     expect(body.shuffle_options).toBe(false);
-    expect(body.progressive_reveal).toBe(true);
     expect(body.theme).toBe("system");
     expect(Array.isArray(body.last_selected_path)).toBe(true);
     expect((body.last_selected_path as unknown[]).length).toBe(0);
@@ -71,7 +70,6 @@ describe("PATCH /api/settings", () => {
 
     // Unpatched keys retain defaults.
     expect(body.source_mode).toBe("filesystem");
-    expect(body.progressive_reveal).toBe(true);
   });
 
   it("returns 400 for an invalid patch value", async () => {

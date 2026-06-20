@@ -7,7 +7,7 @@ describe("migration runner", () => {
   let t: TestDb;
   afterEach(() => t?.cleanup());
 
-  it("applies all registered migrations (0001-0005); a second run is a no-op (one row per version)", () => {
+  it("applies all registered migrations (0001-0007); a second run is a no-op (one row per version)", () => {
     t = makeTestDb(); // makeTestDb already ran migrate once
 
     // schema_migrations exists and has one row per registered version.
@@ -20,18 +20,20 @@ describe("migration runner", () => {
       { version: 3 },
       { version: 4 },
       { version: 5 },
+      { version: 6 },
+      { version: 7 },
     ]);
-    expect(getSchemaVersion(t.db)).toBe(5);
+    expect(getSchemaVersion(t.db)).toBe(7);
 
     // Re-running applies nothing new and does not duplicate the version row.
     const result = migrate(t.db);
     expect(result.applied).toEqual([]);
-    expect(result.currentVersion).toBe(5);
+    expect(result.currentVersion).toBe(7);
 
     const after = t.db
       .prepare("SELECT COUNT(*) AS c FROM schema_migrations")
       .get() as { c: number };
-    expect(after.c).toBe(5);
+    expect(after.c).toBe(7);
   });
 
   /**
@@ -116,11 +118,12 @@ describe("migration runner", () => {
         .run(),
     ).toThrow(/no such column: gave_up_count/);
 
-    // Run the full registry. Only 0004 + 0005 apply (0005 drops the legacy
+    // Run the full registry. 0004 adds gave_up_count, 0005 drops the legacy
     // revealed_count and unanswered_count columns that this fixture still
-    // carries from the old 0001 schema).
+    // carries from the old 0001 schema, 0006 renames session_answers.is_revealed
+    // to is_committed, and 0007 removes the progressive_reveal setting.
     const result = migrate(t.db);
-    expect(result.applied).toEqual([4, 5]);
+    expect(result.applied).toEqual([4, 5, 6, 7]);
 
     // Now the UPDATE must succeed.
     expect(() =>
@@ -138,6 +141,19 @@ describe("migration runner", () => {
     // 0005 dropped the legacy aggregates.
     expect(cols.map((c) => c.name)).not.toContain("revealed_count");
     expect(cols.map((c) => c.name)).not.toContain("unanswered_count");
+
+    // 0006 renamed the per-question live-exam flag.
+    const answerCols = t.db
+      .prepare("PRAGMA table_info('session_answers')")
+      .all() as Array<{ name: string }>;
+    expect(answerCols.map((c) => c.name)).toContain("is_committed");
+    expect(answerCols.map((c) => c.name)).not.toContain("is_revealed");
+
+    // 0007 dropped the progressive_reveal setting.
+    const settings = t.db
+      .prepare("SELECT key FROM settings WHERE key = 'progressive_reveal'")
+      .all() as Array<{ key: string }>;
+    expect(settings).toEqual([]);
   });
 
   it("creates all MVP tables with the enum CHECK constraints", () => {

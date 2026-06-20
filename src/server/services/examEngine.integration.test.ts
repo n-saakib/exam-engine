@@ -181,11 +181,11 @@ describe("ExamEngine — full lifecycle", () => {
     // applyUpdate: tick the timer + move to question index 2.
     h.engine.applyUpdate(live.id, { currentIndex: 2, elapsedMs: 12_345 });
 
-    // Re-fetch via getSession — answers remain hidden on non-revealed questions.
+    // Re-fetch via getSession — answers remain hidden on uncommitted questions.
     const mid = h.engine.getSession(live.id);
     expect(mid.currentIndex).toBe(2);
     expect(mid.timer.elapsedMs).toBe(12_345);
-    // q1 was answered, but NOT revealed → still no correctAnswer.
+    // q1 was answered, but NOT committed → still no correctAnswer.
     const q1 = mid.questions.find((q) => q.id === 1)!;
     expect(q1.answer.selected).toEqual(["A"]);
     expect(q1.correctAnswer).toBeUndefined();
@@ -238,10 +238,10 @@ describe("ExamEngine — retake", () => {
   let h: Harness;
   afterEach(() => h?.cleanup());
 
-  it("retake-incorrect returns the wrong + revealed questions only", async () => {
+  it("retake-incorrect returns the wrong + explicit-give-up questions only", async () => {
     // Build a 5-question set where the correctAnswer pattern is fully explicit
     // (we hand-write the JSON so we can guarantee q1 is correct, q2 is wrong,
-    // q3 is revealed, q4 is wrong, q5 is unanswered).
+    // q3 is an explicit give-up, q4 is wrong, q5 is blank-at-submit).
     const examsRoot = fs.mkdtempSync(path.join(os.tmpdir(), "certprep-engine-int-"));
     const easyDir = path.join(examsRoot, "Cloud", "AWS", "SAA", "Easy");
     fs.mkdirSync(easyDir, { recursive: true });
@@ -299,8 +299,8 @@ describe("ExamEngine — retake", () => {
       },
     };
 
-    // q1 correct (A==A), q2 wrong (B vs A), q3 revealed, q4 wrong (C vs A),
-    // q5 unanswered.
+    // q1 correct (A==A), q2 wrong (B vs A), q3 explicit give-up (no selection),
+    // q4 wrong (C vs A), q5 blank-at-submit.
     const origin = h.engine.createSession({
       quesPath: h.quesPath,
       setId: h.setId,
@@ -308,16 +308,16 @@ describe("ExamEngine — retake", () => {
     });
     h.engine.applyUpdate(origin.id, { answer: { questionId: 1, selected: ["A"] } });
     h.engine.applyUpdate(origin.id, { answer: { questionId: 2, selected: ["B"] } });
-    h.engine.applyUpdate(origin.id, { answer: { questionId: 3, revealed: true } });
+    h.engine.applyUpdate(origin.id, { answer: { questionId: 3, committed: true, gaveUp: true } });
     h.engine.applyUpdate(origin.id, { answer: { questionId: 4, selected: ["C"] } });
     // q5 left unanswered.
 
     h.engine.submit(origin.id);
 
     const retake = h.engine.retake(origin.id, { scope: "incorrect" });
-    // q1 correct, q5 blank (now classified as `gave_up`, NOT in retake
-    // pool) → 5 - 2 = 3 qualifying. Of those, q2 (wrong) + q3 (revealed
-    // in-exam → qualifies for retake) + q4 (wrong) = 3.
+    // q1 correct, q5 blank (classified as `gave_up` but NOT qualifying — no
+    // explicit interaction) → 5 - 2 = 3 qualifying. Of those, q2 (wrong) +
+    // q3 (explicit give-up) + q4 (wrong) = 3.
     expect(retake.totalQuestions).toBe(3);
     expect(retake.mode).toBe("retake_incorrect");
     const ids = retake.questions.map((q) => q.id).sort((a, b) => a - b);

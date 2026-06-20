@@ -14,9 +14,9 @@ function asArray(ca: string | string[]): string[] {
 
 /**
  * Derive the question-level outcome during the exam, based on the answer
- * state and the live question (which carries correctAnswer post-reveal).
+ * state and the live question (which carries correctAnswer post-commit).
  * Mirrors the server-side scoreCalculator.gradeSession logic for the
- * post-reveal case but is a pure client-side helper.
+ * post-commit case but is a pure client-side helper.
  */
 export type LiveOutcome =
   | "correct"
@@ -31,8 +31,8 @@ export function liveOutcome(
 ): LiveOutcome {
   if (!a) return "unanswered";
   if (a.gaveUp) return "gave_up";
-  if (!a.revealed) return a.selected.length > 0 ? "pending" : "unanswered";
-  // revealed === true
+  if (!a.committed) return a.selected.length > 0 ? "pending" : "unanswered";
+  // committed === true
   if (a.selected.length === 0) return "gave_up";
   if (q?.correctAnswer === undefined) return "pending";
   return setEquals(a.selected, asArray(q.correctAnswer)) ? "correct" : "incorrect";
@@ -55,11 +55,11 @@ export function answerStatus(
 ): NavStatus {
   if (isCurrent) return "current";
   if (a?.gaveUp) return "gave_up";
-  if (a?.revealed) {
+  if (a?.committed) {
     const out = liveOutcome(a, q);
     if (out === "correct") return "answered_correct";
     if (out === "incorrect") return "answered_incorrect";
-    if (out === "gave_up") return "gave_up";        // revealed but no selection
+    if (out === "gave_up") return "gave_up";        // committed but no selection
     return "answered_pending";                       // correctAnswer not yet known
   }
   if (a?.flagged) return "flagged";
@@ -69,7 +69,7 @@ export function answerStatus(
 
 export function countAnswered(answers: Record<number, AnswerState>): number {
   return Object.values(answers).filter(
-    (a) => a.revealed || a.gaveUp || a.selected.length > 0,
+    (a) => a.committed || a.gaveUp || a.selected.length > 0,
   ).length;
 }
 

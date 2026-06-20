@@ -7,7 +7,7 @@ import type { SnapshotQuestion } from "@/domain/schemas";
 
 /**
  * Direct unit tests for the answers-hidden DTO mapper (03 §8, F4-T6). This is the
- * server-side gate that strips correctAnswer/explanations/Tips for unrevealed
+ * server-side gate that strips correctAnswer/explanations/Tips for uncommitted
  * questions — verified WITHOUT going through the DB.
  */
 
@@ -82,7 +82,7 @@ function answer(over: Partial<AnswerRow> & { question_id: number }): AnswerRow {
     session_id: "s1",
     selected_options: "[]",
     is_flagged: 0,
-    is_revealed: 0,
+    is_committed: 0,
     is_gave_up: 0,
     is_correct: null,
     time_spent_ms: 0,
@@ -92,7 +92,7 @@ function answer(over: Partial<AnswerRow> & { question_id: number }): AnswerRow {
 }
 
 describe("toLiveSession — answers hidden", () => {
-  it("omits correctAnswer/explanations/Tips for unrevealed questions", () => {
+  it("omits correctAnswer/explanations/Tips for uncommitted questions", () => {
     const dto = toLiveSession(row(), [
       answer({ question_id: 7 }),
       answer({ question_id: 9 }),
@@ -104,10 +104,10 @@ describe("toLiveSession — answers hidden", () => {
     }
   });
 
-  it("includes correct data ONLY for the revealed question", () => {
+  it("includes correct data ONLY for the committed question", () => {
     const dto = toLiveSession(row(), [
-      answer({ question_id: 7, is_revealed: 1 }),
-      answer({ question_id: 9 }), // not revealed
+      answer({ question_id: 7, is_committed: 1 }),
+      answer({ question_id: 9 }), // not committed
     ]);
     const q7 = dto.questions.find((q) => q.id === 7)!;
     const q9 = dto.questions.find((q) => q.id === 9)!;
@@ -121,7 +121,7 @@ describe("toLiveSession — answers hidden", () => {
     expect(q9.Tips).toBeUndefined();
   });
 
-  it("carries per-question answer state (selected/flagged/revealed/time)", () => {
+  it("carries per-question answer state (selected/flagged/committed/time)", () => {
     const dto = toLiveSession(row(), [
       answer({
         question_id: 7,
@@ -135,7 +135,7 @@ describe("toLiveSession — answers hidden", () => {
     expect(q7.answer).toEqual({
       selected: ["A"],
       flagged: true,
-      revealed: false,
+      committed: false,
       gaveUp: false,
       timeSpentMs: 4200,
     });
@@ -235,19 +235,19 @@ describe("toResults — answers shown", () => {
   it("counts summary.incorrect from the persisted incorrect_count only (no folding)", () => {
     // The UI breakdown has 4 columns (correct / incorrect / gave up / flagged).
     // After the post-submit outcome refactor, `incorrect` is exact (no folding):
-    // revealed-without-picking and blank-at-submit are tallied into `gaveUp`
-    // by ScoreCalculator before the counts hit the DB.
+    // explicit give-ups and blank-at-submit are tallied into `gaveUp` by
+    // ScoreCalculator before the counts hit the DB.
     const completed = row({
       status: "completed",
       score_percent: 25,
       correct_count: 1,
       incorrect_count: 1, // one explicit wrong pick only
-      gave_up_count: 1, // the formerly-revealed/unanswered question now lives here
+      gave_up_count: 1, // the give-up/blank question now lives here
       completed_at: "t1",
     });
     const results = toResults(completed, [
       answer({ question_id: 7, selected_options: JSON.stringify(["B"]) }), // correct
-      answer({ question_id: 9, is_revealed: 1 }), // revealed → gave_up
+      answer({ question_id: 9, is_gave_up: 1 }), // give-up → gave_up
       answer({ question_id: 11 }), // blank → gave_up
     ]);
     expect(results.summary.incorrect).toBe(1);
@@ -271,9 +271,11 @@ describe("toResults — answers shown", () => {
     expect(results.summary.flagged).toBe(1);
   });
 
-  it("does not include `revealed` or `unanswered` in the new summary shape", () => {
+  it("does not include legacy `revealed` or `unanswered` keys in the summary shape", () => {
     // The schema intentionally dropped those keys — post-submit outcomes are
-    // now correct | incorrect | gave_up.
+    // now correct | incorrect | gave_up. Asserting they're absent is a
+    // regression guard against any future "re-add revealed as a summary
+    // column" temptation.
     const completed = row({
       status: "completed",
       score_percent: 100,

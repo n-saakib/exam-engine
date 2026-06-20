@@ -23,7 +23,6 @@ describe("settingsRepo", () => {
     expect(settings.show_count_before_start).toBe(true);
     expect(settings.shuffle_questions).toBe(false);
     expect(settings.shuffle_options).toBe(false);
-    expect(settings.progressive_reveal).toBe(true);
     expect(Array.isArray(settings.last_selected_path)).toBe(true);
     expect(settings.last_selected_path).toHaveLength(0);
     expect(settings.schema_version_seen).toBe(0);
@@ -55,7 +54,6 @@ describe("settingsRepo", () => {
     expect(after.theme).toBe("light");
     expect(after.shuffle_questions).toBe(true);
     // Other keys unchanged.
-    expect(after.progressive_reveal).toBe(true);
     expect(after.source_mode).toBe("filesystem");
   });
 

@@ -49,7 +49,6 @@ const BASE_SETTINGS: Settings = {
   show_count_before_start: true,
   shuffle_questions: false,
   shuffle_options: false,
-  progressive_reveal: true,
   theme: "system",
   last_selected_path: [],
   schema_version_seen: 0,

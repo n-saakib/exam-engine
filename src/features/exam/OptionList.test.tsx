@@ -12,7 +12,7 @@
  *   - `optionOrder` entries that don't appear in `options` are dropped
  *     defensively (snapshot drift tolerance).
  *   - Clicking a button calls `onSelect(underlyingKey)`.
- *   - Post-reveal, correct options get `data-correct="true"` and wrong
+ *   - Post-commit, correct options get `data-correct="true"` and wrong
  *     selections get `data-incorrect="true"`.
  */
 
@@ -36,7 +36,7 @@ function makeQuestion(overrides: Partial<LiveQuestion> = {}): LiveQuestion {
     questionType: "single",
     questionText: "Pick one",
     options: { A: "alpha", B: "bravo", C: "charlie" },
-    answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
+    answer: { selected: [], flagged: false, committed: false, gaveUp: false, timeSpentMs: 0 },
     ...overrides,
   };
 }
@@ -45,7 +45,7 @@ function makeAnswer(overrides: Partial<AnswerState> = {}): AnswerState {
   return {
     selected: [],
     flagged: false,
-    revealed: false,
+    committed: false,
     gaveUp: false,
     timeSpentMs: 0,
     ...overrides,
@@ -191,7 +191,7 @@ describe("<OptionList>", () => {
     expect(onSelect).toHaveBeenNthCalledWith(2, "C");
   });
 
-  it("marks selected options with data-selected='true' pre-reveal", () => {
+  it("marks selected options with data-selected='true' pre-commit", () => {
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo", C: "charlie" },
     });
@@ -207,18 +207,18 @@ describe("<OptionList>", () => {
     expect(bBtn).toHaveAttribute("data-selected", "true");
     expect(aBtn).not.toHaveAttribute("data-selected", "true");
     expect(cBtn).not.toHaveAttribute("data-selected", "true");
-    // No reveal → no correctness data attrs.
+    // No commit → no correctness data attrs.
     expect(bBtn).not.toHaveAttribute("data-correct", "true");
     expect(bBtn).not.toHaveAttribute("data-incorrect", "true");
   });
 
-  it("post-reveal: marks correct options with data-correct='true' and wrong selections with data-incorrect='true'", () => {
+  it("post-commit: marks correct options with data-correct='true' and wrong selections with data-incorrect='true'", () => {
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo", C: "charlie" },
       correctAnswer: "B",
     });
     // User picked A (wrong) and B (correct); C was untouched.
-    const answer = makeAnswer({ selected: ["A", "B"], revealed: true });
+    const answer = makeAnswer({ selected: ["A", "B"], committed: true });
 
     renderOptionList(question, answer);
 
@@ -240,12 +240,12 @@ describe("<OptionList>", () => {
     expect(cBtn).not.toHaveAttribute("data-incorrect", "true");
   });
 
-  it("post-reveal: handles multi-correct answers (array correctAnswer)", () => {
+  it("post-commit: handles multi-correct answers (array correctAnswer)", () => {
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo", C: "charlie" },
       correctAnswer: ["A", "C"],
     });
-    const answer = makeAnswer({ selected: ["A", "B"], revealed: true });
+    const answer = makeAnswer({ selected: ["A", "B"], committed: true });
 
     renderOptionList(question, answer);
 
@@ -261,15 +261,15 @@ describe("<OptionList>", () => {
     expect(bBtn).toHaveAttribute("data-incorrect", "true");
   });
 
-  it("post-reveal with no correctAnswer on the question: no correctness markers are applied", () => {
-    // `correctAnswer` may be absent on the question even when `revealed` is true
+  it("post-commit with no correctAnswer on the question: no correctness markers are applied", () => {
+    // `correctAnswer` may be absent on the question even when `committed` is true
     // (e.g. lock-only flow). The component must not mis-mark anything as
     // correct/incorrect in that case.
     const question = makeQuestion({
       options: { A: "alpha", B: "bravo" },
       // correctAnswer omitted
     });
-    const answer = makeAnswer({ selected: ["A"], revealed: true });
+    const answer = makeAnswer({ selected: ["A"], committed: true });
 
     renderOptionList(question, answer);
 

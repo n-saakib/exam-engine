@@ -172,9 +172,8 @@ interface RetakeMenuProps {
 /**
  * Retake actions: "Retake all" and the primary CTA "Retake incorrect only"
  * (disabled when no retakeable questions exist). Retakeable = questions
- * answered incorrectly (including revealed-without-correct) OR gave up —
- * all are wrong and benefit from a second pass. Navigates to the new exam
- * on success (F5-T9, F5-T11).
+ * answered incorrectly OR gave up — all are wrong and benefit from a
+ * second pass. Navigates to the new exam on success (F5-T9, F5-T11).
  */
 export function RetakeMenu({ sessionId, hasRetakeableQuestions }: RetakeMenuProps) {
   const { toast } = useToast();
@@ -245,10 +244,9 @@ interface ResultsActionsProps {
 export function ResultsActions({ results }: ResultsActionsProps) {
   const router = useRouter();
 
-  // "Retake incorrect only" applies to anything wrong: explicit wrong picks,
-  // revealed-without-correct, AND gave-up. All are wrong in the score and all
-  // are eligible for a retake per the examEngine retake logic. The UI
-  // breakdown folds revealed into `incorrect`, so we use `incorrect + gaveUp`.
+  // "Retake incorrect only" applies to anything wrong: explicit wrong picks
+  // AND gave-up. Both are wrong in the score and both are eligible for a
+  // retake per the examEngine retake logic. We use `incorrect + gaveUp`.
   const hasRetakeableQuestions =
     results.summary.incorrect > 0 || results.summary.gaveUp > 0;
 

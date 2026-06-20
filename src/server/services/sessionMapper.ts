@@ -19,7 +19,7 @@ import { gradeSession } from "@/server/services/scoreCalculator";
  *
  * ⚠️ ANSWERS-HIDDEN IS ENFORCED HERE (03 §8, F4-T6). `toLiveSession` strips
  * `correctAnswer`/`explanations`/`Tips` from every question whose answer is NOT
- * `revealed` (when the session is in progress). A revealed question — and only
+ * committed (when the session is in progress). A committed question — and only
  * that question — carries its correct data. Never rely on the client to hide.
  */
 
@@ -44,12 +44,11 @@ function parseSnapshot(row: SessionRow): SnapshotQuestion[] {
 }
 
 /**
- * Build the live session DTO (03 §4.1) from the stored row + answers. Reveal of
- * the correct data is decided per question: a question is "open" iff its answer
- * is revealed. (When the session is completed, callers should use the results
- * mapper — but for safety a completed session still only attaches data to
- * questions actually revealed, since the results endpoint is the answers-shown
- * surface.)
+ * Build the live session DTO (03 §4.1) from the stored row + answers. The
+ * correct data is attached per question iff its answer is committed. (When the
+ * session is completed, callers should use the results mapper — but for safety
+ * a completed session still only attaches data to questions actually
+ * committed, since the results endpoint is the answers-shown surface.)
  */
 export function toLiveSession(row: SessionRow, answers: AnswerRow[]): LiveSession {
   const snapshot = parseSnapshot(row);
@@ -62,13 +61,13 @@ export function toLiveSession(row: SessionRow, answers: AnswerRow[]): LiveSessio
 
   const questions: LiveQuestion[] = snapshot.map((q) => {
     const ans = byId.get(q.id);
-    const revealed = ans?.is_revealed === 1;
+    const committed = ans?.is_committed === 1;
 
     const answer: LiveAnswer = {
       selected: ans ? parseSelected(ans.selected_options) : [],
       flagged: ans?.is_flagged === 1,
       gaveUp: ans?.is_gave_up === 1,
-      revealed,
+      committed,
       timeSpentMs: ans?.time_spent_ms ?? 0,
     };
 
@@ -83,8 +82,8 @@ export function toLiveSession(row: SessionRow, answers: AnswerRow[]): LiveSessio
     };
 
     // ── answers-hidden gate ────────────────────────────────────────────────
-    // Attach correct data ONLY for revealed questions; otherwise omit entirely.
-    if (revealed) {
+    // Attach correct data ONLY for committed questions; otherwise omit entirely.
+    if (committed) {
       base.correctAnswer = q.correctAnswer;
       if (q.explanations) base.explanations = q.explanations;
       if (q.Tips !== undefined) base.Tips = q.Tips;
@@ -131,7 +130,6 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
     answers.map((a) => ({
       questionId: a.question_id,
       selected: parseSelected(a.selected_options),
-      revealed: a.is_revealed === 1,
       gaveUp: a.is_gave_up === 1,
     })),
   );
@@ -175,10 +173,9 @@ export function toResults(row: SessionRow, answers: AnswerRow[]): Results {
       scorePercent: row.score_percent ?? graded.totals.scorePercent,
       correct: row.correct_count ?? graded.totals.correct,
       // "Incorrect" is the count of explicit wrong picks only. All other
-      // wrong-by-policy questions (explicit give-ups, blank-at-submit,
-      // revealed-without-picking) are tallied into `gaveUp` below — the
-      // user sees a clean 4-column view (correct / incorrect / gave up /
-      // flagged).
+      // wrong-by-policy questions (explicit give-ups, blank-at-submit)
+      // are tallied into `gaveUp` below — the user sees a clean 4-column
+      // view (correct / incorrect / gave up / flagged).
       incorrect: row.incorrect_count ?? graded.totals.incorrect,
       gaveUp: row.gave_up_count ?? graded.totals.gaveUp,
       flagged: answers.reduce((n, a) => (a.is_flagged === 1 ? n + 1 : n), 0),

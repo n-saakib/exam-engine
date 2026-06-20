@@ -248,8 +248,8 @@ describe("PATCH /api/sessions/:id — autosave", () => {
     expect(dto.timer.expired).toBe(true);
   });
 
-  it("reveal:true returns correct data for that question ONLY", async () => {
-    const res = await patch({ answer: { questionId: 1, revealed: true } });
+  it("commit:true returns correct data for that question ONLY", async () => {
+    const res = await patch({ answer: { questionId: 1, committed: true } });
     const dto = (await res.json()) as {
       questions: Array<{ id: number; correctAnswer?: unknown; Tips?: unknown }>;
     };
@@ -260,32 +260,32 @@ describe("PATCH /api/sessions/:id — autosave", () => {
     expect(q2.correctAnswer).toBeUndefined();
   });
 
-  it("reveal is monotonic: a later patch cannot un-reveal", async () => {
-    await patch({ answer: { questionId: 1, revealed: true } });
-    // PatchAnswer can't send revealed:false anyway; but even via the engine the
-    // existing reveal must stick. Re-patch other fields and confirm still revealed.
+  it("commit is monotonic: a later patch cannot un-commit", async () => {
+    await patch({ answer: { questionId: 1, committed: true } });
+    // PatchAnswer can't send committed:false anyway; but even via the engine the
+    // existing commit must stick. Re-patch other fields and confirm still committed.
     const res = await patch({ answer: { questionId: 1, selected: ["C"] } });
-    const dto = (await res.json()) as { questions: Array<{ id: number; answer: { revealed: boolean } }> };
-    expect(dto.questions.find((q) => q.id === 1)!.answer.revealed).toBe(true);
+    const dto = (await res.json()) as { questions: Array<{ id: number; answer: { committed: boolean } }> };
+    expect(dto.questions.find((q) => q.id === 1)!.answer.committed).toBe(true);
   });
 
   it("PATCH with gaveUp:true persists is_gave_up=1 and surfaces gaveUp on the DTO", async () => {
-    // F4 gave-up: the user clicks "Give up" with no selection; reveal() must
+    // F4 gave-up: the user clicks "Give up" with no selection; commit() must
     // persist is_gave_up=1, and the next GET must surface gaveUp:true on the
     // LiveAnswer so the navigator's 7-state swatch collapses to "gave_up".
-    const res = await patch({ answer: { questionId: 1, revealed: true, gaveUp: true } });
+    const res = await patch({ answer: { questionId: 1, committed: true, gaveUp: true } });
     const dto = (await res.json()) as {
-      questions: Array<{ id: number; answer: { revealed: boolean; gaveUp: boolean } }>;
+      questions: Array<{ id: number; answer: { committed: boolean; gaveUp: boolean } }>;
     };
     const q1 = dto.questions.find((q) => q.id === 1)!;
-    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.committed).toBe(true);
     expect(q1.answer.gaveUp).toBe(true);
   });
 
-  it("PATCH gaveUp:false on a revealed row does not un-give-up (monotonic)", async () => {
+  it("PATCH gaveUp:false on a committed row does not un-give-up (monotonic)", async () => {
     // The wire-level schema doesn't allow gaveUp:false, but the engine itself
-    // must defend — once gaveUp is true, it stays true (parallel to revealed).
-    await patch({ answer: { questionId: 1, revealed: true, gaveUp: true } });
+    // must defend — once gaveUp is true, it stays true (parallel to committed).
+    await patch({ answer: { questionId: 1, committed: true, gaveUp: true } });
     // Re-patch with selected; the existing gaveUp must stick.
     const res = await patch({ answer: { questionId: 1, selected: ["C"] } });
     const dto = (await res.json()) as { questions: Array<{ id: number; answer: { gaveUp: boolean } }> };
@@ -400,7 +400,7 @@ describe("submit + 409 + resume", () => {
     );
   });
 
-  it("resume: GET returns the exact saved index/elapsed/answers/flags/reveal", async () => {
+  it("resume: GET returns the exact saved index/elapsed/answers/flags/commit", async () => {
     const s = await createSession({ quesPath: QUES_PATH, setId: "set-alpha", options: { seed: "resume" } });
     const { getContainer } = await import("@/server/container");
     const engine = getContainer().services.examEngine;
@@ -409,7 +409,7 @@ describe("submit + 409 + resume", () => {
       elapsedMs: 12345,
       answer: { questionId: 1, selected: ["A"], flagged: true, timeSpentMs: 999 },
     });
-    engine.applyUpdate(s.id, { answer: { questionId: 2, revealed: true } });
+    engine.applyUpdate(s.id, { answer: { questionId: 2, committed: true } });
 
     const res = await GET_one(
       new Request(`http://localhost/api/sessions/${s.id}`),
@@ -418,13 +418,13 @@ describe("submit + 409 + resume", () => {
     const dto = (await res.json()) as {
       currentIndex: number;
       timer: { elapsedMs: number };
-      questions: Array<{ id: number; answer: { selected: string[]; flagged: boolean; revealed: boolean; timeSpentMs: number } }>;
+      questions: Array<{ id: number; answer: { selected: string[]; flagged: boolean; committed: boolean; timeSpentMs: number } }>;
     };
     expect(dto.currentIndex).toBe(2);
     expect(dto.timer.elapsedMs).toBe(12345);
     const q1 = dto.questions.find((q) => q.id === 1)!;
     expect(q1.answer).toMatchObject({ selected: ["A"], flagged: true, timeSpentMs: 999 });
-    expect(dto.questions.find((q) => q.id === 2)!.answer.revealed).toBe(true);
+    expect(dto.questions.find((q) => q.id === 2)!.answer.committed).toBe(true);
   });
 });
 

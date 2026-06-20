@@ -42,9 +42,8 @@ interface ExportSessionEntry {
   correct: number;
   incorrect: number;
   /**
-   * Count of questions that did not score correctly: explicit give-ups,
-   * blank-at-submit, AND revealed-without-picking. Mirrors the on-screen
-   * "Gave up" tally (these three are folded together post-submit).
+   * Count of questions that did not score correctly: explicit give-ups and
+   * blank-at-submit. Mirrors the on-screen "Gave up" tally.
    */
   gaveUp: number;
   total: number;
@@ -112,19 +111,17 @@ export function createExportService(db: Database) {
     question_id: number;
     selected_options: string;
     is_flagged: number;
-    is_revealed: number;
     is_gave_up: number;
     time_spent_ms: number;
   }> {
     return db
       .prepare(
-        "SELECT question_id, selected_options, is_flagged, is_revealed, is_gave_up, time_spent_ms FROM session_answers WHERE session_id = ? ORDER BY question_id ASC",
+        "SELECT question_id, selected_options, is_flagged, is_gave_up, time_spent_ms FROM session_answers WHERE session_id = ? ORDER BY question_id ASC",
       )
       .all(sessionId) as Array<{
       question_id: number;
       selected_options: string;
       is_flagged: number;
-      is_revealed: number;
       is_gave_up: number;
       time_spent_ms: number;
     }>;
@@ -172,10 +169,8 @@ export function createExportService(db: Database) {
         const selected: string[] = ans ? safeParseArray(ans.selected_options) : [];
         const isGaveUp = (ans?.is_gave_up ?? 0) === 1;
 
-        // Outcome is one of correct | incorrect | gave_up. `gave_up` covers:
-        // explicit give-ups, blank-at-submit, AND revealed-without-picking
-        // (the live-exam "view the solution" flag has no graded outcome — a
-        // revealed question with no selection counts as a give-up).
+        // Outcome is one of correct | incorrect | gave_up. `gave_up` covers
+        // explicit give-ups and blank-at-submit (no selection committed).
         let outcome: "correct" | "incorrect" | "gave_up";
         if (isGaveUp || selected.length === 0) {
           outcome = "gave_up";

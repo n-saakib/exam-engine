@@ -48,7 +48,6 @@ const BASE_SETTINGS: Settings = {
   show_count_before_start: true,
   shuffle_questions: false,
   shuffle_options: false,
-  progressive_reveal: true,
   theme: "system",
   last_selected_path: [],
   schema_version_seen: 0,
@@ -114,6 +113,9 @@ describe("<ExamDefaultsSettings>", () => {
   });
 
   it("persists a change via PATCH /settings when a toggle is clicked", async () => {
+    // The progressive_reveal toggle was removed with the "reveal is not a
+    // state" cleanup — pick a remaining toggle (shuffle-options) instead so
+    // we still exercise the PATCH /settings path.
     const { qc, Wrapper } = makeWrapper();
     qc.setQueryData(["settings"], BASE_SETTINGS);
 
@@ -123,7 +125,7 @@ describe("<ExamDefaultsSettings>", () => {
       </Wrapper>,
     );
 
-    const toggle = screen.getByRole("switch", { name: /progressive reveal/i });
+    const toggle = screen.getByRole("switch", { name: /shuffle answer options/i });
     await act(async () => {
       fireEvent.click(toggle);
     });
@@ -132,7 +134,7 @@ describe("<ExamDefaultsSettings>", () => {
       expect(mockPatch).toHaveBeenCalledWith(
         "/settings",
         expect.objectContaining({
-          json: expect.objectContaining({ progressive_reveal: false }),
+          json: expect.objectContaining({ shuffle_options: true }),
         }),
       );
     });

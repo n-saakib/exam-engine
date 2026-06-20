@@ -9,7 +9,7 @@ export interface AnswerRow {
   question_id: number;
   selected_options: string; // JSON array
   is_flagged: number;
-  is_revealed: number;
+  is_committed: number;
   is_gave_up: number;
   is_correct: number | null;
   time_spent_ms: number;
@@ -21,8 +21,8 @@ export interface AnswerPatch {
   /** Selected option keys; replaces the stored array. */
   selected?: string[];
   flagged?: boolean;
-  /** Monotonic: callers must not pass `false` to un-reveal (engine enforces). */
-  revealed?: boolean;
+  /** Monotonic: callers must not pass `false` to un-commit (engine enforces). */
+  committed?: boolean;
   /** Monotonic: callers must not pass `false` to un-give-up (engine enforces). */
   gaveUp?: boolean;
   timeSpentMs?: number;
@@ -95,9 +95,9 @@ export function createAnswerRepo(db: Database) {
         sets.push("is_flagged = @flagged");
         values.flagged = patch.flagged ? 1 : 0;
       }
-      if (patch.revealed !== undefined) {
-        sets.push("is_revealed = @revealed");
-        values.revealed = patch.revealed ? 1 : 0;
+      if (patch.committed !== undefined) {
+        sets.push("is_committed = @committed");
+        values.committed = patch.committed ? 1 : 0;
       }
       if (patch.gaveUp !== undefined) {
         sets.push("is_gave_up = @gaveUp");

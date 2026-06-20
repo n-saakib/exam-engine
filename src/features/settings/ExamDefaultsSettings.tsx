@@ -8,8 +8,8 @@ import type { SettingsPatch } from "@/domain/types";
 
 /**
  * Exam defaults section: timer on/off + default minutes, show-count-before-start,
- * shuffle questions/options, progressive reveal. Each change persists immediately
- * via PATCH /api/settings and drives F4 session creation.
+ * shuffle questions/options. Each change persists immediately via PATCH
+ * /api/settings and drives F4 session creation.
  *
  * Rather than maintaining a local mirror of all settings (which requires a
  * useEffect + setState sync and triggers lint warnings), we read the authoritative
@@ -32,7 +32,6 @@ export function ExamDefaultsSettings() {
   const showCount = settings?.show_count_before_start ?? true;
   const shuffleQuestions = settings?.shuffle_questions ?? false;
   const shuffleOptions = settings?.shuffle_options ?? false;
-  const progressiveReveal = settings?.progressive_reveal ?? true;
 
   // Timer minutes: use the draft while the field is being edited, fall back to
   // the persisted value once settings load.
@@ -147,15 +146,6 @@ export function ExamDefaultsSettings() {
           description="Randomise the order of multiple-choice options."
           checked={shuffleOptions}
           onChange={() => handleToggle("shuffle_options", shuffleOptions)}
-        />
-
-        {/* Progressive reveal */}
-        <ToggleRow
-          id="progressive-reveal"
-          label="Progressive reveal"
-          description="Reveal the correct answer and explanation when submitting each question."
-          checked={progressiveReveal}
-          onChange={() => handleToggle("progressive_reveal", progressiveReveal)}
         />
       </fieldset>
 

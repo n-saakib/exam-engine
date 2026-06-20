@@ -1,8 +1,7 @@
 /**
  * Component tests for the F4 exam UI. Drives a real factory ExamStore (apiClient
- * mocked) and asserts navigator colour/aria states, flag-count updates, give-up
- * reveal, progressive-reveal expander, timer pause, and the submit dialog
- * counts + submit→navigate.
+ * mocked) and asserts navigator colour/aria states, flag-count updates,
+ * commit flow, timer pause, and the submit dialog counts + submit→navigate.
  */
 
 import { render, screen, fireEvent, act, waitFor, within } from "@testing-library/react";
@@ -17,7 +16,7 @@ import { ProgressBar } from "./ProgressBar";
 import { QuestionPanel } from "./QuestionPanel";
 import { ExamTimer } from "./ExamTimer";
 import { SubmitExamDialog } from "./SubmitExamDialog";
-import { RevealedDetail } from "./RevealedDetail";
+import { AnswerExplanation } from "./AnswerExplanation";
 
 vi.mock("@/lib/apiClient", () => ({
   apiClient: {
@@ -62,7 +61,7 @@ function fixture(): LiveSession {
       answer: {
         selected: [],
         flagged: false,
-        revealed: false,
+        committed: false,
         gaveUp: false,
         timeSpentMs: 0,
       },
@@ -106,7 +105,7 @@ describe("<QuestionNavigator>", () => {
     expect(q1).toHaveAttribute("data-status", "current");
     expect(q1).toHaveAttribute("aria-current", "true");
 
-    // Q2 answered but not revealed → "answered (pending)" in the 7-state model.
+    // Q2 answered but not committed → "answered (pending)" in the 7-state model.
     const q2 = screen.getByRole("button", { name: /Question 2, answered \(pending\)/i });
     expect(q2).toHaveAttribute("data-status", "answered_pending");
 
@@ -149,7 +148,7 @@ describe("<ProgressBar>", () => {
 describe("<QuestionPanel> options", () => {
   it("renders a checkbox group (ADR-13: every question is checkboxes) and records an appended selection", () => {
     const store = makeStore();
-    wrap(<QuestionPanel store={store} progressiveReveal={false} />);
+    wrap(<QuestionPanel store={store} />);
 
     const optionGroup = screen.getByTestId("option-list");
     const checkboxes = within(optionGroup).getAllByRole("checkbox");
@@ -162,12 +161,12 @@ describe("<QuestionPanel> options", () => {
     expect(store.getState().answers[1].selected).toEqual(["A", "B"]);
   });
 
-  it("shows per-option correctness styling after reveal", async () => {
+  it("shows per-option correctness styling after commit", async () => {
     const store = makeStore();
-    const revealed = fixture();
-    revealed.questions[0] = {
-      ...revealed.questions[0],
-      answer: { ...revealed.questions[0].answer, selected: ["A"], revealed: true },
+    const committed = fixture();
+    committed.questions[0] = {
+      ...committed.questions[0],
+      answer: { ...committed.questions[0].answer, selected: ["A"], committed: true },
       // ADR-13: correctAnswer is now an array.
       correctAnswer: ["C"],
       explanations: {
@@ -176,14 +175,14 @@ describe("<QuestionPanel> options", () => {
       },
       Tips: "tip",
     };
-    patch.mockResolvedValue(revealed);
+    patch.mockResolvedValue(committed);
 
     store.getState().select(1, "A");
     await act(async () => {
-      await store.getState().reveal(1);
+      await store.getState().commit(1);
     });
 
-    wrap(<QuestionPanel store={store} progressiveReveal={false} />);
+    wrap(<QuestionPanel store={store} />);
     const correct = screen.getByRole("checkbox", { name: /Cherry/ });
     expect(correct).toHaveAttribute("data-correct", "true");
     const wrong = screen.getByRole("checkbox", { name: /Apple/ });
@@ -191,12 +190,12 @@ describe("<QuestionPanel> options", () => {
   });
 });
 
-describe("<RevealedDetail> progressive reveal", () => {
-  const revealedQ = () => {
+describe("<AnswerExplanation>", () => {
+  const committedQ = () => {
     const q = fixture().questions[0];
     return {
       ...q,
-      answer: { ...q.answer, revealed: true },
+      answer: { ...q.answer, committed: true },
       // ADR-13: correctAnswer is now an array.
       correctAnswer: ["C"],
       explanations: {
@@ -207,23 +206,24 @@ describe("<RevealedDetail> progressive reveal", () => {
     };
   };
 
-  it("hides explanations behind an expander when progressive reveal is on", () => {
-    wrap(<RevealedDetail question={revealedQ()} progressive />);
-    // Correct answer is shown immediately.
+  it("shows the correct answer inline and collapses the per-option reasoning + Tips behind a toggle", () => {
+    wrap(<AnswerExplanation question={committedQ()} />);
+    // The "Correct answer" header is always visible (it's the answer, not
+    // the explanation). The per-option reasoning + Tips are collapsed.
     expect(screen.getByText(/Correct answer: C/)).toBeInTheDocument();
-    // Explanations hidden until expanded.
     expect(screen.queryByText(/it is correct/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /show explanations/i }));
+    expect(screen.queryByText(/Remember C/)).not.toBeInTheDocument();
+
+    // Open the toggle — the reasoning + Tips become visible.
+    fireEvent.click(screen.getByRole("button", { name: /show explanation/i }));
     expect(screen.getByText(/it is correct/)).toBeInTheDocument();
     expect(screen.getByText(/Remember C/)).toBeInTheDocument();
   });
 
-  it("shows explanations inline when progressive reveal is off", () => {
-    wrap(<RevealedDetail question={revealedQ()} progressive={false} />);
-    expect(screen.getByText(/it is correct/)).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /show explanations/i }),
-    ).not.toBeInTheDocument();
+  it("renders nothing when the question has no correctAnswer (pre-commit DTO)", () => {
+    const q = fixture().questions[0];
+    wrap(<AnswerExplanation question={q} />);
+    expect(screen.queryByText(/Correct answer:/)).not.toBeInTheDocument();
   });
 });
 

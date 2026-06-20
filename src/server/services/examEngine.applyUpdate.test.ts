@@ -125,7 +125,6 @@ beforeAll(async () => {
       show_count_before_start: true,
       shuffle_questions: false,
       shuffle_options: false,
-      progressive_reveal: true,
       theme: "system",
       last_selected_path: [],
       schema_version_seen: 0,
@@ -219,38 +218,38 @@ describe("examEngine.applyUpdate — idempotency & monotonicity", () => {
     expect(session.timer.elapsedMs).toBe(5_000);
   });
 
-  it("monotonic reveal: once revealed:true, a later revealed:false does not un-reveal", () => {
+  it("monotonic commit: once committed:true, a later committed:false does not un-commit", () => {
     const id = makeSession();
-    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true } });
-    // The schema (PatchAnswerSchema) does not allow `revealed: false` from
+    engine.applyUpdate(id, { answer: { questionId: 1, committed: true } });
+    // The schema (PatchAnswerSchema) does not allow `committed: false` from
     // the wire, but the engine itself must defend — we call with the full
     // patch object including the field.
     engine.applyUpdate(id, {
-      answer: { questionId: 1, revealed: false } as unknown as { questionId: number; revealed: boolean },
+      answer: { questionId: 1, committed: false } as unknown as { questionId: number; committed: boolean },
     });
     const session = engine.getSession(id);
     const q1 = session.questions.find((q) => q.id === 1)!;
-    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.committed).toBe(true);
   });
 
   it("persists gaveUp on the answer row (live DTO carries gaveUp=true)", () => {
-    // F4 gave-up: user clicks "Give up" with no selection; reveal() must
+    // F4 gave-up: user clicks "Give up" with no selection; commit() must
     // persist is_gave_up=1 and the next getSession() must surface gaveUp=true
     // on the LiveAnswer. The flag is monotonic (give-up is a one-way intent).
     const id = makeSession();
-    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true, gaveUp: true } });
+    engine.applyUpdate(id, { answer: { questionId: 1, committed: true, gaveUp: true } });
     const session = engine.getSession(id);
     const q1 = session.questions.find((q) => q.id === 1)!;
-    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.committed).toBe(true);
     expect(q1.answer.gaveUp).toBe(true);
   });
 
-  it("monotonic gaveUp: a later gaveUp:false on a revealed row does not un-give-up", () => {
+  it("monotonic gaveUp: a later gaveUp:false on a committed row does not un-give-up", () => {
     // The schema (PatchAnswerSchema) does not allow `gaveUp: false` from
     // the wire, but the engine itself must defend — once gaveUp is true it
-    // stays true, parallel to `revealed`. This pins the symmetry.
+    // stays true, parallel to `committed`. This pins the symmetry.
     const id = makeSession();
-    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true, gaveUp: true } });
+    engine.applyUpdate(id, { answer: { questionId: 1, committed: true, gaveUp: true } });
     engine.applyUpdate(id, {
       answer: { questionId: 1, gaveUp: false } as unknown as { questionId: number; gaveUp: boolean },
     });
@@ -266,11 +265,11 @@ describe("examEngine.applyUpdate — idempotency & monotonicity", () => {
     // must reflect both fields.
     const id = makeSession();
     engine.applyUpdate(id, { answer: { questionId: 1, selected: ["B"] } });
-    engine.applyUpdate(id, { answer: { questionId: 1, revealed: true, gaveUp: true } });
+    engine.applyUpdate(id, { answer: { questionId: 1, committed: true, gaveUp: true } });
     const session = engine.getSession(id);
     const q1 = session.questions.find((q) => q.id === 1)!;
     expect(q1.answer.selected).toEqual(["B"]);
-    expect(q1.answer.revealed).toBe(true);
+    expect(q1.answer.committed).toBe(true);
     expect(q1.answer.gaveUp).toBe(true);
   });
 });

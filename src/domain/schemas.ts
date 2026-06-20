@@ -145,7 +145,7 @@ export type QuestionSet = z.infer<typeof QuestionSetSchema>;
 /**
  * One question in `exam_sessions.question_snapshot`. It carries everything needed
  * to play AND grade — including `correctAnswer`/`explanations`/`Tips`, which the
- * live DTO mapper strips until the question is revealed (02 §5, 03 §8). The
+ * live DTO mapper strips until the question is committed (02 §5, 03 §8). The
  * snapshot is the single source of truth for grading (ADR-4): once written it is
  * immune to changes to the source JSON file on disk.
  *

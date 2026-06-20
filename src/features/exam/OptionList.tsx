@@ -18,8 +18,9 @@ import type { AnswerState } from "@/store/examStore";
  *
  * Every option is a tab stop (WAI-ARIA APG pattern for `group > checkbox[]`);
  * Space/Enter toggles the focused option; arrow keys do not move focus inside
- * the group. After reveal/lock shows per-option correctness styling. Colour is
- * paired with text ("Correct"/"Your answer") so it isn't the only signal.
+ * the group. After commit (submit or give-up) the option list is locked and
+ * shows per-option correctness styling. Colour is paired with text
+ * ("Correct"/"Your answer") so it isn't the only signal.
  */
 
 /** Letters used as display labels, in canonical order. */
@@ -66,8 +67,8 @@ export function OptionList({
   onSelect: (option: string) => void;
 }) {
   const letters = displayLetters(question);
-  const locked = answer.revealed;
-  const revealed = answer.revealed && question.correctAnswer !== undefined;
+  const locked = answer.committed;
+  const committed = answer.committed && question.correctAnswer !== undefined;
   const correct = correctSet(question);
 
   // Native button + role="checkbox" handles Space/Enter toggle and Tab focus.
@@ -88,8 +89,8 @@ export function OptionList({
       {letters.map((displayLetter, i) => {
         const key = underlyingKey(question, displayLetter, i);
         const selected = answer.selected.includes(key);
-        const isCorrect = revealed && correct.has(key);
-        const isWrongPick = revealed && selected && !correct.has(key);
+        const isCorrect = committed && correct.has(key);
+        const isWrongPick = committed && selected && !correct.has(key);
 
         return (
           <button
@@ -109,11 +110,11 @@ export function OptionList({
             className={cn(
               "flex w-full items-start gap-3 rounded-card border p-3 text-left transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1",
-              !revealed && selected && "border-brand bg-brand/10",
-              !revealed && !selected && "border-border bg-surface hover:bg-bg",
+              !committed && selected && "border-brand bg-brand/10",
+              !committed && !selected && "border-border bg-surface hover:bg-bg",
               isCorrect && "border-correct bg-correct/10",
               isWrongPick && "border-incorrect bg-incorrect/10",
-              revealed && !isCorrect && !isWrongPick && "border-border bg-surface opacity-80",
+              committed && !isCorrect && !isWrongPick && "border-border bg-surface opacity-80",
               locked && "cursor-default",
             )}
           >
@@ -130,7 +131,7 @@ export function OptionList({
             </span>
             <span className="flex-1 text-sm">
               <span>{question.options[key]}</span>
-              {revealed && (isCorrect || isWrongPick || selected) ? (
+              {committed && (isCorrect || isWrongPick || selected) ? (
                 <span
                   className={cn(
                     "ml-2 text-xs font-semibold",

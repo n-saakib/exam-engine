@@ -64,7 +64,7 @@ describe("<ExamScreen> guard", () => {
     } as unknown as ReturnType<typeof useExamSession>);
 
     vi.mocked(useSettings).mockReturnValue({
-      data: { progressive_reveal: false },
+      data: undefined,
       isLoading: false,
     } as unknown as ReturnType<typeof useSettings>);
 

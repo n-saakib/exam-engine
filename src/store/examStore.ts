@@ -22,10 +22,10 @@ import type {
  *   - Every mutating action marks fields dirty and schedules a debounced flush
  *     (~400 ms). A flush sends only the changed fields plus the ABSOLUTE
  *     `elapsedMs` (replace semantics — idempotent on retry; 09 §7.1).
- *   - `reveal()`, `pause()`, `submit()` and route-leave FORCE an immediate flush
- *     (cancel the pending debounce, fire now). `reveal()` additionally merges
+ *   - `commit()`, `pause()`, `submit()` and route-leave FORCE an immediate flush
+ *     (cancel the pending debounce, fire now). `commit()` additionally merges
  *     the server's returned correct answer / explanations / Tips into the
- *     question, since those are only present post-reveal.
+ *     question, since those are only present post-commit.
  *   - A `beforeunload` handler flushes pending state via `navigator.sendBeacon`
  *     (fallback: `fetch(..., { keepalive: true })`) so a hard tab-close still
  *     persists (09 §7.3).
@@ -40,7 +40,12 @@ export const AUTOSAVE_DEBOUNCE_MS = 400;
 export interface AnswerState {
   selected: string[];
   flagged: boolean;
-  revealed: boolean;
+  /**
+   * True once the user has committed an answer (submit or give-up). The
+   * question's correctAnswer / explanations / Tips become visible on the next
+   * flush response. Monotonic: once true it stays true.
+   */
+  committed: boolean;
   /** True once the user explicitly gives up on this question. */
   gaveUp: boolean;
   timeSpentMs: number;
@@ -77,7 +82,7 @@ export interface ExamStoreState {
   loadFromDTO(dto: LiveSession): void;
   select(qid: number, option: string): void;
   toggleFlag(qid: number): void;
-  reveal(qid: number, options?: { gaveUp?: boolean }): Promise<void>;
+  commit(qid: number, options?: { gaveUp?: boolean }): Promise<void>;
   goTo(index: number): void;
   tick(deltaMs: number): void;
   pause(): Promise<void>;
@@ -102,7 +107,7 @@ function liveAnswerToState(a: LiveAnswer): AnswerState {
   return {
     selected: [...a.selected],
     flagged: a.flagged,
-    revealed: a.revealed,
+    committed: a.committed,
     gaveUp: a.gaveUp ?? false,
     timeSpentMs: a.timeSpentMs,
   };
@@ -268,7 +273,7 @@ export function createExamStore(): ExamStore {
 
       select(qid, option) {
         const cur = get().answers[qid];
-        if (!cur || cur.revealed) return; // locked once revealed
+        if (!cur || cur.committed) return; // locked once committed
         // Multi-select (checkbox) semantics: clicking a selected option removes
         // it; clicking an unselected option appends it. The UI is a checkbox
         // group for BOTH `single` and `multi` question types, and the user is
@@ -296,20 +301,20 @@ export function createExamStore(): ExamStore {
         scheduleFlush();
       },
 
-      async reveal(qid, options) {
+      async commit(qid, options) {
         const cur = get().answers[qid];
-        if (!cur || cur.revealed) return; // monotonic / irreversible
+        if (!cur || cur.committed) return; // monotonic / irreversible
         // gaveUp is sticky: only set to true here, and only when the caller
         // explicitly opts in via `options.gaveUp`. Once true it stays true.
         const gaveUpRequested = options?.gaveUp === true;
         const nextGaveUp = cur.gaveUp || gaveUpRequested;
         set((s) => ({
-          answers: { ...s.answers, [qid]: { ...cur, revealed: true, gaveUp: nextGaveUp } },
+          answers: { ...s.answers, [qid]: { ...cur, committed: true, gaveUp: nextGaveUp } },
         }));
-        // Cancel pending debounce; fold reveal into a forced immediate flush so
+        // Cancel pending debounce; fold commit into a forced immediate flush so
         // the server returns this question's correct answer + explanations.
         clearDebounce();
-        queueAnswer(qid, { revealed: true });
+        queueAnswer(qid, { committed: true });
         if (gaveUpRequested && !cur.gaveUp) {
           queueAnswer(qid, { gaveUp: true });
         }
@@ -329,7 +334,7 @@ export function createExamStore(): ExamStore {
             }
             if (merged) {
               mergeServerTimer(merged);
-              // Merge the revealed question's now-attached correct data.
+              // Merge the now-committed question's correct data.
               const fresh = merged.questions.find((q) => q.id === qid);
               if (fresh) {
                 set((s) => ({

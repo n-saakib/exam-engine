@@ -148,7 +148,6 @@ beforeEach(async () => {
       show_count_before_start: true,
       shuffle_questions: false,
       shuffle_options: false,
-      progressive_reveal: true,
       theme: "system" as const,
       last_selected_path: [],
       schema_version_seen: 0,

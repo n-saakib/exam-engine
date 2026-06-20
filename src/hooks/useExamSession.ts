@@ -11,7 +11,7 @@ import type { LiveSession } from "@/domain/types";
  * authoritative after hydration, so this query uses `staleTime: Infinity` +
  * `refetchOnWindowFocus: false` — a focus refetch must never stomp the Zustand
  * store mid-exam. On a fresh mount / refresh it rehydrates the exact saved
- * position, answers, flags, reveals and elapsed time (resume path, F4-T28).
+ * position, answers, flags, commits and elapsed time (resume path, F4-T28).
  */
 export function useExamSession(id: string) {
   return useQuery({

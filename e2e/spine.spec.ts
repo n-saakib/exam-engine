@@ -1,9 +1,16 @@
 /**
  * CertPrep E2E spine test — the one browser-level guard for the core journey.
  *
- * Journey: Home → select domain → start exam → answer/flag/give-up →
+ * Journey: Home → select domain → start exam → answer/flag/commit →
  *          pause → resume → submit → results (filter) → retake incorrect →
  *          history stats updated.
+ *
+ * Note on the per-question button: there is no separate "reveal" action
+ * anymore. Committing an answer (≥1 selected) or giving up (0 selected)
+ * both surface the explanation immediately. The dialog text for the
+ * 0-selected branch is "Give up on this question?" (not "Reveal the
+ * answer?"). data-testid="revealed-detail" is preserved on the visible
+ * explanation panel so e2e selectors remain stable.
  *
  * Design principles:
  *  - One test, sequential steps — the entire spine in one `test()` so a
@@ -12,7 +19,10 @@
  *    `waitForTimeout` / arbitrary sleeps; Playwright auto-waits.
  *  - Stable selectors: role/label/text preferred; `data-testid` used sparingly
  *    for elements that have them (question-text, option-list, question-navigator,
- *    revealed-detail, leaf-panel already exist on key elements).
+ *    revealed-detail, leaf-panel already exist on key elements). The
+ *    `revealed-detail` testid is kept for selector stability even though
+ *    the underlying concept ("the question's answer is now visible") is no
+ *    longer called "reveal" in product copy.
  *  - The exam set used is "Easy" (AWS SAA) which loads real JSON from Exams/.
  *    Each set has 10 questions, so navigator assertions use count === 10.
  *
@@ -163,28 +173,31 @@ test.describe("spine", () => {
       await nextButton.click();
       await expect(questionText).toContainText(/Q3\./);
 
-      // "Give up" triggers a confirm dialog; we must confirm it
+      // With 0 selected the per-question button is labeled "Give up".
+      // Clicking it opens a confirm dialog ("Give up on this question?")
+      // because giving up with no interaction is a deliberate action.
       const giveUpButton = page.getByRole("button", { name: /^Give up$/i });
       await expect(giveUpButton).toBeVisible();
       await giveUpButton.click();
 
-      // A dialog appears asking to reveal the answer
-      const revealDialog = page.getByRole("dialog");
-      await expect(revealDialog).toBeVisible({ timeout: 5_000 });
-      await expect(revealDialog).toContainText(/Reveal the answer/i);
-      // Confirm the reveal
-      const revealConfirmBtn = revealDialog.getByRole("button", { name: /^Reveal$/i });
-      await expect(revealConfirmBtn).toBeVisible();
-      await revealConfirmBtn.click();
+      // A dialog asks to confirm giving up.
+      const giveUpDialog = page.getByRole("dialog");
+      await expect(giveUpDialog).toBeVisible({ timeout: 5_000 });
+      await expect(giveUpDialog).toContainText(/Give up on this question/i);
+      // Confirm the give-up.
+      const giveUpConfirmBtn = giveUpDialog.getByRole("button", { name: /^Give up$/i });
+      await expect(giveUpConfirmBtn).toBeVisible();
+      await giveUpConfirmBtn.click();
 
-      // After revealing, the RevealedDetail component should appear
+      // After giving up, the explanation panel becomes visible immediately.
+      // data-testid="revealed-detail" is preserved on the panel for selector
+      // stability (the component was renamed internally but kept the testid).
       const revealedDetail = page.getByTestId("revealed-detail");
       await expect(revealedDetail).toBeVisible({ timeout: 10_000 });
-      // The correct answer text should appear
       await expect(revealedDetail).toContainText(/Correct answer:/i);
 
-      // Give up button should now show "Revealed" (disabled)
-      await expect(page.getByRole("button", { name: /^Revealed$/i })).toBeVisible();
+      // The button now reflects the committed state — "Submitted", disabled.
+      await expect(page.getByRole("button", { name: /^Submitted$/i })).toBeVisible();
 
       // ── Step 10: Pause → navigate to /resume ───────────────────────────────
       const pauseButton = page.getByRole("button", { name: /^Pause$/i });
@@ -240,15 +253,16 @@ test.describe("spine", () => {
 
       // Q3's navigator button should now carry "gave up" in its aria-label
       // and data-status="gave_up" — the gave-up state is a first-class
-      // outcome (distinct from "revealed"), surfaced in the live palette
-      // and persisted to the DB as is_gave_up.
+      // outcome (alongside correct and incorrect), surfaced in the live
+      // palette and persisted to the DB as is_gave_up. There is no
+      // "revealed" status anymore.
       const navQ3 = navigator.getByRole("button", { name: /Question 3/i });
       await expect(navQ3).toBeVisible();
       const navQ3Label = await navQ3.getAttribute("aria-label");
       expect(navQ3Label).toMatch(/gave up/i);
       // data-status is the source of truth for the swatch colour and is one
       // of the 7 NavStatus values. The user gave up on Q3 with no selection,
-      // so the status should be "gave_up" (not "revealed").
+      // so the status should be "gave_up".
       await expect(navQ3).toHaveAttribute("data-status", "gave_up");
 
       // ── Step 13: Navigate to the last question to reach "Submit exam" ───────
@@ -364,7 +378,8 @@ test.describe("spine", () => {
         await waitForExamScreen(page);
 
         // The navigator in the retake exam should have fewer than 10 questions
-        // (only incorrect + gave-up + revealed-in-exam questions are included).
+        // (only incorrect + gave-up questions are included; correct answers are
+        // not re-included regardless of whether they were committed in-exam).
         const retakeNav = page.getByTestId("question-navigator");
         const retakeNavBtns = retakeNav.getByRole("button");
         // There should be at least 1 and at most 9 (definitely fewer than 10,

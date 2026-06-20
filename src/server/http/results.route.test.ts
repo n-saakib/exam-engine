@@ -109,8 +109,8 @@ afterAll(async () => {
 // Helper: seed a completed session with controllable outcomes
 //   q1 → correct (answer A, correctAnswer A)
 //   q2 → incorrect (answer A, correctAnswer B)
-//   q3 → gave_up (user revealed in-exam without picking; outcome is gave_up
-//                now that the post-submit outcome set collapsed to
+//   q3 → gave_up (user gave up with no selection; outcome is gave_up now
+//                that the post-submit outcome set collapsed to
 //                correct | incorrect | gave_up)
 //   q4 → gave_up (left blank at submit; outcome is gave_up now that
 //                unanswered folded into gave_up)
@@ -120,7 +120,7 @@ async function seedCompletedSession(): Promise<string> {
   const s = e.createSession({ quesPath: QUES_PATH, setId: "set-main", options: { seed: "test" } });
   e.applyUpdate(s.id, { answer: { questionId: 1, selected: ["A"] } }); // correct
   e.applyUpdate(s.id, { answer: { questionId: 2, selected: ["A"] } }); // incorrect (correct is B)
-  e.applyUpdate(s.id, { answer: { questionId: 3, revealed: true } });   // revealed (no pick) → gave_up
+  e.applyUpdate(s.id, { answer: { questionId: 3, committed: true, gaveUp: true } }); // gave up → gave_up
   // q4 left blank at submit → gave_up
   e.submit(s.id);
   return s.id;
@@ -173,7 +173,7 @@ describe("GET /api/sessions/:id/results", () => {
       correct: 1,
       // incorrect is now exact (no folding): only q2 is a wrong pick.
       incorrect: 1,
-      // gaveUp absorbs both revealed-without-picking (q3) and blank-at-submit (q4).
+      // gaveUp absorbs both explicit give-up (q3) and blank-at-submit (q4).
       gaveUp: 2,
       flagged: 0,
       total: 4,
@@ -284,7 +284,7 @@ describe("POST /api/sessions/:id/retake", () => {
   let originId: string;
 
   beforeEach(async () => {
-    // Seed: q1 correct, q2 incorrect, q3 gave_up (revealed in-exam), q4 gave_up (blank).
+    // Seed: q1 correct, q2 incorrect, q3 gave_up (gave up in-exam), q4 gave_up (blank).
     originId = await seedCompletedSession();
   });
 
@@ -315,12 +315,13 @@ describe("POST /api/sessions/:id/retake", () => {
 
   /**
    * REQUIRED: retake-incorrect snapshot builder test (F5 spec).
-   * Origin: q1=correct, q2=incorrect, q3=gave_up (revealed in-exam), q4=gave_up (blank).
-   * retake "incorrect" should include ONLY q2 (incorrect) + q3 (revealed-in-exam
-   * qualifies via the live-exam `is_revealed` flag, not via the post-submit
-   * outcome) = 2 questions.
+   * Origin: q1=correct, q2=incorrect, q3=gave_up (gave up in-exam), q4=gave_up (blank).
+   * retake "incorrect" should include ONLY q2 (explicit wrong pick) + q3
+   * (explicit give-up). q4 (gave_up via blank-at-submit) does NOT qualify
+   * because there was no real interaction with the question — there's
+   * nothing to retake.
    */
-  it("[REQUIRED] retake incorrect — snapshot contains exactly the incorrect+revealed questions", async () => {
+  it("[REQUIRED] retake incorrect — snapshot contains exactly the wrong-pick + give-up questions", async () => {
     const res = await POST_retake(retakeReq(originId, { scope: "incorrect" }), ctx(originId));
     expect(res.status).toBe(201);
     const dto = await res.json() as {
@@ -333,7 +334,8 @@ describe("POST /api/sessions/:id/retake", () => {
     expect(dto.mode).toBe("retake_incorrect");
     expect(dto.totalQuestions).toBe(2);
 
-    // Must contain exactly q2 and q3; NOT q1 (correct) or q4 (gave_up via blank).
+    // Must contain exactly q2 (wrong pick) and q3 (give-up). NOT q1 (correct)
+    // or q4 (blank-at-submit; nothing to retake).
     const ids = dto.questions.map((q) => q.id).sort();
     expect(ids).toEqual([2, 3]);
   });
@@ -348,7 +350,8 @@ describe("POST /api/sessions/:id/retake", () => {
   });
 
   it("[REQUIRED] retake incorrect with NO qualifying questions → 409 SETS_EXHAUSTED", async () => {
-    // Create a session where every question is correct — no incorrect / revealed-in-exam.
+    // Create a session where every question is correct — no incorrect picks,
+    // no explicit give-ups. Nothing qualifies for retake-incorrect.
     const e = await engine();
     const s = e.createSession({ quesPath: QUES_PATH, setId: "set-main", options: { seed: "allcorrect" } });
     // q1 correct=A, q2 correct=B, q3 correct=C, q4 correct=D
@@ -377,8 +380,8 @@ describe("POST /api/sessions/:id/retake", () => {
     const { getContainer } = await import("@/server/container");
     const answers = getContainer().repos.answer.getBySession(dto.id);
     expect(answers.length).toBe(4);
-    // All blank: no selection, not revealed, not flagged.
+    // All blank: no selection, not committed, not flagged.
     expect(answers.every((a) => JSON.parse(a.selected_options).length === 0)).toBe(true);
-    expect(answers.every((a) => a.is_revealed === 0)).toBe(true);
+    expect(answers.every((a) => a.is_committed === 0)).toBe(true);
   });
 });

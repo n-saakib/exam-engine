@@ -1,0 +1,18 @@
+-- 0006_rename_revealed_to_committed — rename the per-question live-exam flag.
+--
+-- Until now `session_answers.is_revealed` was overloaded as both:
+--   (a) the answers-hidden gate in the live-session mapper, and
+--   (b) a "this question was peeked" flag that drove the retake-incorrect
+--       filter (any revealed question always qualified).
+-- Both are being folded into the simpler model: a question has three outcomes
+-- (correct | incorrect | gave_up) and one orthogonal flag (is_flagged). The
+-- moment a user commits an answer (submit or give-up), the correct answer is
+-- exposed inline; there is no separate "peek" action.
+--
+-- This migration renames the column to `is_committed` so the same 1:1
+-- semantics carry forward with a clearer name. SQLite ≥ 3.25 supports
+-- ALTER TABLE … RENAME COLUMN; better-sqlite3 12.x bundles SQLite 3.45+.
+--
+-- Forward-only. No backfill is required: every existing row with
+-- is_revealed = 1 is a committed question under the new model.
+ALTER TABLE session_answers RENAME COLUMN is_revealed TO is_committed;

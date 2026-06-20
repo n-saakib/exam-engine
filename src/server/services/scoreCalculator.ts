@@ -13,12 +13,9 @@ import type { SnapshotQuestion } from "@/domain/schemas";
  *
  * Scoring rules (F4 / 03 §5.1):
  *   - Outcome is one of `correct | incorrect | gave_up`.
- *   - `gave_up` covers three cases that all count as wrong: the user explicitly
- *     gave up; the user left the question blank at submit; the user revealed
- *     the solution in-exam without committing a selection. All three are
- *     treated identically for scoring and for the UI breakdown.
- *   - `revealed` is a LIVE-EXAM VIEWING FLAG on `AnswerState` only — it is not
- *     a graded outcome and never appears on the wire as one.
+ *   - `gave_up` covers two cases that both count as wrong: the user explicitly
+ *     gave up; the user left the question blank at submit. Both are treated
+ *     identically for scoring and for the UI breakdown.
  *   - `scorePercent = round(correct / total * 100)` — see ROUNDING below.
  *
  * ROUNDING: half-up to the nearest integer percent via `Math.round`. The
@@ -39,8 +36,6 @@ export interface AnswerInput {
   questionId: number;
   /** Selected option keys. Empty ⇒ gave_up (unless the user also gave up explicitly, which is the same outcome). */
   selected: string[];
-  /** Live-exam "view the solution" flag. Affects answer visibility during the exam; does NOT drive the post-submit outcome. */
-  revealed: boolean;
   /** User explicitly gave up on this question — surfaces as `gave_up` outcome. */
   gaveUp: boolean;
 }
@@ -75,8 +70,8 @@ export interface ScoreResult {
 
 /**
  * A grader decides ONLY raw correctness for one question type (no notion of
- * reveal/unanswered — that policy lives in `grade`). Returning a clean boolean
- * keeps the outcome policy in one place and makes multi/ordered a 1-line add.
+ * unanswered — that policy lives in `grade`). Returning a clean boolean keeps
+ * the outcome policy in one place and makes multi/ordered a 1-line add.
  */
 type Grader = (selected: string[], correctAnswer: string | string[]) => boolean;
 
@@ -129,7 +124,6 @@ export function gradeSession(
     const answer = byId.get(q.id) ?? {
       questionId: q.id,
       selected: [],
-      revealed: false,
       gaveUp: false,
     };
 
@@ -147,9 +141,7 @@ export function gradeSession(
       outcome = "gave_up";
       gaveUp++;
     } else if (answer.selected.length === 0) {
-      // No selection committed. Covers two cases that are indistinguishable for
-      // grading: the user left the question blank, OR the user revealed the
-      // solution in-exam without committing an answer. Both count as `gave_up`.
+      // No selection committed at submit — counts as `gave_up` for scoring.
       outcome = "gave_up";
       gaveUp++;
     } else if (isCorrect) {

@@ -51,7 +51,7 @@ function seedCompleted(
   t: TestDb,
   id: string,
   selected: string,
-  opts: { revealed?: boolean; flagged?: boolean; note?: string | null } = {},
+  opts: { committed?: boolean; flagged?: boolean; note?: string | null } = {},
 ): void {
   const sessions = createSessionRepo(t.db);
   const answers = createAnswerRepo(t.db);
@@ -70,12 +70,12 @@ function seedCompleted(
     answers.upsert(id, 1, {
       selected: [selected],
       flagged: !!opts.flagged,
-      revealed: !!opts.revealed,
+      committed: !!opts.committed,
     });
-  } else if (opts.revealed || opts.flagged) {
+  } else if (opts.committed || opts.flagged) {
     answers.upsert(id, 1, {
       flagged: !!opts.flagged,
-      revealed: !!opts.revealed,
+      committed: !!opts.committed,
     });
   }
 }
@@ -153,15 +153,14 @@ describe("exportService — JSON", () => {
     expect(payload.sessions.length).toBe(1);
   });
 
-  it("JSON output round-trips answers (selected, revealed-as-gave-up, flagged)", () => {
+  it("JSON output round-trips answers (selected, committed-wrong-pick, flagged)", () => {
     // Post-submit outcomes are correct | incorrect | gave_up. A question that
-    // was revealed-in-exam with a non-empty selection becomes `incorrect`
-    // (the user committed an answer); revealed-in-exam with no selection
-    // becomes `gave_up`. The `rev` seed selects "B" while revealing, so it
-    // now lands in `incorrect`.
+    // was committed in-exam with a non-empty selection becomes `correct` or
+    // `incorrect` (the user committed an answer). The `rev` seed selects "B"
+    // and commits; correctAnswer is A, so the outcome lands in `incorrect`.
     t = makeTestDb();
     seedCompleted(t, "sel", "A");
-    seedCompleted(t, "rev", "B", { revealed: true });
+    seedCompleted(t, "rev", "B", { committed: true });
     seedCompleted(t, "flag", "C", { flagged: true });
 
     const exportService = createExportService(t.db);
@@ -176,7 +175,7 @@ describe("exportService — JSON", () => {
     expect(byId.get("sel")?.questions[0]?.outcome).toBe("correct");
     expect(byId.get("sel")?.questions[0]?.flagged).toBe(false);
 
-    // "rev" was revealed in-exam with selection "B" (correctAnswer=A) →
+    // "rev" was committed in-exam with selection "B" (correctAnswer=A) →
     // outcome is `incorrect` (the user committed a wrong pick).
     expect(byId.get("rev")?.questions[0]?.yourAnswer).toEqual(["B"]);
     expect(byId.get("rev")?.questions[0]?.outcome).toBe("incorrect");

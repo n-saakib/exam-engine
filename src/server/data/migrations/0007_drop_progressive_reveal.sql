@@ -1,0 +1,13 @@
+-- 0007_drop_progressive_reveal — drop the now-unused `progressive_reveal`
+-- setting from the key/value `settings` table.
+--
+-- `progressive_reveal` controlled a UX-only toggle: when ON, the per-question
+-- explanation was hidden behind a "Show explanations" expander; when OFF,
+-- explanations were shown inline immediately. With the removal of the reveal
+-- state (migration 0006), explanations are always shown inline at commit
+-- time, so the toggle has no remaining semantics.
+--
+-- Forward-only. We do not migrate the value of the existing setting — any
+-- user with `progressive_reveal = 1` simply loses the toggle on next boot;
+-- the new (always-inline) behaviour is what they would have wanted anyway.
+DELETE FROM settings WHERE key = 'progressive_reveal';

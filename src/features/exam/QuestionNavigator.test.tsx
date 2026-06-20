@@ -32,9 +32,9 @@ function makeQuestion(id: number, correctAnswer: string | string[] = "A"): LiveQ
     questionType: "single",
     questionText: `Q${id}?`,
     options: { A: "a", B: "b" },
-    answer: { selected: [], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
-    // The server only attaches correctAnswer post-reveal, but exposing it
-    // in the fixture keeps the post-reveal tests self-contained.
+    answer: { selected: [], flagged: false, committed: false, gaveUp: false, timeSpentMs: 0 },
+    // The server only attaches correctAnswer post-commit, but exposing it
+    // in the fixture keeps the post-commit tests self-contained.
     correctAnswer,
   };
 }
@@ -118,15 +118,15 @@ describe("<QuestionNavigator>", () => {
     expect(store.getState().currentIndex).toBe(3);
   });
 
-  it("marks an answered-but-not-revealed question as 'answered_pending' with a ? glyph", () => {
+  it("marks an answered-but-not-committed question as 'answered_pending' with a ? glyph", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
     // Q1 is current. Mark Q2 (id=2) as answered with selected=["A"] but NOT
-    // revealed — this is a "pending" answer in the new model.
+    // committed — this is a "pending" answer in the new model.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        2: { selected: ["A"], flagged: false, revealed: false, gaveUp: false, timeSpentMs: 0 },
+        2: { selected: ["A"], flagged: false, committed: false, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -153,7 +153,7 @@ describe("<QuestionNavigator>", () => {
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        3: { selected: [], flagged: true, revealed: false, gaveUp: false, timeSpentMs: 0 },
+        3: { selected: [], flagged: true, committed: false, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -171,14 +171,14 @@ describe("<QuestionNavigator>", () => {
     expect(q3.textContent).not.toContain("⏏");
   });
 
-  it("marks a revealed-and-correct question as 'answered_correct' with a ✓ glyph", () => {
+  it("marks a committed-and-correct question as 'answered_correct' with a ✓ glyph", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q4 (id=4): revealed with the correct answer "A".
+    // Q4 (id=4): committed with the correct answer "A".
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        4: { selected: ["A"], flagged: false, revealed: true, gaveUp: false, timeSpentMs: 0 },
+        4: { selected: ["A"], flagged: false, committed: true, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -197,14 +197,14 @@ describe("<QuestionNavigator>", () => {
     expect(q4.textContent).not.toContain("?");
   });
 
-  it("marks a revealed-and-incorrect question as 'answered_incorrect' with a ✗ glyph", () => {
+  it("marks a committed-and-incorrect question as 'answered_incorrect' with a ✗ glyph", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q2 (id=2): revealed but with the wrong answer "B" (correct is "A").
+    // Q2 (id=2): committed but with the wrong answer "B" (correct is "A").
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        2: { selected: ["B"], flagged: false, revealed: true, gaveUp: false, timeSpentMs: 0 },
+        2: { selected: ["B"], flagged: false, committed: true, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -221,11 +221,11 @@ describe("<QuestionNavigator>", () => {
   it("marks a gave-up question with data-status='gave_up' and ⏏ glyph", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q3 (id=3): gaveUp=true, revealed=true, no selection.
+    // Q3 (id=3): gaveUp=true, committed=true, no selection.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        3: { selected: [], flagged: false, revealed: true, gaveUp: true, timeSpentMs: 0 },
+        3: { selected: [], flagged: false, committed: true, gaveUp: true, timeSpentMs: 0 },
       },
     }));
 
@@ -264,11 +264,11 @@ describe("<QuestionNavigator>", () => {
   it("flag wins the swatch over an answered_pending question, and is surfaced via data-flagged + aria", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q2 (id=2): answered AND flagged, but not revealed.
+    // Q2 (id=2): answered AND flagged, but not committed.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        2: { selected: ["A"], flagged: true, revealed: false, gaveUp: false, timeSpentMs: 0 },
+        2: { selected: ["A"], flagged: true, committed: false, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 
@@ -290,11 +290,11 @@ describe("<QuestionNavigator>", () => {
   it("flag overlay is preserved on an answered_correct question", () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeSession(5, 0));
-    // Q4 (id=4): revealed, correct, AND flagged.
+    // Q4 (id=4): committed, correct, AND flagged.
     store.setState((s) => ({
       answers: {
         ...s.answers,
-        4: { selected: ["A"], flagged: true, revealed: true, gaveUp: false, timeSpentMs: 0 },
+        4: { selected: ["A"], flagged: true, committed: true, gaveUp: false, timeSpentMs: 0 },
       },
     }));
 

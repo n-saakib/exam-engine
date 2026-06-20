@@ -256,8 +256,8 @@ export function createExamEngine(deps: ExamEngineDeps) {
     /**
      * Apply an autosave patch (F4-T9). Updates navigation, the absolute (clamped)
      * timer, and a single per-question answer. Only valid while in_progress
-     * (409 SESSION_NOT_IN_PROGRESS otherwise). `revealed:true` is monotonic.
-     * Returns the updated live DTO (a just-revealed question now carries its data).
+     * (409 SESSION_NOT_IN_PROGRESS otherwise). `committed:true` is monotonic.
+     * Returns the updated live DTO (a just-committed question now carries its data).
      */
     applyUpdate(id: string, patch: PatchSessionBody): LiveSession {
       const row = requireSession(id);
@@ -316,15 +316,15 @@ export function createExamEngine(deps: ExamEngineDeps) {
         if (patch.answer) {
           const a = patch.answer;
           const existing = answerRepo.getOne(id, a.questionId);
-          const alreadyRevealed = existing?.is_revealed === 1;
+          const alreadyCommitted = existing?.is_committed === 1;
           const alreadyGaveUp = existing?.is_gave_up === 1;
 
           answerRepo.upsert(id, a.questionId, {
             ...(a.selected !== undefined ? { selected: a.selected } : {}),
             ...(a.flagged !== undefined ? { flagged: a.flagged } : {}),
-            // Monotonic reveal: never un-reveal. Only write `true`.
-            ...(a.revealed === true || alreadyRevealed
-              ? { revealed: true }
+            // Monotonic commit: never un-commit. Only write `true`.
+            ...(a.committed === true || alreadyCommitted
+              ? { committed: true }
               : {}),
             ...(a.gaveUp === true || alreadyGaveUp ? { gaveUp: true } : {}),
             ...(a.timeSpentMs !== undefined
@@ -369,7 +369,6 @@ export function createExamEngine(deps: ExamEngineDeps) {
         answers.map((a) => ({
           questionId: a.question_id,
           selected: safeParseArray(a.selected_options),
-          revealed: a.is_revealed === 1,
           gaveUp: a.is_gave_up === 1,
         })),
       );
@@ -419,9 +418,8 @@ export function createExamEngine(deps: ExamEngineDeps) {
      * - `scope: "all"` → re-uses the origin snapshot unchanged (all questions fresh).
      * - `scope: "incorrect"` → filters the origin snapshot to keep only questions
      *   the learner should redo: explicit incorrect picks (is_correct = 0 with a
-     *   non-empty selection), explicit give-ups (is_gave_up = 1), and questions
-     *   the user revealed in-exam (is_revealed = 1). Throws 409 when no
-     *   qualifying questions exist.
+     *   non-empty selection) and explicit give-ups (is_gave_up = 1). Throws 409
+     *   when no qualifying questions exist.
      *
      * The new session records `origin_session_id = originId` and the appropriate
      * `mode` ("retake_all" | "retake_incorrect"). Works from the stored snapshot
@@ -447,33 +445,28 @@ export function createExamEngine(deps: ExamEngineDeps) {
         // origin was already a filtered retake.
         snapshot = originSnapshot.map((q, idx) => ({ ...q, order: idx + 1 }));
       } else {
-        // Keep only questions the learner should redo. Three groups qualify:
+        // Keep only questions the learner should redo. Two groups qualify:
         //   - Incorrect picks: is_correct = 0 AND the learner actually answered
         //     (selected_options non-empty).
         //   - Explicit give-ups: is_gave_up = 1.
-        //   - Revealed-in-exam: is_revealed = 1 (the user viewed the solution;
-        //     they should re-attempt without peeking).
         // Blank questions (is_correct = 0 with empty selected_options) are
         // excluded — the learner skipped them, not failed them. A question
         // with no answer row is also excluded.
         const qualifying = originSnapshot.filter((q) => {
           const ans = answerById.get(q.id);
           if (!ans) return false;
-          const isRevealed = ans.is_revealed === 1;
-          const isGaveUp = ans.is_gave_up === 1;
-          if (isRevealed || isGaveUp) return true;
+          if (ans.is_gave_up === 1) return true;
           // Incorrect: graded wrong (is_correct = 0) AND the learner actually answered
           // (selected_options is not empty). Unanswered get is_correct=0 but should not
           // appear in a "retake incorrect" set.
           const selected = safeParseArray(ans.selected_options);
-          const isIncorrect = ans.is_correct === 0 && selected.length > 0;
-          return isIncorrect;
+          return ans.is_correct === 0 && selected.length > 0;
         });
 
         if (qualifying.length === 0) {
           throw new AppError(
             "SETS_EXHAUSTED",
-            "No incorrect, gave-up, or revealed questions to retake in this session",
+            "No incorrect or gave-up questions to retake in this session",
             409,
           );
         }

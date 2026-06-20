@@ -27,10 +27,9 @@ function q(id: number, correctAnswer: string | string[] = ["A"]): SnapshotQuesti
 function ans(
   questionId: number,
   selected: string[],
-  revealed = false,
   gaveUp = false,
 ): AnswerInput {
-  return { questionId, selected, revealed, gaveUp };
+  return { questionId, selected, gaveUp };
 }
 
 describe("gradeSession — outcomes", () => {
@@ -104,15 +103,14 @@ describe("gradeSession — outcomes", () => {
   });
 });
 
-describe("gradeSession — gave_up semantics (replaces old 'revealed' outcome)", () => {
-  // `revealed` is no longer a post-submit outcome. Revealed-without-picking
-  // is classified as `gave_up`, alongside explicit give-ups and blank-at-submit.
-  // Revealed-with-a-(wrong-)selection becomes `incorrect` (the user actually
-  // committed an answer).
+describe("gradeSession — gave_up semantics", () => {
+  // The three post-submit outcomes are correct | incorrect | gave_up. Blank
+  // selections (no answer row, or `selected.length === 0`) collapse into
+  // `gave_up` regardless of any commit state.
 
-  it("revealed-empty counts as gave_up (was 'revealed')", () => {
+  it("blank-at-submit with an empty selection counts as gave_up", () => {
     const snap = [q(1, ["A"]), q(2, ["B"])];
-    const answers = [ans(1, ["A"]), ans(2, [], true)]; // revealed, no selection
+    const answers = [ans(1, ["A"]), ans(2, [])]; // q2 blank
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals).toMatchObject({
       correct: 1,
@@ -123,12 +121,12 @@ describe("gradeSession — gave_up semantics (replaces old 'revealed' outcome)",
     expect(perQuestion[1]!.outcome).toBe("gave_up");
   });
 
-  it("revealed-with-a-wrong-selection counts as incorrect (was 'revealed')", () => {
+  it("committed-with-a-wrong-selection counts as incorrect", () => {
     const snap = [q(1, ["A"]), q(2, ["B"]), q(3, ["C"])];
     const answers = [
       ans(1, ["A"]), // correct
-      ans(2, ["X"], true), // revealed, had a (wrong) selection
-      ans(3, [], true), // revealed, no selection → gave_up
+      ans(2, ["X"]), // wrong pick
+      ans(3, []), // blank → gave_up
     ];
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals).toMatchObject({
@@ -144,7 +142,7 @@ describe("gradeSession — gave_up semantics (replaces old 'revealed' outcome)",
   it("gave_up pulls the percentage down (denominator is full total, not just graded)", () => {
     // 1 correct out of 2 questions, the other gave_up → 1/2 = 50%, NOT 100%.
     const snap = [q(1, ["A"]), q(2, ["B"])];
-    const answers = [ans(1, ["A"]), ans(2, [], false, true)]; // explicit give-up
+    const answers = [ans(1, ["A"]), ans(2, [], true)]; // explicit give-up
     const { totals } = gradeSession(snap, answers);
     expect(totals.scorePercent).toBe(50);
     expect(totals.correct).toBe(1);
@@ -153,7 +151,7 @@ describe("gradeSession — gave_up semantics (replaces old 'revealed' outcome)",
 
   it("explicit gave_up with a correct selection still does not count as correct", () => {
     const snap = [q(1, ["A"])];
-    const answers = [ans(1, ["A"], false, true)]; // would be correct, but user gave up
+    const answers = [ans(1, ["A"], true)]; // would be correct, but user gave up
     const { totals, perQuestion } = gradeSession(snap, answers);
     expect(totals.correct).toBe(0);
     expect(totals.gaveUp).toBe(1);

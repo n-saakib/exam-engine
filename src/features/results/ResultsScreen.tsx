@@ -83,8 +83,8 @@ export function ResultsScreen({ sessionId, mode = "post-exam" }: ResultsScreenPr
     return {
       all: data.questions.length,
       correct: data.questions.filter((q) => q.outcome === "correct").length,
-      // "Incorrect" is explicit wrong picks only — revealed-without-picking
-      // and blank-at-submit are tallied into gaveUp by ScoreCalculator.
+      // "Incorrect" is explicit wrong picks only — give-ups and
+      // blank-at-submit are tallied into gaveUp by ScoreCalculator.
       incorrect: data.questions.filter((q) => q.outcome === "incorrect").length,
       gaveUp: data.questions.filter((q) => q.outcome === "gave_up").length,
       flagged: data.questions.filter((q) => q.flagged).length,

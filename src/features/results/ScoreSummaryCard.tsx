@@ -40,10 +40,10 @@ interface ScoreSummaryCardProps {
  * Shows the score percentage, four-way breakdown (correct / incorrect /
  * gave up / flagged), time taken vs limit, and the domain/difficulty header.
  *
- * "Revealed" is intentionally NOT shown as its own column — a revealed
- * question is treated as wrong (the user revealed without picking correctly),
- * so it is folded into the `incorrect` count. `flagged` is purely informational
- * and does NOT affect the score.
+ * "Revealed" is intentionally NOT shown as its own column — a committed-
+ * without-correct-answer question (i.e. a give-up or blank-at-submit) is
+ * folded into the `gaveUp` count. `flagged` is purely informational and does
+ * NOT affect the score.
  */
 export function ScoreSummaryCard({ results }: ScoreSummaryCardProps) {
   const { summary, domainLabel, difficulty } = results;

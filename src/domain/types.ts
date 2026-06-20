@@ -45,13 +45,13 @@ export type SessionMode = z.infer<typeof SessionModeSchema>;
  * Post-submit question outcome. The set is intentionally minimal:
  *   - `correct`: the user's selection matched the correct answer.
  *   - `incorrect`: the user picked a wrong answer.
- *   - `gave_up`: the user explicitly gave up, OR left the question without
- *     answering, OR revealed the solution without picking (reveal is a
- *     live-exam viewing action, not a graded outcome).
+ *   - `gave_up`: the user explicitly gave up, OR left the question blank
+ *     at submit.
  *
- * The per-question LIVE-exam `AnswerState.revealed: boolean` flag (see
- * `LiveAnswerSchema`) is a separate concern — it controls answer visibility
- * during the exam and is preserved on the wire; it is not an outcome.
+ * The per-question `LiveAnswer.committed` flag (see `LiveAnswerSchema`) is a
+ * separate concern — it controls answer visibility during the exam (the
+ * server attaches correctAnswer/explanations/Tips only once committed) and
+ * is preserved on the wire; it is not a graded outcome.
  */
 export const OutcomeSchema = z.enum(["correct", "incorrect", "gave_up"]);
 export type Outcome = z.infer<typeof OutcomeSchema>;
@@ -89,7 +89,13 @@ export type Timer = z.infer<typeof TimerSchema>;
 export const LiveAnswerSchema = z.object({
   selected: z.array(z.string()),
   flagged: z.boolean(),
-  revealed: z.boolean(),
+  /**
+   * True once the user has committed an answer on this question — either by
+   * submitting a selection or by giving up. The server attaches the
+   * question's `correctAnswer`/`explanations`/`Tips` only when this is true.
+   * Monotonic: once true it stays true.
+   */
+  committed: z.boolean(),
   /** True once the user explicitly gives up on this question. */
   gaveUp: z.boolean(),
   timeSpentMs: z.number().int(),
@@ -98,7 +104,7 @@ export type LiveAnswer = z.infer<typeof LiveAnswerSchema>;
 
 /**
  * A question as seen during an exam. `correctAnswer`/`explanations`/`Tips` are
- * present ONLY when `answer.revealed === true` (the server attaches them then).
+ * present ONLY when `answer.committed === true` (the server attaches them then).
  */
 export const LiveQuestionSchema = z.object({
   id: z.number().int(),
@@ -108,7 +114,7 @@ export const LiveQuestionSchema = z.object({
   options: z.record(z.string(), z.string()),
   optionOrder: z.array(z.string()).optional(),
   answer: LiveAnswerSchema,
-  // Only present post-reveal:
+  // Only present post-commit (submit or give-up):
   correctAnswer: z.union([z.string(), z.array(z.string())]).optional(),
   explanations: z.record(z.string(), ExplanationSchema).optional(),
   Tips: z.string().optional(),
@@ -141,17 +147,15 @@ export const ResultsSummarySchema = z.object({
   scorePercent: z.number(),
   correct: z.number().int(),
   /**
-   * Count of wrong answers — explicit wrong picks only. Questions the user
-   * revealed-without-picking are classified as `gave_up`, not `incorrect`,
-   * and are tallied into `gaveUp` below.
+   * Count of wrong answers — explicit wrong picks only. Questions left
+   * blank at submit are classified as `gave_up`, not `incorrect`, and are
+   * tallied into `gaveUp` below.
    */
   incorrect: z.number().int(),
   /**
    * Count of questions the user did not answer correctly: explicit give-ups
-   * PLUS questions left blank at submit PLUS revealed-without-picking (the
-   * user viewed the solution in-exam but did not commit an answer).
-   * All three contribute to this single tally and all three count as wrong
-   * in scoring.
+   * PLUS questions left blank at submit. Both contribute to this single
+   * tally and both count as wrong in scoring.
    */
   gaveUp: z.number().int(),
   /** Count of questions the user flagged for review. Pure annotation — does NOT affect scoring. */
@@ -264,7 +268,6 @@ export const SettingsSchema = z.object({
   show_count_before_start: z.boolean(),
   shuffle_questions: z.boolean(),
   shuffle_options: z.boolean(),
-  progressive_reveal: z.boolean(),
   theme: ThemeSchema,
   last_selected_path: z.array(z.string()),
   schema_version_seen: z.number().int(),
@@ -348,10 +351,14 @@ export const PatchAnswerSchema = z.object({
   /** Replaces the current selection; `[]` clears it. */
   selected: z.array(z.string()).optional(),
   flagged: z.boolean().optional(),
-  /** Monotonic: once `true` it can never be unset (server enforces), parallel to `revealed`. */
-  gaveUp: z.boolean().optional(),
   /** Monotonic: once `true` it can never be unset (server enforces). */
-  revealed: z.boolean().optional(),
+  gaveUp: z.boolean().optional(),
+  /**
+   * Monotonic: once `true` it can never be unset (server enforces). Sets
+   * `is_committed = 1` on the answer row and surfaces correctAnswer on the
+   * question in subsequent live DTO responses.
+   */
+  committed: z.boolean().optional(),
   timeSpentMs: z.number().int().min(0).optional(),
 });
 export type PatchAnswer = z.infer<typeof PatchAnswerSchema>;
