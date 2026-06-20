@@ -1,0 +1,73 @@
+{
+  "setId": "550e8400-e29b-41d4-a716-446655440000",
+  "setTitle": "REPLACE_ME - Short descriptive title of the set",
+  "difficulty": "Easy",
+  "questions": [
+    {
+      "id": 1,
+      "questionText": "REPLACE_ME with the question stem. State a scenario, then ask for the best solution.",
+      "options": {
+        "A": "First option text",
+        "B": "Second option text",
+        "C": "Third option text",
+        "D": "Fourth option text"
+      },
+      "correctAnswer": [
+        "B"
+      ],
+      "explanations": {
+        "A": {
+          "description": "Short label for A",
+          "reason": "Why A is correct or incorrect — be specific, not 'wrong answer'."
+        },
+        "B": {
+          "description": "Short label for B",
+          "reason": "Why B is the right answer — tie it back to a specific AWS concept or constraint."
+        },
+        "C": {
+          "description": "Short label for C",
+          "reason": "Why C is correct or incorrect."
+        },
+        "D": {
+          "description": "Short label for D",
+          "reason": "Why D is correct or incorrect."
+        }
+      },
+      "Tips": "One-line mnemonic or hook to remember the concept."
+    },
+    {
+      "id": 2,
+      "questionText": "REPLACE_ME with a select-two-or-more style question. State which TWO actions are required.",
+      "options": {
+        "A": "First option text",
+        "B": "Second option text",
+        "C": "Third option text",
+        "D": "Fourth option text"
+      },
+      "correctAnswer": [
+        "A",
+        "C"
+      ],
+      "questionType": "multi",
+      "explanations": {
+        "A": {
+          "description": "Short label for A",
+          "reason": "Why A is one of the correct answers."
+        },
+        "B": {
+          "description": "Short label for B",
+          "reason": "Why B is incorrect (or partial — explain what it leaves out)."
+        },
+        "C": {
+          "description": "Short label for C",
+          "reason": "Why C is one of the correct answers."
+        },
+        "D": {
+          "description": "Short label for D",
+          "reason": "Why D is incorrect."
+        }
+      },
+      "Tips": "For multi-answer questions, name the trigger phrase in the stem ('Which TWO…') so learners can pattern-match in the exam."
+    }
+  ]
+}
