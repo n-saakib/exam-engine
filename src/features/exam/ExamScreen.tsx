@@ -178,15 +178,12 @@ export function ExamScreen({
         const s = store.getState();
         const q = s.questions[s.currentIndex];
         if (!q || s.answers[q.id]?.committed) return;
-        // Mirror the button: with ≥1 selected, opening the exam-submit dialog
-        // (when on the last question) is the parent screen's responsibility,
-        // so route through the same path the button uses. The commit path is
-        // shared; the dialog open is delegated.
+        // Mirror the SubmitOrGiveUpButton: commit the question's answer. The
+        // exam-submit dialog is opened only by the dedicated Submit-exam
+        // button (or the timer expiry), not by committing an individual
+        // answer.
         const hasSelection = (s.answers[q.id]?.selected.length ?? 0) > 0;
-        const isLast = s.currentIndex >= s.questions.length - 1;
-        void s.commit(q.id, { gaveUp: !hasSelection }).then(() => {
-          if (hasSelection && isLast) setSubmitOpen(true);
-        });
+        void s.commit(q.id, { gaveUp: !hasSelection });
       },
       onSelectIndex: (index) => {
         const s = store.getState();
@@ -258,10 +255,7 @@ export function ExamScreen({
           <ExamTimer store={store} onExpire={onExpire} />
           <div className="flex items-center gap-2">
             <PauseButton store={store} onPaused={() => router.push("/resume")} />
-            <SubmitOrGiveUpButton
-              store={store}
-              onLastSubmit={() => setSubmitOpen(true)}
-            />
+            <SubmitOrGiveUpButton store={store} />
           </div>
         </div>
       </header>

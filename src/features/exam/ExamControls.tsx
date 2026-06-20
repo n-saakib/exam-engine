@@ -83,24 +83,21 @@ export function SubmitOrNextButton({
  *
  *   - 0 selected, any question  → label "Give up"; on confirm, commit the
  *     question as `gave_up` and surface the correct answer inline.
- *   - ≥1 selected, not last     → label "Submit answer"; on confirm, commit the
- *     selection (graded answer + explanations appear inline; no advance —
- *     Next/Submit-exam buttons handle navigation/exam finalization).
- *   - ≥1 selected, last         → label "Submit answer"; on confirm, commit and
- *     then open the exam-submit dialog so the user can finalize.
+ *   - ≥1 selected, any question → label "Submit answer"; on confirm, commit the
+ *     selection (graded answer + explanations appear inline). No navigation,
+ *     no exam finalisation — those are owned by the Next / Submit-exam button.
+ *
+ * Critically, this button never finalises the exam, even on the last
+ * question. Finalising the exam is the responsibility of the dedicated
+ * `Submit exam` button (`SubmitOrNextButton` on the navigation row), so a
+ * single click on "Submit answer" cannot accidentally end the user's session.
  *
  * Both branches share the same code path: `store.commit(qid)` writes
  * `is_committed = 1` server-side and surfaces `correctAnswer` /
  * `explanations` / `Tips` on the question in the live DTO. The `gaveUp`
  * flag is sticky and only set when the caller opts in (no-selection case).
  */
-export function SubmitOrGiveUpButton({
-  store,
-  onLastSubmit,
-}: {
-  store: ExamStore;
-  onLastSubmit?: () => void;
-}) {
+export function SubmitOrGiveUpButton({ store }: { store: ExamStore }) {
   const commit = store((s) => s.commit);
   const qid = store((s) => s.questions[s.currentIndex]?.id);
   const committed = store((s) => {
@@ -111,22 +108,17 @@ export function SubmitOrGiveUpButton({
     const q = s.questions[s.currentIndex];
     return q ? s.answers[q.id]?.selected.length ?? 0 : 0;
   });
-  const isLast = store((s) => {
-    const total = s.questions.length;
-    return s.currentIndex >= total - 1;
-  });
   const { confirm } = useGlobalDialogs();
   const [busy, setBusy] = useState(false);
 
   const hasSelection = selectedCount > 0;
-  const canSubmitLast = hasSelection && isLast;
 
   const handle = async () => {
     if (qid === undefined || committed) return;
-    // Give up (no selection) asks for confirmation — once committed, the
-    // question counts as `gave_up` in scoring. Submit (has selection) on the
-    // LAST question also asks for confirmation — the user is about to
-    // finalise, so we want a clear handoff.
+    // Only the give-up branch asks for confirmation — once committed, the
+    // question counts as `gave_up` in scoring, which is the irreversible
+    // action we want a guard for. Submitting a real answer is reversible in
+    // spirit (the user can keep editing and re-submit until the exam ends).
     if (!hasSelection) {
       const ok = await confirm({
         title: "Give up on this question?",
@@ -136,21 +128,11 @@ export function SubmitOrGiveUpButton({
         variant: "primary" as const,
       });
       if (!ok) return;
-    } else if (canSubmitLast) {
-      const ok = await confirm({
-        title: "Submit and finalize?",
-        description:
-          "This submits your answer for this question and opens the exam-submit dialog so you can finalize the exam.",
-        confirmLabel: "Submit",
-        variant: "primary" as const,
-      });
-      if (!ok) return;
     }
     setBusy(true);
     try {
       const isGiveUp = !hasSelection;
       await commit(qid, { gaveUp: isGiveUp });
-      if (canSubmitLast) onLastSubmit?.();
     } finally {
       setBusy(false);
     }

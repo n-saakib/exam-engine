@@ -1,8 +1,12 @@
 /**
  * <SubmitOrGiveUpButton> label-flip tests. Verifies the button's label and
- * dialog copy branch on `selected.length` for the current question, and that
- * `onLastSubmit` fires only when ≥1 option is selected AND the question is the
- * last one.
+ * dialog copy branch on `selected.length` for the current question.
+ *
+ * Critically, the button never opens the exam-submit dialog and never
+ * finalises the exam — finalisation is the responsibility of the dedicated
+ * Submit exam button (`SubmitOrNextButton`). A single click on "Submit
+ * answer" commits the question's answer immediately, on every question
+ * (including the last one).
  *
  * The store action `commit` is mocked at the apiClient layer so we don't have
  * to wait on a real PATCH.
@@ -118,55 +122,45 @@ describe("<SubmitOrGiveUpButton>", () => {
     ).toBeInTheDocument();
   });
 
-  it("calls commit on confirm and fires onLastSubmit on the last question", async () => {
+  it("commits immediately on the last question with a selection, without opening any dialog", async () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeDTO(2, 1)); // last question
     store.getState().select(2, "B");
-    const onLastSubmit = vi.fn();
     render(
       <ToastProvider>
         <GlobalDialogsProvider>
-          <SubmitOrGiveUpButton store={store} onLastSubmit={onLastSubmit} />
+          <SubmitOrGiveUpButton store={store} />
         </GlobalDialogsProvider>
       </ToastProvider>,
     );
 
+    // One click commits. No confirmation dialog — finalising the exam is the
+    // Submit exam button's job, not this one.
     fireEvent.click(screen.getByRole("button", { name: /^Submit answer$/i }));
-    const dialog = await screen.findByRole("dialog");
-    // New copy: "Submit and finalize?"
-    expect(dialog).toHaveTextContent(/Submit and finalize\?/i);
-    // Confirm via the "Submit" button in the dialog.
-    fireEvent.click(screen.getByRole("button", { name: /^Submit$/i }));
 
     await waitFor(() => {
       expect(patch).toHaveBeenCalled();
     });
-    await waitFor(() => {
-      expect(onLastSubmit).toHaveBeenCalledTimes(1);
-    });
+    // No dialog should have appeared.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("does NOT fire onLastSubmit when not on the last question", async () => {
+  it("commits immediately when not on the last question, without opening any dialog", async () => {
     const store = createExamStore();
     store.getState().loadFromDTO(makeDTO(3, 0));
     store.getState().select(1, "A");
-    const onLastSubmit = vi.fn();
     render(
       <ToastProvider>
         <GlobalDialogsProvider>
-          <SubmitOrGiveUpButton store={store} onLastSubmit={onLastSubmit} />
+          <SubmitOrGiveUpButton store={store} />
         </GlobalDialogsProvider>
       </ToastProvider>,
     );
-    // Not on the last question → no dialog; one click commits the answer.
     fireEvent.click(screen.getByRole("button", { name: /^Submit answer$/i }));
     await waitFor(() => {
       expect(patch).toHaveBeenCalled();
     });
-    // Give the .then() a microtask to run.
-    await waitFor(() => {
-      expect(onLastSubmit).not.toHaveBeenCalled();
-    });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it('shows the "Give up on this question?" dialog when nothing is selected', async () => {
